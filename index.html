@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Poker Club Leaderboard</title>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: var(--tg-theme-bg-color, #17212b);
+      color: var(--tg-theme-text-color, #ffffff);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .card-bg {
+      background-color: var(--tg-theme-secondary-bg-color, #232e3c);
+    }
+  </style>
+</head>
+<body class="p-4 pb-10">
+
+  <!-- Шапка -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-xl font-bold flex items-center gap-2">
+      🏆 <span>Leaderboard</span>
+    </h1>
+    <span id="updated-at" class="text-xs opacity-50">Обновление...</span>
+  </div>
+
+  <!-- Поиск -->
+  <div class="mb-4">
+    <input type="text" id="search-input" placeholder="🔍 Поиск игрока..." 
+           class="w-full p-3 rounded-xl card-bg outline-none border border-white/10 text-sm focus:border-blue-500 transition">
+  </div>
+
+  <!-- Список игроков -->
+  <div id="leaderboard-list" class="space-y-2">
+    <div class="text-center py-8 opacity-50 text-sm">Загрузка данных...</div>
+  </div>
+
+  <!-- Модальное окно профиля игрока -->
+  <div id="player-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end justify-center hidden z-50">
+    <div class="card-bg w-full max-w-md rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto relative animate-slide-up">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-xl opacity-50 hover:opacity-100">&times;</button>
+      
+      <div id="modal-content">
+        <div class="text-center py-6 opacity-50">Загрузка профиля...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔗 ВСТАВЬ СЮДА СВОЙ URL ВЕБ-ПРИЛОЖЕНИЯ ИЗ GOOGLE APPS SCRIPT
+    const API_URL = "https://script.google.com/macros/s/AKfycbx19vXh8P3TQmD2V55rJhz7YvVOjA2pYZQn1MnsSZoZAFviw-wFL7j4MNKVTmHWrxeSmw/exec";
+
+    let allPlayers = [];
+
+    // Инициализация Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    // Загрузка лидерборда
+    async function fetchLeaderboard() {
+      try {
+        const res = await fetch(`${API_URL}?action=leaderboard`);
+        const data = await res.json();
+        
+        if (data.error) throw new Error(data.error);
+
+        allPlayers = data.players || [];
+        renderLeaderboard(allPlayers);
+
+        if (data.updated_at) {
+          const date = new Date(data.updated_at);
+          document.getElementById('updated-at').innerText = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+      } catch (err) {
+        document.getElementById('leaderboard-list').innerHTML = `
+          <div class="text-center py-8 text-red-400 text-sm">
+            Ошибка загрузки данных.<br><span class="text-xs opacity-50">${err.message}</span>
+          </div>`;
+      }
+    }
+
+    // Отрисовка списка игроков
+    function renderLeaderboard(players) {
+      const container = document.getElementById('leaderboard-list');
+      if (!players.length) {
+        container.innerHTML = `<div class="text-center py-8 opacity-50 text-sm">Игроки не найдены</div>`;
+        return;
+      }
+
+      container.innerHTML = players.map(p => `
+        <div onclick="openPlayerProfile('${encodeURIComponent(p.raw_name)}')" 
+             class="card-bg p-3.5 rounded-2xl flex items-center justify-between border border-white/5 active:scale-[0.98] transition cursor-pointer">
+          <div class="flex items-center gap-3">
+            <span class="font-bold text-lg w-6 text-center opacity-70">#${p.rank}</span>
+            <div>
+              <div class="font-semibold text-base flex items-center gap-1.5">
+                ${p.name}
+              </div>
+              <div class="text-xs opacity-60 flex items-center gap-2">
+                <span>${p.rank_status}</span>
+                <span>•</span>
+                <span>${p.itm_total} ITM</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold text-lg text-blue-400">${p.total_score} <span class="text-xs">PTS</span></div>
+            <div class="text-xs ${String(p.trend).includes('▲') ? 'text-green-400' : String(p.trend).includes('▼') ? 'text-red-400' : 'opacity-40'} font-medium">
+              ${p.trend}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Поиск
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const filtered = allPlayers.filter(p => p.name.toLowerCase().includes(query));
+      renderLeaderboard(filtered);
+    });
+
+    // Открытие профиля игрока
+    async function openPlayerProfile(rawName) {
+      const modal = document.getElementById('player-modal');
+      const content = document.getElementById('modal-content');
+      
+      modal.classList.remove('hidden');
+      content.innerHTML = `<div class="text-center py-8 opacity-50">Загрузка статистики...</div>`;
+
+      try {
+        const res = await fetch(`${API_URL}?action=player&name=${rawName}`);
+        const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
+        content.innerHTML = `
+          <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold mb-1">${data.player}</h2>
+            <p class="text-xs opacity-50">Карточка игрока • All Time</p>
+          </div>
+
+          <!-- Сетка со статистикой -->
+          <div class="grid grid-cols-3 gap-2 mb-6">
+            <div class="bg-white/5 p-3 rounded-xl text-center">
+              <div class="text-xs opacity-50 mb-1">Всего игр</div>
+              <div class="text-xl font-bold">${data.stats.total_games}</div>
+            </div>
+            <div class="bg-white/5 p-3 rounded-xl text-center">
+              <div class="text-xs opacity-50 mb-1">Побед (1st)</div>
+              <div class="text-xl font-bold text-yellow-400">${data.stats.wins}</div>
+            </div>
+            <div class="bg-white/5 p-3 rounded-xl text-center">
+              <div class="text-xs opacity-50 mb-1">Winrate</div>
+              <div class="text-xl font-bold text-green-400">${data.stats.winrate}</div>
+            </div>
+          </div>
+
+          <!-- Последние игры -->
+          <h3 class="font-bold text-sm mb-3 opacity-80">История последних игр</h3>
+          <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            ${data.recent_games.length ? data.recent_games.map(g => `
+              <div class="flex justify-between items-center text-xs p-2.5 rounded-lg bg-white/5">
+                <div>
+                  <span class="font-semibold">${g.type}</span> 
+                  <span class="opacity-40">(${g.date})</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="opacity-50">Ведущий: ${g.dealer}</span>
+                  <span class="px-2 py-0.5 rounded font-bold ${g.place === 1 ? 'bg-yellow-500/20 text-yellow-300' : 'bg-white/10'}">
+                    #${g.place} место
+                  </span>
+                </div>
+              </div>
+            `).join('') : '<div class="text-xs opacity-40 text-center py-2">Нет сыгреных игр</div>'}
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = `<div class="text-center py-6 text-red-400 text-sm">Ошибка: ${err.message}</div>`;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('player-modal').classList.add('hidden');
+    }
+
+    // Стартовый запрос
+    fetchLeaderboard();
+  </script>
+</body>
+</html>
