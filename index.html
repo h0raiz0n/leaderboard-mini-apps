@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>🏆 Poker Leaderboard</title>
+<style>
+  :root {
+    --bg: #1b1e28; --card: #232735; --card2: #2a2f40; --line: #343a4e;
+    --text: #e9ecf3; --muted: #9aa3b8; --accent: #4f8cff; --gold: #ffd166;
+    --green: #3ddc84; --red: #ff5c5c; --telegray: #5e6271;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body { max-width:100%; }
+  body {
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding-bottom:64px;
+    overflow-x:hidden; width:100%;
+  }
+  .content { max-width:100%; overflow:hidden; }
+  .lb-row, .sec, .hof-row, .card-sec { max-width:100%; }
+  .top { position:sticky; top:0; z-index:20; background:rgba(27,30,40,.95); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  h1 { margin:0; padding:12px 14px 6px; font-size:18px; letter-spacing:.3px; }
+  .sub { padding:0 14px 10px; color:var(--muted); font-size:12px; }
+  .tabs { display:flex; padding:8px 8px 10px; gap:6px; overflow-x:auto; }
+  .tab { flex:1; white-space:nowrap; padding:9px 8px; text-align:center; font-size:13px; font-weight:600;
+    border-radius:10px; color:var(--muted); cursor:pointer; user-select:none; border:1px solid transparent; }
+  .tab.active { background:var(--accent); color:#fff; }
+  .content { padding:10px; }
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  .loader { text-align:center; color:var(--muted); padding:40px 0; font-size:14px; }
+  .err { text-align:center; color:var(--red); padding:30px; font-size:14px; }
+
+  /* Лидерборд */
+  .lb-row { display:flex; align-items:center; padding:11px 10px; background:var(--card);
+    border-radius:12px; margin-bottom:8px; cursor:pointer; border:1px solid var(--line); transition:background .15s; }
+  .lb-row:active { background:var(--card2); }
+  .lb-row.top1{ background:linear-gradient(135deg,#3a3215,#2c2a20); border-color:#a8842c; }
+  .lb-row.top2{ background:linear-gradient(135deg,#2f333d,#262a33); border-color:#6f7ea6; }
+  .lb-row.top3{ background:linear-gradient(135deg,#3a2c1d,#2a241c); border-color:#8a5a2b; }
+  .pos { width:32px; text-align:center; font-weight:800; font-size:15px; }
+  .pos .pc { display:block; font-style:normal; font-size:20px; line-height:1; }
+  .pos .pn { font-size:11px; color:var(--muted); }
+  .pinfo { flex:1; min-width:0; padding:0 8px; }
+  .pname { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .prank { color:var(--muted); font-size:11px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pts { text-align:right; font-weight:800; font-size:15px; }
+  .trend { font-size:11px; margin-top:2px; color:var(--muted); text-align:right; }
+
+  /* Карточка игрока */
+  .back { background:none; border:none; color:var(--accent); font-size:14px; font-weight:600;
+    padding:8px 4px; cursor:pointer; }
+  .card-sec { background:var(--card); border-radius:12px; padding:12px; margin-bottom:10px; border:1px solid var(--line); }
+  .card-sec h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--accent); }
+  .kv { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--line); font-size:13px; }
+  .kv:last-child{border-bottom:none;}
+  .kv b{color:#fff;}
+  .pill { display:inline-block; background:var(--card2); border:1px solid var(--line); border-radius:8px;
+    padding:3px 8px; font-size:12px; margin:2px 3px 2px 0; }
+
+  /* Карточка игрока: плитки статистики */
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .tile { background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:9px 10px; }
+  .tile .tl { font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .tile .tv { font-size:16px; font-weight:800; color:#fff; }
+  .sec { background:var(--card); border-radius:14px; padding:12px; margin-bottom:12px; border:1px solid var(--line); }
+  .sec h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--accent); }
+
+  /* Гистограмма мест за всё время */
+  .bars { display:flex; gap:6px; align-items:flex-end; height:52px; }
+  .bar { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:3px; font-size:10px; color:var(--muted); }
+  .bar .b { width:100%; max-width:34px; border-radius:5px 5px 0 0; min-height:3px; }
+  .bar .bl { font-size:10px; }
+
+  /* Зал славы: блоки по дням */
+  .day-block { margin-bottom:14px; }
+  .day-head { font-size:12px; color:var(--muted); font-weight:700; margin:0 2px 8px; text-transform:uppercase; letter-spacing:.5px; }
+  .hof-row { display:flex; align-items:center; gap:10px; padding:10px; background:var(--card);
+    border-radius:10px; margin-bottom:7px; border:1px solid var(--line); }
+  .medal { font-size:20px; width:30px; text-align:center; }
+  .hof-info { flex:1; min-width:0; }
+  .hof-name { font-weight:700; font-size:14px; }
+  .hof-sub { color:var(--muted); font-size:11px; margin-top:2px; }
+
+  /* История игр */
+  .arch-row { display:flex; align-items:center; gap:10px; padding:9px 6px; border-bottom:1px dashed var(--line); }
+  .arch-row:last-child{border-bottom:none;}
+  .arch-d { font-size:11px; color:var(--muted); width:70px; flex-shrink:0; }
+  .arch-info { flex:1; min-width:0; }
+  .arch-ev { font-size:13px; font-weight:600; }
+  .arch-fmt{font-size:11px;color:var(--muted);}
+  .arch-pts{font-weight:800;font-size:14px;}
+  .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:6px;margin-left:6px;}
+  .tag.mtt{background:#4a3a10;color:#ffd166;} .tag.sng{background:#1f3550;color:#7fb2ff;}
+  .tag.mb{background:#4a1f2e;color:#ff9ecb;}
+
+  /* Дилеры (ведущие) */
+  .heat-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .heat { display:grid; gap:3px; min-width:max-content; }
+  .heat-row { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:3px; align-items:center; }
+  .heat-cell { width:36px; min-width:36px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:5px;
+    font-size:11px; color:#fff; font-weight:700; }
+  .hd { color:var(--muted); font-size:10px; width:44px; min-width:44px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .legend { display:flex; gap:6px; align-items:center; font-size:10px; color:var(--muted); margin-top:8px; flex-wrap:wrap;}
+  .legend i{display:inline-block;width:14px;height:14px;border-radius:3px;}
+
+  .btn { display:inline-block; background:var(--card2); color:var(--text); padding:8px 14px; border-radius:9px;
+    font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🏆 Poker Leaderboard</h1>
+  <div class="sub" id="subtitle">Загрузка…</div>
+  <div class="tabs">
+    <div class="tab active" data-tab="lb">📊 Лидерборд</div>
+    <div class="tab" data-tab="hof">🏆 Зал славы</div>
+    <div class="tab" data-tab="dealers">🎩 Ведущие</div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="panel active" id="panel-lb">
+    <div id="lb-load" class="loader">Загрузка лидерборда…</div>
+    <div id="lb-err" class="err" style="display:none"></div>
+    <div id="lb-list"></div>
+  </div>
+
+  <div class="panel" id="panel-player">
+    <button class="back" onclick="goBackToLb()">← Назад к лидерборду</button>
+    <div id="pl-content"></div>
+  </div>
+
+  <div class="panel" id="panel-hof">
+    <div id="hof-load" class="loader">Загрузка…</div>
+    <div id="hof-err" class="err" style="display:none"></div>
+    <div id="hof-list"></div>
+  </div>
+
+  <div class="panel" id="panel-dealers">
+    <div id="de-load" class="loader">Загрузка…</div>
+    <div id="de-err" class="err" style="display:none"></div>
+    <div id="de-content"></div>
+  </div>
+</div>
+
+<script>
+  function esc(s){
+    if(s==null) return "";
+    return String(s).replace(/[&<>"']/g,function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  // Web App URL — Apps Script JSON-эндпоинт (GitHub Pages -> Apps Script).
+  var API = "https://script.google.com/macros/s/AKfycbwXrgT_FBDueyA4ap3gryOQQfxBqiv2GJL_H4Ejt3bQhOdZThoMW_j61T-C7Oq4ZTTseg/exec";
+  function getJson(type, extra, onOk, onErr){
+    var url = API + "?type=" + type + (extra || "");
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(payload){
+        if(payload && payload.success){ onOk(payload.data); }
+        else { throw (payload && payload.error) || "ошибка сервера"; }
+      })
+      .catch(function(err){ onErr(err); });
+  }
+
+  var LB = []; // кеш лидерборда для карточек
+  function showPanel(name){
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+    document.getElementById('panel-'+name).classList.add('active');
+    document.querySelectorAll('.tab').forEach(function(t){
+      t.classList.toggle('active', t.getAttribute('data-tab')===name);
+    });
+    var subs = {
+      lb:"Текущий месяц · динамика и очки",
+      hof:"Призовые места в MTT",
+      dealers:"Тепловая карта раздач за месяц"
+    };
+    document.getElementById('subtitle').textContent = subs[name] || "";
+  }
+
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      var name = this.getAttribute('data-tab');
+      goTo(name);
+    });
+  });
+
+  function goTo(name){
+    if(name==='lb'){ showPanel('lb'); loadLeaderboard(); }
+    else if(name==='hof'){ showPanel('hof'); loadHof(); }
+    else if(name==='dealers'){ showPanel('dealers'); loadDealers(); }
+  }
+
+  // ---------- ЛИДЕРБОРД ----------
+  function loadLeaderboard(){
+    showPanel('lb');
+    document.getElementById('lb-load').style.display='block';
+    document.getElementById('lb-err').style.display='none';
+    document.getElementById('lb-list').innerHTML='';
+    getJson('current', '', function(data){
+      document.getElementById('lb-load').style.display='none';
+      LB = data || [];
+      renderLb(LB);
+    }, function(err){ failLb({error: (err && err.message) || err || "ошибка"}); });
+  }
+  function failLb(res){
+    document.getElementById('lb-load').style.display='none';
+    var e=document.getElementById('lb-err');
+    e.style.display='block';
+    e.textContent="Не удалось загрузить: "+(res&&res.error||"ошибка");
+  }
+  function renderLb(rows){
+    var medals = {1:"🥇",2:"🥈",3:"🥉"};
+    var html="";
+    rows.forEach(function(r,i){
+      var pos=i+1;
+      var topCls = pos===1?'top1':(pos===2?'top2':(pos===3?'top3':''));
+      var trend = r[1] || "🆕";
+      var posHtml = medals[pos] ? '<span class="pc">'+medals[pos]+'</span>' : '<span class="pc">'+pos+'</span>';
+      html += '<div class="lb-row '+topCls+'" onclick="openPlayer('+(i)+')">'
+        + '<div class="pos">'+posHtml+'</div>'
+        + '<div class="pinfo"><div class="pname">'+esc(r[2])+'</div>'
+        + '<div class="prank">'+esc(r[4])+'</div></div>'
+        + '<div><div class="pts">'+esc(r[3])+'</div><div class="trend">'+esc(trend)+'</div></div>'
+        + '</div>';
+    });
+    document.getElementById('lb-list').innerHTML = html || '<div class="loader">Пока нет данных за месяц</div>';
+  }
+
+  // ---------- КАРТОЧКА ИГРОКА ----------
+  function openPlayer(idx){
+    if(!LB[idx]) return;
+    var name = LB[idx][2];
+    showPanel('player');
+    document.getElementById('pl-content').innerHTML='<div class="loader">Загрузка…</div>';
+    getJson('player', '&name='+encodeURIComponent(name), function(c){
+      if(!c){ document.getElementById('pl-content').innerHTML='<div class="err">Игрок не найден</div>'; return; }
+      renderPlayer(c);
+    }, function(err){
+      document.getElementById('pl-content').innerHTML='<div class="err">Ошибка загрузки: '+esc((err&&err.message)||err)+'</div>';
+    });
+    window.scrollTo(0,0);
+  }
+  function goBackToLb(){ loadLeaderboard(); }
+
+  function medal(n){
+    var m={1:"🥇",2:"🥈",3:"🥉",4:"4️⃣",5:"5️⃣"};
+    return m[n]||n;
+  }
+  function formatDate(ds){
+    var d = new Date(ds + "T00:00:00");
+    if(isNaN(d.getTime())) return ds||"";
+    var months=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+    return d.getDate()+" "+months[d.getMonth()];
+  }
+  function placeEmoji(n){
+    var m={1:"🥇",2:"🥈",3:"🥉",4:"4️⃣",5:"5️⃣"};
+    return m[n]||n;
+  }
+  function fmtTag(f){
+    f=(f||"").toLowerCase();
+    if(f.indexOf("mtt")>-1) return '<span class="tag mtt">MTT</span>';
+    if(f.indexOf("mystery")>-1 || f.indexOf("bounty")>-1) return '<span class="tag mb">Mystery</span>';
+    return '<span class="tag sng">SnG</span>';
+  }
+  function evLabel(ev){
+    var m={"1 место":"1 место","2 место":"2 место","3 место":"3 место","4 место":"4 место","5 место":"5 место","Нокаут":"💥 Нокаут"};
+    return m[ev]||ev||"—";
+  }
+
+  function renderPlayer(c){
+    var h='';
+    // Шапка: только ник, без реального имени
+    h+='<div style="text-align:center;margin:6px 0 14px;"><div style="font-size:24px;font-weight:800;">'+esc(c.name)+'</div></div>';
+
+    // --- За текущий месяц ---
+    h+='<div class="sec"><h3>Текущий месяц</h3>';
+    if(c.month){
+      h+='<div class="grid">';
+      h+='<div class="tile"><div class="tl">Позиция</div><div class="tv">'+esc(c.month.position)+'</div></div>';
+      h+='<div class="tile"><div class="tl">Динамика</div><div class="tv">'+esc(c.month.trend)+'</div></div>';
+      h+='<div class="tile"><div class="tl">Очки</div><div class="tv">'+esc(c.month.points)+'</div></div>';
+      h+='<div class="tile"><div class="tl">Ранг</div><div class="tv">'+esc(c.month.rank)+'</div></div>';
+      h+='<div class="tile" style="grid-column:1/-1;"><div class="tl">Разбивка</div><div class="tv" style="font-size:12px;font-weight:600;">'+esc(c.month.breakdown)+'</div></div>';
+      h+='</div>';
+    } else {
+      h+='<div style="color:var(--muted)">Нет данных за месяц</div>';
+    }
+    h+='</div>';
+
+    // --- За всё время ---
+    h+='<div class="sec"><h3>За всё время</h3>';
+    if(c.allTime){
+      var at=c.allTime;
+      h+='<div class="grid">';
+      h+='<div class="tile"><div class="tl">Игр</div><div class="tv">'+esc(at.games)+'</div></div>';
+      h+='<div class="tile"><div class="tl">Всего очков</div><div class="tv">'+esc(at.totalPoints)+'</div></div>';
+      h+='<div class="tile"><div class="tl">ITM</div><div class="tv">'+esc(at.itm)+'</div></div>';
+      h+='<div class="tile"><div class="tl">Нокауты</div><div class="tv">'+esc(at.knockouts)+'</div></div>';
+      h+='<div class="tile"><div class="tl">Очки игры</div><div class="tv">'+esc(at.gamePoints)+'</div></div>';
+      h+='<div class="tile"><div class="tl">Очки KO</div><div class="tv">'+esc(at.koPoints)+'</div></div>';
+      if(at.mttPlacePoints>0){
+        h+='<div class="tile"><div class="tl">MTT призовые</div><div class="tv">+'+esc(at.mttPlacePoints)+'</div></div>';
+      }
+      h+='</div>';
+
+      // Гистограмма мест 1-3 (4-5 бывают только в MTT — редкий формат, не показываем)
+      var maxPlace = Math.max(1, at.place1, at.place2, at.place3);
+      var pls = [{n:1,v:at.place1},{n:2,v:at.place2},{n:3,v:at.place3}];
+      h+='<div style="margin-top:12px;">';
+      h+='<div class="bars">';
+      pls.forEach(function(p){
+        var hgt = Math.round((p.v/maxPlace)*100);
+        var color = p.n===1?'#ffd166':(p.n===2?'#d0d5e2':(p.n===3?'#c98a4b':'#4f8cff'));
+        h+='<div class="bar"><div class="bl">'+p.v+'</div><div class="b" style="height:'+hgt+'%;background:'+color+'"></div><div class="bl">'+placeEmoji(p.n)+'</div></div>';
+      });
+      h+='</div></div>';
+
+      // Процентили как «топ-N%» (доля игроков, которые сильнее)
+      h+='<div style="margin-top:12px;font-size:11px;color:var(--muted);">Топ-% игроков:</div>';
+      h+='<div><span class="pill">Очки: топ-'+esc(c.percentiles.points)+'%</span>'
+         +'<span class="pill">ITM: топ-'+esc(c.percentiles.itm)+'%</span>'
+         +'<span class="pill">Нокауты: топ-'+esc(c.percentiles.knockouts)+'%</span></div>';
+
+      if(c.mtt){
+        var placesHtml="";
+        for(var pn in c.mtt.places){ if(Number(c.mtt.places[pn])>0) placesHtml += '<span class="pill">'+placeEmoji(pn)+'×'+c.mtt.places[pn]+'</span>'; }
+        h+='<div style="margin-top:12px;"><div style="font-size:11px;color:var(--muted);">MTT призовые места (всего '+esc(c.mtt.podiumCount)+'):</div><div>'+(placesHtml||'<span class="pill">—</span>')+'</div></div>';
+      }
+    } else {
+      h+='<div style="color:var(--muted)">Нет данных</div>';
+    }
+    h+='</div>';
+
+    // --- История игр (свежие сверху) ---
+    h+='<div class="sec"><h3>История игр · '+esc((c.history||[]).length)+'</h3>';
+    if(c.history && c.history.length){
+      h+='<div id="arch-list">';
+      c.history.forEach(function(g){
+        h+='<div class="arch-row">'
+          +'<div class="arch-d">'+esc(formatDate(g.date))+'</div>'
+          +'<div class="arch-info"><div class="arch-ev">'+esc(evLabel(g.event))+fmtTag(g.format)+'</div>'
+          +'<div class="arch-fmt">'+esc(g.format)+' · '+esc(g.dealer||"—")+'</div></div>'
+          +'<div class="arch-pts">'+(g.points?'+'+esc(g.points):'—')+'</div>'
+          +'</div>';
+      });
+      h+='</div>';
+    } else {
+      h+='<div style="color:var(--muted)">Игр пока нет</div>';
+    }
+    h+='</div>';
+
+    document.getElementById('pl-content').innerHTML=h;
+  }
+
+  // ---------- ЗАЛ СЛАВЫ ----------
+  function loadHof(){
+    showPanel('hof');
+    document.getElementById('hof-load').style.display='block';
+    document.getElementById('hof-err').style.display='none';
+    document.getElementById('hof-list').innerHTML='';
+    getJson('halloffame', '', function(data){
+      document.getElementById('hof-load').style.display='none';
+      renderHof(data || []);
+    }, function(err){ failHof({error: (err && err.message) || err || "ошибка"}); });
+  }
+  function failHof(res){
+    document.getElementById('hof-load').style.display='none';
+    var e=document.getElementById('hof-err');
+    e.style.display='block';
+    e.textContent="Не удалось загрузить: "+(res&&res.error||"ошибка");
+  }
+  function renderHof(list){
+    // Группируем по дням (дата уже "YYYY-MM-DD", идёт свежими сверху)
+    var days = [];
+    var order = [];
+    list.forEach(function(it){
+      var d = it.date || "";
+      if(order.indexOf(d)===-1) order.push(d);
+    });
+    order.forEach(function(d){
+      var rows = list.filter(function(it){ return (it.date||"") === d; });
+      days.push({date:d, rows:rows});
+    });
+
+    var html="";
+    days.forEach(function(day){
+      html += '<div class="day-block">';
+      html += '<div class="day-head">'+esc(formatDate(day.date))+'</div>';
+      day.rows.forEach(function(it){
+        html += '<div class="hof-row">'
+          + '<div class="medal">'+medal(it.place)+'</div>'
+          + '<div class="hof-info"><div class="hof-name">'+esc(it.player)+'</div>'
+          + '<div class="hof-sub">'+esc(it.format)+' · ведущий '+esc(it.dealer)+'</div></div>'
+          + '</div>';
+      });
+      html += '</div>';
+    });
+    document.getElementById('hof-list').innerHTML = html || '<div class="loader">Пока нет призовых мест в MTT</div>';
+  }
+
+  // ---------- ДИЛЕРЫ (ТЕПЛОВАЯ КАРТА) ----------
+  function loadDealers(){
+    showPanel('dealers');
+    document.getElementById('de-load').style.display='block';
+    document.getElementById('de-err').style.display='none';
+    document.getElementById('de-content').innerHTML='';
+    getJson('dealers', '', function(data){
+      document.getElementById('de-load').style.display='none';
+      renderDealers(data || {dealers:[],dates:[],matrix:[],byMonth:[],month:""});
+    }, function(err){ failDe({error: (err && err.message) || err || "ошибка"}); });
+  }
+  function failDe(res){
+    document.getElementById('de-load').style.display='none';
+    var e=document.getElementById('de-err');
+    e.style.display='block';
+    e.textContent="Не удалось загрузить: "+(res&&res.error||"ошибка");
+  }
+  function renderDealers(d){
+    var h='';
+    h+='<div style="margin:4px 0 10px;color:var(--muted);font-size:12px;">Месяц: <b style="color:var(--text)">'+esc(d.month)+'</b> · ведущих: '+d.dealers.length+'</div>';
+
+    // Сводка по ведущим
+    h+='<div class="sec"><h3>Игр за месяц</h3>';
+    d.byMonth.slice().sort(function(a,b){return b.games-a.games;}).forEach(function(x){
+      h+='<div class="dealer-total"><span>'+esc(x.dealer)+'</span><b>'+esc(x.games)+' игр</b></div>';
+    });
+    h+='</div>';
+
+    // Тепловая карта: столбцы = ведущие, строки = даты
+    h+='<div class="sec"><h3>Тепловая карта по датам</h3>';
+    // max для цвета
+    var max=1;
+    d.matrix.forEach(function(row){ row.forEach(function(v){ if(v>max)max=v; }); });
+    function heatColor(v){ if(v===0) return '#2a2f40'; var t=v/max; if(t<0.34)return '#2d5aa8'; if(t<0.67)return '#d98a2b'; return '#d64545'; }
+
+    h+='<div class="heat-wrap"><div class="heat">';
+    h+='<div class="heat-row"><div class="hd"></div>'+d.dealers.map(function(dr){return '<div class="hd">'+esc(dr)+'</div>';}).join('')+'</div>';
+    d.dates.forEach(function(dt,di){
+      h+='<div class="heat-row"><div class="hd">'+esc(dt.slice(5))+'</div>';
+      d.matrix.forEach(function(row){ var v=row[di]; h+='<div class="heat-cell" style="background:'+heatColor(v)+'">'+(v||'')+'</div>'; });
+      h+='</div>';
+    });
+    h+='</div></div>';
+
+    h+='<div class="legend"><i style="background:#2d5aa8"></i> мало<i style="background:#d98a2b"></i> средне<i style="background:#d64545"></i> много</div>';
+    h+='</div>';
+
+    document.getElementById('de-content').innerHTML=h;
+  }
+
+  // Загрузка по умолчанию
+  loadLeaderboard();
+</script>
+</body>
+</html>
