@@ -591,6 +591,16 @@
     return WDAYS[d.getDay()];
   }
 
+  var MONTHS_NOM = ["", "январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+
+  function monthLabel(m) {
+    var p = String(m || "").split("-");
+    if (p.length === 2 && Number(p[1]) >= 1 && Number(p[1]) <= 12) {
+      return MONTHS_NOM[Number(p[1])] + " " + p[0];
+    }
+    return m || "этот месяц";
+  }
+
   function parseTrend(t) {
     t = t || "🆕";
     if (t.indexOf("🔼") > -1) return { dir: "up", val: (t.match(/\d+/) || [""])[0] };
@@ -1025,7 +1035,7 @@
   }
 
   function renderDealers(d) {
-    document.getElementById("de-sub").textContent = "Игры ведущих";
+    document.getElementById("de-sub").textContent = "Игры ведущих за " + monthLabel(d.month);
     var h = '';
 
     h += '<div class="block"><h3>Игр за месяц</h3>';
