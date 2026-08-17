@@ -1,7 +1,7 @@
 /* Service Worker для мини-приложения «Атмосфера».
    Кэширует HTML, шрифт и данные API — повторные открытия мгновенны.
    При обновлении index.html — меняйте версию CACHE. */
-const CACHE = 'atmos-v2';
+const CACHE = 'atmos-v3';
 const API_PREFIX = 'https://script.google.com/macros/s/';
 const API_TTL = 120000; // 2 минуты
 
