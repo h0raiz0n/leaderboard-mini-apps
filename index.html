@@ -245,6 +245,59 @@
   }
   .back svg { width: 16px; height: 16px; }
 
+  /* ---------- FAQ ---------- */
+  .help-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--line-2); background: rgba(255,255,255,.04);
+    color: var(--ink-2); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0; flex-shrink: 0;
+    transition: background .16s var(--ease), color .16s var(--ease), transform .16s var(--ease);
+  }
+  .help-btn svg { width: 19px; height: 19px; }
+  .help-btn:active { transform: scale(.92); background: var(--card-2); color: var(--ink); }
+
+  .faq { display: flex; flex-direction: column; gap: 12px; }
+  .faq-sec {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: 14px 15px; box-shadow: var(--shadow);
+  }
+  .faq-sec h3 {
+    margin: 0 0 8px; font-family: var(--display); font-size: 15px; letter-spacing: .09em;
+    color: var(--ink); text-transform: uppercase; font-weight: 600;
+  }
+  .faq-sec p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+  .faq-sec p b { color: var(--ink); }
+  .faq-list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .faq-list li { font-size: 13.5px; line-height: 1.5; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .pts { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .pts th {
+    font: 600 11px/1 var(--ui); color: var(--muted-2); text-align: center;
+    padding: 5px 4px; letter-spacing: .06em; text-transform: uppercase;
+  }
+  .pts td {
+    font-family: var(--display); font-size: 17px; color: var(--ink);
+    text-align: center; padding: 6px 4px; border-top: 1px solid var(--line);
+    font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+  .pts td.dash { color: var(--muted-2); font-weight: 400; }
+  .pts tr td:first-child { font-family: var(--ui); font-size: 13px; text-align: left; padding-left: 2px; font-weight: 600; }
+  .pts th:first-child { text-align: left; padding-left: 2px; }
+  .faq-achv { margin-top: 14px; }
+  .faq-achv-t { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--ink); }
+  .faq-achv-ic {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .faq-achv-ic.rk { background: rgba(224,169,46,.16); }
+  .faq-achv-ic.st { background: rgba(124,80,184,.18); }
+  .faq-achv-ic.se { background: rgba(31,157,92,.18); }
+  .faq-achv-ic.db { background: rgba(224,134,46,.18); }
+  .faq-note {
+    margin-top: 14px; padding: 10px 12px; border-radius: 10px;
+    background: rgba(255,255,255,.05); border: 1px dashed var(--line-2);
+    font-size: 13px; line-height: 1.5; color: var(--ink);
+  }
+
   .p-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .p-name { font-family: var(--display); font-size: 34px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); line-height: 1; font-weight: 600; }
 
@@ -453,6 +506,9 @@
         <div class="brand__sub">Антикафе · лидерборд</div>
       </div>
     </div>
+    <button class="help-btn" id="help-btn" type="button" aria-label="Правила и очки" title="Правила и очки">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.6-2.4 2.1-2.4 3.4"/><path d="M12 17.2h.01"/></svg>
+    </button>
   </header>
 
   <main id="view">
@@ -501,6 +557,103 @@
       </div>
       <div id="de-content"></div>
       <div id="de-state"></div>
+    </section>
+
+    <!-- Правила и очки -->
+    <section class="panel" id="panel-faq">
+      <button class="back" onclick="goTo('lb')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        К рейтингу
+      </button>
+      <div class="section-head">
+        <h2>Правила и очки</h2>
+        <p>Как начисляются очки и достижения</p>
+      </div>
+      <div class="faq">
+
+        <div class="faq-sec">
+          <h3>Базовые очки за места</h3>
+          <p>За каждое призовое место начисляются очки по формату игры:</p>
+          <table class="pts">
+            <tr><th>Формат</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+            <tr><td><span class="fmt-chip sng">SNG</span></td><td>10</td><td>6</td><td>3</td><td class="dash">—</td><td class="dash">—</td></tr>
+            <tr><td><span class="fmt-chip mtt">MTT</span></td><td>30</td><td>20</td><td>14</td><td>9</td><td>5</td></tr>
+            <tr><td><span class="fmt-chip mb">MYSTERY</span></td><td>10</td><td>6</td><td>3</td><td class="dash">—</td><td class="dash">—</td></tr>
+          </table>
+        </div>
+
+        <div class="faq-sec">
+          <h3>Нокауты</h3>
+          <p>Только в Mystery Bounty: за каждое выбивание — <b>+20 очков</b>. Нокауты не считаются ITM.</p>
+        </div>
+
+        <div class="faq-sec">
+          <h3>ITM — попадание в призы</h3>
+          <ul class="faq-list">
+            <li><span class="fmt-chip sng">SNG</span> — места 1–3</li>
+            <li><span class="fmt-chip mtt">MTT</span> — места 1–5</li>
+            <li><span class="fmt-chip mb">MYSTERY</span> — места 1–3 (нокауты не в счёт)</li>
+          </ul>
+          <p>ITM нужен для рангов, стека и сравнения при равных очках.</p>
+        </div>
+
+        <div class="faq-sec">
+          <h3>Достижения — только за текущий месяц</h3>
+
+          <div class="faq-achv">
+            <div class="faq-achv-t"><span class="faq-achv-ic rk">🏷</span>Ранг</div>
+            <p>Начисляется за число ITM за месяц:</p>
+            <table class="pts">
+              <tr><th>Ранг</th><th>ITM</th><th>Очки</th></tr>
+              <tr><td>🐟 FISH</td><td>0–5</td><td>0</td></tr>
+              <tr><td>🦈 SHARK</td><td>6–11</td><td>+15</td></tr>
+              <tr><td>💪 LEGEND</td><td>12–17</td><td>+35</td></tr>
+              <tr><td>👑 BOSS</td><td>18+</td><td>+50</td></tr>
+            </table>
+          </div>
+
+          <div class="faq-achv">
+            <div class="faq-achv-t"><span class="faq-achv-ic st">💎</span>Stack</div>
+            <p>Лесенка ITM: пороги 3, 7, 12, 18, 25… Каждый достигнутый уровень — <b>+5 очков</b>.</p>
+          </div>
+
+          <div class="faq-achv">
+            <div class="faq-achv-t"><span class="faq-achv-ic se">♠</span>Set</div>
+            <p>Полный комплект (1-е + 2-е + 3-е место) за месяц — <b>+10 очков</b> за каждый комплект.</p>
+          </div>
+
+          <div class="faq-achv">
+            <div class="faq-achv-t"><span class="faq-achv-ic db">⚡</span>Double</div>
+            <p>Две победы (1-е место) у одного ведущего за один день — <b>+10 очков</b> за каждую пару.</p>
+          </div>
+
+          <p class="faq-note">Итого за месяц = места + нокауты + Ранг + Stack + Set + Double.</p>
+        </div>
+
+        <div class="faq-sec">
+          <h3>За всё время</h3>
+          <p>Считаются только очки за места и нокауты — без месячных достижений.</p>
+        </div>
+
+        <div class="faq-sec">
+          <h3>Сортировка и тренд</h3>
+          <ul class="faq-list">
+            <li>Рейтинг сортируется по очкам; при равенстве выше тот, у кого больше ITM.</li>
+            <li>Тренд 🔼 / 🔽 — изменение места относительно последнего игрового дня (снапшоты в ср, пт, сб). 🆕 — новый в рейтинге месяца.</li>
+          </ul>
+        </div>
+
+        <div class="faq-sec">
+          <h3>Подиум и MTT</h3>
+          <p>Вкладка «Подиум» — призовые места 1–5 в MTT. В карточке игрока есть «MTT-подиум» — все места 1–5 в MTT за всё время.</p>
+        </div>
+
+        <div class="faq-sec">
+          <h3>Топ-N%</h3>
+          <p>В карточке игрока «топ-N%» — доля игроков с более высоким показателем (очки, ITM, нокауты). Топ-1% — лучший показатель.</p>
+        </div>
+
+      </div>
     </section>
   </main>
 
@@ -670,6 +823,10 @@
 
   document.querySelectorAll(".tab").forEach(function (t) {
     t.addEventListener("click", function () { goTo(this.getAttribute("data-tab")); });
+  });
+
+  document.getElementById("help-btn").addEventListener("click", function () {
+    showPanel("faq");
   });
 
   function goTo(name) {
