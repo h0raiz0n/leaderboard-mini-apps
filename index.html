@@ -439,14 +439,13 @@
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <svg class="brand__logo" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <circle cx="16" cy="19" r="11" fill="#e0a92e" stroke="#8a6413" stroke-width="1.6"/>
-        <circle cx="16" cy="19" r="7" fill="none" stroke="#8a6413" stroke-width="1" opacity=".55"/>
-        <circle cx="16" cy="11" r="7.4" fill="#d34a42" stroke="#7c2420" stroke-width="1.6"/>
-        <circle cx="16" cy="11" r="4.6" fill="none" stroke="#7c2420" stroke-width="1" opacity=".5"/>
-        <circle cx="16" cy="25" r="7.4" fill="#ece7da" stroke="#8a6413" stroke-width="1.6"/>
-        <circle cx="16" cy="25" r="4.6" fill="none" stroke="#8a6413" stroke-width="1" opacity=".45"/>
-        <path d="M16 3.6L18 8.2h-4z" fill="#0b1830"/>
+      <svg class="brand__logo" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="23" fill="#e8b84b"/>
+        <circle cx="24" cy="24" r="21" fill="none" stroke="#8a6413" stroke-width="1.6"/>
+        <circle cx="24" cy="24" r="18" fill="none" stroke="#8a6413" stroke-width="3.4" stroke-dasharray="2.6 2.9"/>
+        <circle cx="24" cy="24" r="13.5" fill="none" stroke="#8a6413" stroke-width="2.2"/>
+        <circle cx="24" cy="19" r="9" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.6"/>
+        <path d="M24 14.2 C19.6 18.7 16.8 21.5 16.8 24.6 a4.9 4.9 0 0 0 7.2 4.4 l-1.5 2.8 h3 l-1.5 -2.8 a4.9 4.9 0 0 0 7.2 -4.4 C31.2 21.5 28.4 18.7 24 14.2 Z" fill="#8a6413"/>
       </svg>
       <div>
         <div class="brand__name">Атмосфера</div>
@@ -497,7 +496,7 @@
     <section class="panel" id="panel-dealers">
       <div class="section-head">
         <h2>Ведущие</h2>
-        <p id="de-sub">Игры дилеров за месяц</p>
+        <p id="de-sub">Игры ведущих</p>
       </div>
       <div id="de-content"></div>
       <div id="de-state"></div>
@@ -1026,7 +1025,7 @@
   }
 
   function renderDealers(d) {
-    document.getElementById("de-sub").textContent = "Игры дилеров за " + (d.month || "этот месяц");
+    document.getElementById("de-sub").textContent = "Игры ведущих";
     var h = '';
 
     h += '<div class="block"><h3>Игр за месяц</h3>';
