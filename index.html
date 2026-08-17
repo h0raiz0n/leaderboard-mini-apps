@@ -1102,19 +1102,51 @@
 
   // Один запрос bundle при старте: кэшируем все вкладки сразу,
   // чтобы переключение между ними было мгновенным.
-  function loadBundle(onDone) {
-    document.getElementById("lb-list").innerHTML = skeletons(7);
+  // Дополнительно сохраняем bundle в localStorage — при повторном открытии
+  // Mini App рендерится мгновенно, а свежие данные подгружаются фоном.
+  var LS_KEY = "atmos_bundle_v1";
+  var LS_TTL = 300000; // 5 минут
+
+  function applyBundle(b) {
+    if (!b) return;
+    if (b.current) setCached("lb-cur", b.current);
+    if (b.all) setCached("lb-all", b.all);
+    if (b.hof) setCached("hof", b.hof);
+    if (b.dealers) setCached("dealers", b.dealers);
+  }
+
+  function fetchBundle(onDone) {
     getJson("bundle", "", function (b) {
       if (b) {
-        if (b.current) setCached("lb-cur", b.current);
-        if (b.all) setCached("lb-all", b.all);
-        if (b.hof) setCached("hof", b.hof);
-        if (b.dealers) setCached("dealers", b.dealers);
+        applyBundle(b);
+        try {
+          localStorage.setItem(LS_KEY, JSON.stringify({ ts: Date.now(), bundle: b }));
+        } catch (e) {}
       }
       if (onDone) onDone();
     }, function () {
       if (onDone) onDone();
     });
+  }
+
+  function loadBundle(onDone) {
+    var saved = null;
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        var obj = JSON.parse(raw);
+        if (obj && obj.bundle && obj.ts && Date.now() - obj.ts < LS_TTL) saved = obj.bundle;
+      }
+    } catch (e) {}
+
+    if (saved) {
+      applyBundle(saved);
+      if (onDone) onDone();
+      fetchBundle(onDone); // фоновая актуализация
+      return;
+    }
+    document.getElementById("lb-list").innerHTML = skeletons(7);
+    fetchBundle(onDone);
   }
 
   loadBundle(function () { loadLeaderboard(); });
