@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0b1830">
-<title>Атмосфера · Покер-клуб</title>
+<title>Атмосфера · Антикафе</title>
 <style>
   /* ==========================================================
      CHIP STACK — светлый нежно-голубой мир
@@ -105,19 +105,6 @@
     line-height: 1; color: var(--ink); text-transform: uppercase; font-weight: 600;
   }
   .brand__sub { font-size: 12px; color: var(--muted); letter-spacing: .04em; margin-top: 2px; }
-
-  .top-right { display: flex; align-items: center; gap: 6px; }
-
-  .chip-badge {
-    width: 26px; height: 26px; border-radius: 50%;
-    position: relative;
-    background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.5), rgba(0,0,0,.06) 55%, rgba(0,0,0,.12));
-    box-shadow: inset 0 0 0 3px rgba(0,0,0,.12), inset 0 0 0 6px rgba(255,255,255,.4);
-    display: inline-block;
-  }
-  .chip-badge--gold  { background-color: var(--chip-gold); }
-  .chip-badge--red   { background-color: var(--chip-red); }
-  .chip-badge--white { background-color: var(--chip-white); border: 1px solid var(--line-2); }
 
   /* ---------- Panels ---------- */
   main {
@@ -375,7 +362,7 @@
   .hof-place.pl2 { background: #cfd3da; }
   .hof-place.pl3 { background: #cf8b4b; }
   .hof-place.pl4 { background: var(--chip-blue); color: #fff; }
-  .hof-place.pl5 { background: var(--chip-white); color: var(--ink); border: 1px solid var(--line-2); }
+  .hof-place.pl5 { background: var(--chip-white); color: #1a2635; border: 1px solid var(--line-2); }
   .hof-name { font-weight: 700; font-size: 14px; color: var(--ink); }
   .hof-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 
@@ -404,7 +391,9 @@
   .heat-row { display: flex; align-items: center; gap: 3px; margin-bottom: 3px; }
   .heat-hd { color: var(--ink-2); font-size: 11.5px; width: 76px; min-width: 76px; flex: 0 0 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
   .heat-hd.lead { color: #e8b84b; }
-  .heat-dh { width: 20px; min-width: 20px; flex: 0 0 20px; text-align: center; font-family: var(--display); font-size: 12px; color: var(--muted); font-weight: 500; }
+  .heat-dh { width: 20px; min-width: 20px; flex: 0 0 20px; display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+  .heat-dh .d { font-family: var(--display); font-size: 12px; color: var(--muted); font-weight: 500; }
+  .heat-dh .w { font-size: 11px; color: var(--muted-2); font-weight: 600; }
   .heat-cell {
     width: 20px; min-width: 20px; flex: 0 0 20px; height: 26px; border-radius: 5px;
     display: flex; align-items: center; justify-content: center;
@@ -461,13 +450,8 @@
       </svg>
       <div>
         <div class="brand__name">Атмосфера</div>
-        <div class="brand__sub">Покер-клуб · лидерборд</div>
+        <div class="brand__sub">Антикафе · лидерборд</div>
       </div>
-    </div>
-    <div class="top-right">
-      <span class="chip-badge chip-badge--gold"></span>
-      <span class="chip-badge chip-badge--red"></span>
-      <span class="chip-badge chip-badge--white"></span>
     </div>
   </header>
 
@@ -594,11 +578,18 @@
 
   /* ---------- Utils ---------- */
   var MONTHS = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  var WDAYS = ["вс","пн","вт","ср","чт","пт","сб"];
 
   function formatDate(ds) {
     var d = new Date(ds + "T00:00:00");
     if (isNaN(d.getTime())) return ds || "";
     return d.getDate() + " " + MONTHS[d.getMonth()];
+  }
+
+  function weekdayOf(ds) {
+    var d = new Date(ds + "T00:00:00");
+    if (isNaN(d.getTime())) return "";
+    return WDAYS[d.getDay()];
   }
 
   function parseTrend(t) {
@@ -1067,7 +1058,9 @@
       }
       h += '<div class="heat-wrap"><div class="heat">';
       h += '<div class="heat-row"><div class="heat-hd"></div>';
-      for (var dc = 0; dc < dates.length; dc++) h += '<div class="heat-dh">' + esc(String(dates[dc]).slice(8)) + '</div>';
+      for (var dc = 0; dc < dates.length; dc++) {
+        h += '<div class="heat-dh"><span class="d">' + esc(String(dates[dc]).slice(8)) + '</span><span class="w">' + esc(weekdayOf(dates[dc])) + '</span></div>';
+      }
       h += '</div>';
       for (var di = 0; di < dealers.length; di++) {
         h += '<div class="heat-row"><div class="heat-hd' + (di === 0 ? " lead" : "") + '">' + esc(dealers[di]) + '</div>';
@@ -1078,7 +1071,7 @@
         h += '</div>';
       }
       h += '</div></div>';
-      h += '<div class="heat-note">Номер — день месяца. Цифра — количество игр за день.</div>';
+      h += '<div class="heat-note">Номер — день месяца, под ним день недели. Цифра — количество игр за день.</div>';
       h += '</div>';
     }
 
