@@ -544,10 +544,13 @@
   /* ---------- Client-side cache (ускорение вкладок) ---------- */
   var dataCache = {};
   var dataCacheTs = {};
-  var TTL = { lb: 30000, player: 120000, hof: 60000, dealers: 60000 };
+  var TTL = { lb: 30000, player: 300000, hof: 300000, dealers: 300000 };
   function getCached(key) {
     var c = dataCache[key];
-    if (c !== undefined && Date.now() - (dataCacheTs[key] || 0) < (TTL[key] || 60000)) return c;
+    if (c !== undefined) {
+      var cat = key.indexOf("-") > -1 ? key.split("-")[0] : key;
+      if (Date.now() - (dataCacheTs[key] || 0) < (TTL[cat] || 60000)) return c;
+    }
     return null;
   }
   function setCached(key, val) { dataCache[key] = val; dataCacheTs[key] = Date.now(); }
@@ -706,7 +709,7 @@
     if (cached) {
       LB = cached;
       renderLb(LB);
-      fetchLb(key, isAll, true);
+      if (Date.now() - (dataCacheTs[key] || 0) > 10000) fetchLb(key, isAll, true);
       return;
     }
     document.getElementById("lb-list").innerHTML = skeletons(7);
@@ -927,7 +930,7 @@
     if (cached) {
       document.getElementById("hof-state").innerHTML = "";
       renderHof(cached);
-      fetchHof(true);
+      if (Date.now() - (dataCacheTs["hof"] || 0) > 10000) fetchHof(true);
       return;
     }
     document.getElementById("hof-list").innerHTML = '<div>' + skeletons(6) + '</div>';
@@ -1012,7 +1015,7 @@
     if (cached) {
       document.getElementById("de-state").innerHTML = "";
       renderDealers(cached);
-      fetchDealers(true);
+      if (Date.now() - (dataCacheTs["dealers"] || 0) > 10000) fetchDealers(true);
       return;
     }
     document.getElementById("de-content").innerHTML = '<div>' + skeletons(4) + '</div>';
@@ -1096,7 +1099,25 @@
       Telegram.WebApp.setBackgroundColor("#0b1830");
     }
   } catch (e) {}
-  loadLeaderboard();
+
+  // Один запрос bundle при старте: кэшируем все вкладки сразу,
+  // чтобы переключение между ними было мгновенным.
+  function loadBundle(onDone) {
+    document.getElementById("lb-list").innerHTML = skeletons(7);
+    getJson("bundle", "", function (b) {
+      if (b) {
+        if (b.current) setCached("lb-cur", b.current);
+        if (b.all) setCached("lb-all", b.all);
+        if (b.hof) setCached("hof", b.hof);
+        if (b.dealers) setCached("dealers", b.dealers);
+      }
+      if (onDone) onDone();
+    }, function () {
+      if (onDone) onDone();
+    });
+  }
+
+  loadBundle(function () { loadLeaderboard(); });
 </script>
 </body>
 </html>
