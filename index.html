@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#072521">
-<title>Покер Клуб · Лидерборд</title>
+<meta name="theme-color" content="#062b29">
+<title>Атмосфера · Покер-клуб</title>
 <style>
   /* ==========================================================
      CHIP STACK — мир сукна и фишек
@@ -20,19 +20,19 @@
   }
 
   :root {
-    --felt-950: #041610;
-    --felt-900: #072521;
-    --felt-850: #0a2f29;
-    --felt-800: #103a33;
-    --felt-700: #17473e;
-    --felt-600: #1f5a4e;
-    --line: #1c453b;
-    --line-2: #2b5c50;
+    --felt-950: #041c1b;
+    --felt-900: #062b29;
+    --felt-850: #093a37;
+    --felt-800: #0e4a46;
+    --felt-700: #145b56;
+    --felt-600: #1c6f68;
+    --line: #13564f;
+    --line-2: #1e6f67;
 
-    --ink: #f3efe4;
-    --ink-2: #c9d8d0;
-    --muted: #97b3a8;
-    --muted-2: #64867a;
+    --ink: #eef4f2;
+    --ink-2: #c5dbd7;
+    --muted: #8fb6b0;
+    --muted-2: #5e8d86;
 
     --chip-white: #ece7da;
     --chip-red: #c2443c;
@@ -66,13 +66,13 @@
 
   body {
     margin: 0;
-    min-height: 100%;
+    height: 100%;
+    overflow: hidden;
     font-family: var(--ui);
     color: var(--ink);
     background:
       radial-gradient(130% 90% at 50% -10%, var(--felt-850) 0%, var(--felt-900) 46%, var(--felt-950) 78%),
       var(--felt-950);
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
   }
@@ -85,16 +85,16 @@
   ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
 
-  .app { max-width: 720px; margin: 0 auto; min-height: 100%; }
+  .app { max-width: 720px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
 
   /* ---------- Top bar ---------- */
   .topbar {
-    position: sticky; top: 0; z-index: 30;
-    height: var(--top-h);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px;
+    flex: 0 0 auto;
+    height: calc(var(--top-h) + env(safe-area-inset-top));
     padding-top: env(safe-area-inset-top);
-    background: rgba(7,37,33,.86);
+    display: flex; align-items: center; justify-content: space-between;
+    padding-left: 16px; padding-right: 16px;
+    background: rgba(6,43,41,.86);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);
   }
@@ -120,7 +120,12 @@
   .chip-badge--white { background-color: var(--chip-white); }
 
   /* ---------- Panels ---------- */
-  main { padding: 14px 14px calc(var(--tab-h) + env(safe-area-inset-bottom) + 18px); }
+  main {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 14px 20px;
+  }
   .panel { display: none; animation: panelIn .22s var(--ease); }
   .panel.active { display: block; }
   @keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -170,7 +175,7 @@
   .lb-row {
     display: flex; align-items: center; gap: 12px;
     padding: 10px 12px;
-    background: linear-gradient(180deg, rgba(23,71,62,.55), rgba(16,58,51,.5));
+    background: linear-gradient(180deg, rgba(20,91,86,.55), rgba(14,74,70,.5));
     border: 1px solid var(--line);
     border-radius: var(--r-md);
     cursor: pointer;
@@ -204,7 +209,9 @@
 
   .pts-chip {
     display: flex; align-items: center; justify-content: center;
-    min-width: 46px; height: 30px; padding: 0 9px;
+    flex-shrink: 0;
+    min-width: 40px; height: 30px; padding: 0 11px;
+    white-space: nowrap;
     border-radius: 15px;
     font-family: var(--display); font-size: 17px; letter-spacing: .04em;
     color: var(--ink); font-variant-numeric: tabular-nums;
@@ -252,7 +259,7 @@
   .p-name { font-family: var(--display); font-size: 34px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink); line-height: 1; }
 
   .block {
-    background: linear-gradient(180deg, rgba(23,71,62,.5), rgba(16,58,51,.42));
+    background: linear-gradient(180deg, rgba(20,91,86,.5), rgba(14,74,70,.42));
     border: 1px solid var(--line); border-radius: var(--r-lg);
     padding: 14px; margin-bottom: 14px;
   }
@@ -264,6 +271,14 @@
   .block h3 .n { color: var(--muted-2); font-size: 12px; letter-spacing: .04em; }
 
   .p-hero { display: flex; align-items: center; gap: 16px; }
+  .p-hero--alltime {
+    border: 1px solid var(--gold-deep);
+    background: rgba(232,184,75,.08);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .p-rank-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .p-pos { font-family: var(--display); font-size: 64px; line-height: .9; letter-spacing: .01em; color: var(--chip-gold); font-variant-numeric: tabular-nums; }
   .p-pos small { font-size: 22px; color: var(--muted); letter-spacing: .05em; margin-right: 4px; }
   .p-hero-meta { display: flex; flex-direction: column; gap: 7px; }
@@ -302,14 +317,6 @@
   }
   .bar .bl { font-family: var(--display); font-size: 13px; color: var(--muted); letter-spacing: .04em; }
 
-  .pct { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-  .pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(0,0,0,.2); border: 1px solid var(--line-2);
-    border-radius: 999px; padding: 6px 10px; font-size: 11.5px; color: var(--ink-2); font-weight: 600;
-  }
-  .pill b { color: var(--chip-gold); font-variant-numeric: tabular-nums; }
-
   /* history */
   .arch-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px dashed var(--line); }
   .arch-row:last-child { border-bottom: 0; }
@@ -328,8 +335,8 @@
 
   /* ---------- Podium ---------- */
   .podium { display: flex; align-items: flex-end; gap: 10px; margin: 6px 2px 14px; height: 108px; }
-  .pod { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
-  .pod .pn { font-family: var(--display); font-size: 15px; letter-spacing: .02em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pod { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; }
+  .pod .pn { font-family: var(--display); font-size: 15px; letter-spacing: .02em; width: 100%; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
   .pod .pb {
     width: 100%; max-width: 74px; border-radius: 10px 10px 4px 4px;
     display: flex; align-items: flex-start; justify-content: center; padding-top: 6px;
@@ -339,7 +346,7 @@
   .pod.gold .pb { background: linear-gradient(180deg,#f3cd6b,#d8a83a); }
   .pod.silver .pb { background: linear-gradient(180deg,#e2e5ea,#b9bfc9); }
   .pod.bronze .pb { background: linear-gradient(180deg,#e0a469,#bd7c3c); }
-  .pod.other .pb { background: linear-gradient(180deg,#2c5c50,#1f4a40); }
+  .pod.other .pb { background: linear-gradient(180deg,#1c6f68,#145b56); }
 
   .hof-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px dashed var(--line); }
   .hof-row:last-child { border-bottom: 0; }
@@ -361,12 +368,21 @@
     font-family: var(--display); font-size: 14px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--muted); margin: 18px 0 8px; display: flex; align-items: center; gap: 8px;
   }
+  .day-head .day-dealer { color: var(--chip-gold); letter-spacing: .04em; }
   .day-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
   /* ---------- Dealers ---------- */
   .dealer-total { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
   .dealer-total:last-child { border-bottom: 0; }
-  .dealer-total b { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dealer-total .d-rank {
+    width: 24px; flex-shrink: 0; text-align: center;
+    font-family: var(--display); font-size: 17px; color: var(--muted-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .dealer-total .d-rank.lead { color: var(--chip-gold); font-size: 20px; }
+  .dealer-total .d-name { color: var(--ink); }
+  .dealer-total .d-name.lead { color: var(--chip-gold); font-weight: 700; }
+  .dealer-total b { margin-left: auto; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
   .heat-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; margin-top: 12px; }
   .heat { min-width: max-content; display: grid; gap: 3px; }
@@ -374,20 +390,19 @@
   .heat-cell {
     width: 34px; min-width: 34px; height: 28px; border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
-    font-family: var(--display); font-size: 13px; color: rgba(0,0,0,.0);
+    font-family: var(--display); font-size: 13px; color: var(--accent-ink);
     font-variant-numeric: tabular-nums;
   }
-  .heat-cell.has { color: var(--accent-ink); }
+  .heat-cell.zero { background: rgba(255,255,255,.05); color: transparent; }
   .heat-hd { color: var(--muted); font-size: 11px; width: 40px; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .heat-hd.lead { color: var(--chip-gold); }
-  .legend { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
-  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+  .heat-note { font-size: 11px; color: var(--muted); margin-top: 8px; }
 
   /* ---------- Bottom tab bar ---------- */
   .tabbar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    flex: 0 0 auto;
     display: flex;
-    background: rgba(5,22,16,.92);
+    background: rgba(4,28,27,.92);
     backdrop-filter: blur(12px);
     border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom);
@@ -410,7 +425,7 @@
 <!--
   IMPECCABLE DIRECTION · seed 127fdba0 · chip-stack/felt
   THESIS: Живой табло покер-клуба, где очки — фишки, а фон — сукно.
-  OWN-WORLD: глубокое зелёное сукно, тёплая бумажная краска, акценты номиналов фишек (золото/красный/синий/чёрный/фиолет), единственное золото — у лидера; гигантские конденсированные цифры; видимая волосяная сетка.
+  OWN-WORLD: глубокое бирюзовое сукно (цвет интерьера клуба), тёплая бумажная краска, акценты номиналов фишек (золото/красный/синий/чёрный/фиолет), единственное золото — у лидера; гигантские конденсированные цифры; видимая волосяная сетка.
   STORY: Игрок открывает приложение после игры и мгновенно видит своё место и очки, разложенные на сукне как фишки на столе.
   FIRST VIEWPORT: волосяная шапка с вордмарком, гигантские цифры топ-3, строка = фишка позиции + имя + фишка-очки + тренд; сегмент «Месяц/Всё время».
   FORM: Operate-лидерборд; направление chip-stack.
@@ -426,11 +441,11 @@
         <circle cx="16" cy="11" r="4.6" fill="none" stroke="#3a0f0c" stroke-width="1" opacity=".5"/>
         <circle cx="16" cy="25" r="7.4" fill="#ece7da" stroke="#241b05" stroke-width="1.6"/>
         <circle cx="16" cy="25" r="4.6" fill="none" stroke="#241b05" stroke-width="1" opacity=".45"/>
-        <path d="M16 3.6L18 8.2h-4z" fill="#072521"/>
+        <path d="M16 3.6L18 8.2h-4z" fill="#062b29"/>
       </svg>
       <div>
-        <div class="brand__name">Покер Клуб</div>
-        <div class="brand__sub" id="subtitle">Лидерборд · текущий месяц</div>
+        <div class="brand__name">Атмосфера</div>
+        <div class="brand__sub">Покер-клуб · лидерборд</div>
       </div>
     </div>
     <div class="top-right">
@@ -705,7 +720,7 @@
     }, function (err) {
       document.getElementById("pl-content").innerHTML = stateHtml("Ошибка", "Не удалось загрузить карточку.", true);
     });
-    window.scrollTo(0, 0);
+    document.getElementById("view").scrollTop = 0;
   }
 
   function goBackToLb() { loadLeaderboard(); }
@@ -752,6 +767,12 @@
     h += '<div class="block"><h3>За всё время</h3>';
     if (c.allTime) {
       var at = c.allTime;
+      if (at.position) {
+        h += '<div class="p-hero p-hero--alltime">'
+          + '<div class="p-pos"><small>#</small>' + at.position + '</div>'
+          + '<div class="p-hero-meta"><span class="p-rank-label">место за всё время</span></div>'
+          + '</div>';
+      }
       h += '<div class="grid">'
         + '<div class="tile"><div class="tl">Игр</div><div class="tv">' + at.games + '</div></div>'
         + '<div class="tile gold"><div class="tl">Очки</div><div class="tv">' + at.totalPoints + '</div></div>'
@@ -770,12 +791,6 @@
         h += '<div class="bar"><div class="bv">' + pls[b].v + '</div><div class="b" style="height:' + hgt + '%;background:' + pls[b].c + '"></div><div class="bl">' + pls[b].n + '</div></div>';
       }
       h += '</div>';
-
-      h += '<div class="pct">'
-        + '<span class="pill">Очки: топ-<b>' + (c.percentiles.points === undefined ? "—" : c.percentiles.points) + '%</b></span>'
-        + '<span class="pill">ITM: топ-<b>' + (c.percentiles.itm === undefined ? "—" : c.percentiles.itm) + '%</b></span>'
-        + '<span class="pill">Нокауты: топ-<b>' + (c.percentiles.knockouts === undefined ? "—" : c.percentiles.knockouts) + '%</b></span>'
-        + '</div>';
 
       if (c.mtt) {
         var ph = "";
@@ -834,7 +849,15 @@
     var html = "";
     order.forEach(function (d) {
       var rows = list.filter(function (it) { return (it.date || "") === d; });
-      html += '<div class="day-head">' + esc(formatDate(d)) + '</div>';
+
+      var dealers = {};
+      rows.forEach(function (it) { if (it.dealer) dealers[String(it.dealer).trim()] = true; });
+      var dealerNames = Object.keys(dealers);
+      var dealerLine = dealerNames.length === 1
+        ? ' <span class="day-dealer">· ведущий ' + esc(dealerNames[0]) + '</span>'
+        : "";
+
+      html += '<div class="day-head">' + esc(formatDate(d)) + dealerLine + '</div>';
 
       var pod = [];
       for (var p = 1; p <= 3; p++) {
@@ -862,7 +885,7 @@
         html += '<div class="hof-row">'
           + medalChip(Number(it.place) || 1)
           + '<div><div class="hof-name">' + esc(it.player) + '</div>'
-          + '<div class="hof-sub">' + esc(it.format) + ' · ведущий ' + esc(it.dealer || "—") + ' · ' + esc(it.points) + ' очков</div></div>'
+          + '<div class="hof-sub">' + esc(it.format) + ' · ' + esc(it.points) + ' очков</div></div>'
           + '</div>';
       }
     });
@@ -892,24 +915,25 @@
     if (!sorted.length) {
       h += '<p class="state" style="padding:12px">Игр за месяц пока не было</p>';
     } else {
-      var top = sorted[0].games;
       for (var i = 0; i < sorted.length; i++) {
         var x = sorted[i];
-        var isLead = x.games === top && top > 0;
-        h += '<div class="dealer-total"><span class="rank-chip' + (isLead ? " r-legend" : "") + '" style="width:10px;height:10px"></span><span' + (isLead ? ' style="color:var(--chip-gold);font-weight:700"' : "") + '>' + esc(x.dealer) + '</span><b>' + x.games + ' игр</b></div>';
+        var isLead = i === 0 && x.games > 0;
+        h += '<div class="dealer-total"><span class="d-rank' + (isLead ? " lead" : "") + '">' + (i + 1) + '</span>'
+          + '<span class="d-name' + (isLead ? " lead" : "") + '">' + esc(x.dealer) + '</span>'
+          + '<b>' + x.games + ' игр</b></div>';
       }
     }
     h += '</div>';
 
     var dealers = d.dealers || [], dates = d.dates || [], matrix = d.matrix || [];
     if (dealers.length && dates.length) {
-      h += '<div class="block"><h3>Тепловая карта</h3>';
+      h += '<div class="block"><h3>Игры по дням</h3>';
       var max = 1;
       matrix.forEach(function (row) { row.forEach(function (v) { if (v > max) max = v; }); });
       function heatColor(v) {
-        if (!v) return "rgba(255,255,255,.045)";
+        if (!v) return "rgba(255,255,255,.05)";
         var t = v / max;
-        if (t < 0.34) return "rgba(232,184,75,.28)";
+        if (t < 0.34) return "rgba(232,184,75,.3)";
         if (t < 0.67) return "rgba(232,184,75,.6)";
         return "#e8b84b";
       }
@@ -921,12 +945,12 @@
         h += '<div class="heat-row"><div class="heat-hd">' + esc(String(dates[di]).slice(5)) + '</div>';
         for (var r2 = 0; r2 < matrix.length; r2++) {
           var v = matrix[r2][di] || 0;
-          h += '<div class="heat-cell' + (v ? " has" : "") + '" style="background:' + heatColor(v) + '">' + (v || "") + '</div>';
+          h += '<div class="heat-cell' + (v ? "" : " zero") + '" style="background:' + heatColor(v) + '">' + (v || "") + '</div>';
         }
         h += '</div>';
       }
       h += '</div></div>';
-      h += '<div class="legend"><i style="background:rgba(255,255,255,.05)"></i> нет<i style="background:rgba(232,184,75,.28)"></i> мало<i style="background:rgba(232,184,75,.6)"></i> средне<i style="background:#e8b84b"></i> много</div>';
+      h += '<div class="heat-note">Цифра — количество игр за день. Золото — больше игр.</div>';
       h += '</div>';
     }
 
