@@ -1048,17 +1048,35 @@
         + '</div></div>';
     }
 
-    // Цель (прогноз подъёма по текущему месяцу)
+    // Цель (значимые рубежи: топ-9, топ-3, 1-е место)
     if (c.goal) {
       var gl = c.goal;
       var goalHtml = '';
       if (gl.isLeader) {
         goalHtml += '<p class="goal-line">Вы лидируете в этом месяце 🥇</p>';
       } else {
-        if (gl.nearest) goalHtml += '<p class="goal-line">До игрока выше (<b>' + esc(gl.nearest.name) + '</b>) не хватает <b>' + gl.nearest.gap + '</b> очк.</p>';
-        goalHtml += '<p class="goal-line">До 1-го места не хватает <b>' + gl.gapToTop + '</b> очков.</p>';
+        var glList = [];
+        for (var gi = 0; gi < (gl.milestones || []).length; gi++) {
+          var mk = gl.milestones[gi];
+          if (mk.in) continue;
+          var label = mk.pos === 1 ? '1-го места' : ('топ-' + mk.pos);
+          var txt;
+          if (mk.gap !== null && mk.gap <= 0) {
+            txt = 'Вы в шаге от ' + label + ' — равны по очкам';
+          } else {
+            txt = 'До ' + label + ' не хватает <b>' + (mk.gap == null ? '—' : mk.gap) + '</b> очк.';
+          }
+          if (mk.minWin) {
+            var w;
+            if (mk.minWin === 10) w = 'хватит победы SnG (+10)';
+            else if (mk.minWin === 20) w = 'хватит двух побед (+20)';
+            else w = 'хватит MTT-победы (+30)';
+            txt += ' — ' + w;
+          }
+          glList.push('<p class="goal-line">' + txt + '</p>');
+        }
+        goalHtml += glList.join('');
       }
-      goalHtml += '<p class="goal-line">При победе: SnG (+10) → место <b>' + gl.onWin[0].pos + '</b> · две SnG (+20) → место <b>' + gl.onWin[1].pos + '</b> · MTT (+30) → место <b>' + gl.onWin[2].pos + '</b>.</p>';
       goalHtml += '<p class="goal-note">Прикидка при неизменных очках остальных игроков.</p>';
       h += '<div class="block"><h3>Цель · месяц</h3>' + goalHtml + '</div>';
     }
