@@ -373,6 +373,19 @@
   .bar .bl { font-family: var(--display); font-size: 13px; color: var(--muted); letter-spacing: .03em; font-weight: 500; }
   .block--mtt { border-color: var(--gold-deep); }
 
+  /* achievements progress + goal */
+  .ach { display: flex; flex-direction: column; gap: 12px; }
+  .ach-row { display: flex; flex-direction: column; gap: 5px; }
+  .ach-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .ach-top .n { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); }
+  .ach-track { height: 6px; background: rgba(128,128,128,.18); border-radius: 4px; overflow: hidden; }
+  .ach-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg,#d8a83a,#f0c96a); }
+  .ach-hint { font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .goal-line { margin: 0 0 7px; font-size: 13px; line-height: 1.5; color: var(--ink); }
+  .goal-line b { color: #e8b84b; font-variant-numeric: tabular-nums; }
+  .goal-note { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
+
+
   /* history */
   .arch-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px dashed var(--line); }
   .arch-row:last-child { border-bottom: 0; }
@@ -646,11 +659,6 @@
         <div class="faq-sec">
           <h3>Подиум и MTT</h3>
           <p>Вкладка «Подиум» — призовые места 1–5 в MTT. В карточке игрока есть «MTT-подиум» — все места 1–5 в MTT за всё время.</p>
-        </div>
-
-        <div class="faq-sec">
-          <h3>Топ-N%</h3>
-          <p>В карточке игрока «топ-N%» — доля игроков с более высоким показателем (очки, ITM, нокауты). Топ-1% — лучший показатель.</p>
         </div>
 
       </div>
@@ -1014,6 +1022,47 @@
       h += '<p class="state" style="padding:12px">Нет игр за месяц</p>';
     }
     h += '</div>';
+
+    // Достижения месяца (прогресс)
+    if (c.month && c.month.meta) {
+      var mt = c.month.meta;
+      var rankFill = mt.rank.next ? Math.min(100, Math.round((mt.itm / mt.rank.next.itm) * 100)) : 100;
+      var rankHint = mt.rank.next ? ('до ' + mt.rank.next.name + ' осталось ' + mt.rank.next.need + ' ITM') : 'максимальный ранг';
+      var stackFill = mt.stack.need > 0 ? Math.min(100, Math.round((mt.stack.itm / mt.stack.nextItm) * 100)) : 100;
+      var stackHint = mt.stack.need > 0 ? ('до уровня ' + (mt.stack.level + 1) + ' осталось ' + mt.stack.need + ' ITM') : 'все уровни стека достигнуты';
+      var setParts = [];
+      if (mt.set.needG > 0) setParts.push('🥇' + mt.set.needG);
+      if (mt.set.needS > 0) setParts.push('🥈' + mt.set.needS);
+      if (mt.set.needB > 0) setParts.push('🥉' + mt.set.needB);
+      var setHint = setParts.length ? ('до следующего сета не хватает: ' + setParts.join(' ')) : ('набран ' + mt.set.sets + ' комплект(а)');
+      h += '<div class="block"><h3>Достижения · месяц</h3><div class="ach">'
+        + '<div class="ach-row"><div class="ach-top"><span>' + esc(mt.rank.label) + '</span><span class="n">' + mt.itm + ' ITM</span></div>'
+        + '<div class="ach-track"><div class="ach-fill" style="width:' + rankFill + '%"></div></div>'
+        + '<div class="ach-hint">' + esc(rankHint) + '</div></div>'
+        + '<div class="ach-row"><div class="ach-top"><span>💎 Stack · уровень ' + mt.stack.level + '</span><span class="n">' + mt.stack.itm + '/' + mt.stack.nextItm + '</span></div>'
+        + '<div class="ach-track"><div class="ach-fill" style="width:' + stackFill + '%"></div></div>'
+        + '<div class="ach-hint">' + esc(stackHint) + '</div></div>'
+        + '<div class="ach-row"><div class="ach-top"><span>♠ Set · ' + mt.set.sets + ' наб.</span><span class="n">🥇' + mt.set.gold + ' 🥈' + mt.set.silver + ' 🥉' + mt.set.bronze + '</span></div>'
+        + '<div class="ach-hint">' + esc(setHint) + '</div></div>'
+        + '<div class="ach-row"><div class="ach-top"><span>⚡ Double · ' + mt.dbl.count + ' пар</span></div>'
+        + '<div class="ach-hint">' + esc(mt.dbl.hint) + '</div></div>'
+        + '</div></div>';
+    }
+
+    // Цель (прогноз подъёма по текущему месяцу)
+    if (c.goal) {
+      var gl = c.goal;
+      var goalHtml = '';
+      if (gl.isLeader) {
+        goalHtml += '<p class="goal-line">Вы лидируете в этом месяце 🥇</p>';
+      } else {
+        if (gl.nearest) goalHtml += '<p class="goal-line">До игрока выше (<b>' + esc(gl.nearest.name) + '</b>) не хватает <b>' + gl.nearest.gap + '</b> очк.</p>';
+        goalHtml += '<p class="goal-line">До 1-го места не хватает <b>' + gl.gapToTop + '</b> очков.</p>';
+      }
+      goalHtml += '<p class="goal-line">При победе: SnG (+10) → место <b>' + gl.onWin[0].pos + '</b> · две SnG (+20) → место <b>' + gl.onWin[1].pos + '</b> · MTT (+30) → место <b>' + gl.onWin[2].pos + '</b>.</p>';
+      goalHtml += '<p class="goal-note">Прикидка при неизменных очках остальных игроков.</p>';
+      h += '<div class="block"><h3>Цель · месяц</h3>' + goalHtml + '</div>';
+    }
 
     h += '<div class="block"><h3>За всё время</h3>';
     if (c.allTime) {
