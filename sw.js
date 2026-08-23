@@ -1,7 +1,7 @@
 /* Service Worker для мини-приложения «Атмосфера».
    Кэширует HTML, шрифт и данные API — повторные открытия мгновенны.
    При обновлении index.html — меняйте версию CACHE. */
-const CACHE = 'atmos-v7';
+const CACHE = 'atmos-v8';
 const API_PREFIX = 'https://script.google.com/macros/s/';
 const API_TTL = 120000; // 2 минуты
 
@@ -22,6 +22,10 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   var url = req.url;
   if (url.indexOf(API_PREFIX) === 0) {
+    if (url.indexOf('_t=') > -1) {
+      e.respondWith(refreshApi(req, null));
+      return;
+    }
     e.respondWith(cachedApi(req));
     return;
   }
@@ -59,7 +63,7 @@ async function cachedApi(req) {
 async function refreshApi(req, cache) {
   try {
     var res = await fetch(req);
-    if (res && res.ok) {
+    if (res && res.ok && cache) {
       var copy = res.clone();
       var headers = new Headers(copy.headers);
       headers.set('x-fetched-at', String(Date.now()));
@@ -71,10 +75,11 @@ async function refreshApi(req, cache) {
     }
     return res;
   } catch (err) {
-    var hit = await cache.match(req);
+    var hit = cache ? await cache.match(req) : null;
     return hit || new Response(JSON.stringify({ success: false, error: 'offline' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 }
+

@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0b1830">
 <title>Атмосфера · Антикафе</title>
 <link rel="preconnect" href="https://script.google.com">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   /* ==========================================================
      CHIP STACK — светлый нежно-голубой мир
@@ -106,6 +107,57 @@
     line-height: 1; color: var(--ink); text-transform: uppercase; font-weight: 600;
   }
   .brand__sub { font-size: 12px; color: var(--muted); letter-spacing: .04em; margin-top: 2px; }
+
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+  .help-btn {
+    appearance: none; border: 1px solid var(--line); background: rgba(0,0,0,.25);
+    color: var(--muted); border-radius: 50%; width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: background .16s var(--ease), color .16s var(--ease), transform .16s var(--ease), border-color .16s var(--ease);
+  }
+  .help-btn svg { width: 17px; height: 17px; }
+  .help-btn:hover { color: var(--ink); border-color: var(--line-2); background: rgba(255,255,255,.06); }
+  .help-btn:active { transform: scale(.92); }
+  .help-btn.spin svg { animation: iconSpin 0.75s cubic-bezier(.4, 0, .2, 1) infinite; color: var(--chip-gold); }
+  @keyframes iconSpin { 100% { transform: rotate(360deg); } }
+
+  /* Подсветка "Вы / Моё место" */
+  .lb-row.is-me {
+    border-color: rgba(232,184,75,.45);
+    background: linear-gradient(90deg, rgba(232,184,75,.14) 0%, rgba(18,40,66,.9) 100%);
+    box-shadow: 0 0 12px rgba(232,184,75,.12);
+  }
+  .you-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--chip-gold);
+    color: var(--accent-ink);
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .my-rank-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, rgba(232,184,75,.18) 0%, rgba(20,44,72,.9) 100%);
+    border: 1px solid rgba(232,184,75,.4);
+    border-radius: var(--r-md);
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: transform .14s var(--ease), border-color .14s var(--ease);
+  }
+  .my-rank-banner:active { transform: scale(.98); }
+  .my-rank-left { display: flex; align-items: center; gap: 10px; }
+  .my-rank-pos { font-family: var(--display); font-size: 24px; color: var(--chip-gold); font-weight: 700; line-height: 1; }
+  .my-rank-info { display: flex; flex-direction: column; gap: 2px; }
+  .my-rank-name { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .my-rank-sub { font-size: 11.5px; color: var(--muted); }
+  .my-rank-pts { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--ink); }
 
   /* ---------- Panels ---------- */
   main {
@@ -520,9 +572,14 @@
         <div class="brand__sub">Антикафе · лидерборд</div>
       </div>
     </div>
-    <button class="help-btn" id="help-btn" type="button" aria-label="Правила и очки" title="Правила и очки">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.6-2.4 2.1-2.4 3.4"/><path d="M12 17.2h.01"/></svg>
-    </button>
+    <div class="topbar-actions">
+      <button class="help-btn" id="refresh-btn" type="button" aria-label="Обновить данные" title="Обновить данные">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+      </button>
+      <button class="help-btn" id="help-btn" type="button" aria-label="Правила и очки" title="Правила и очки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.6-2.4 2.1-2.4 3.4"/><path d="M12 17.2h.01"/></svg>
+      </button>
+    </div>
   </header>
 
   <main id="view">
@@ -827,6 +884,55 @@
     return (n >> 16) + "," + ((n >> 8) & 255) + "," + (n & 255);
   }
 
+  /* ---------- Telegram WebApp & Haptics ---------- */
+  function haptic(type) {
+    try {
+      if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+        if (type === "medium" || type === "heavy" || type === "rigid" || type === "soft") {
+          Telegram.WebApp.HapticFeedback.impactOccurred(type);
+        } else if (type === "success" || type === "warning" || type === "error") {
+          Telegram.WebApp.HapticFeedback.notificationOccurred(type);
+        } else {
+          Telegram.WebApp.HapticFeedback.impactOccurred("light");
+        }
+      }
+    } catch (e) {}
+  }
+
+  function updateBackButton(show) {
+    try {
+      if (window.Telegram && Telegram.WebApp && Telegram.WebApp.BackButton) {
+        if (show) Telegram.WebApp.BackButton.show();
+        else Telegram.WebApp.BackButton.hide();
+      }
+    } catch (e) {}
+  }
+
+  var CURRENT_USER = (function () {
+    try {
+      if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user) {
+        var u = Telegram.WebApp.initDataUnsafe.user;
+        return {
+          id: u.id,
+          username: (u.username || "").toLowerCase().trim(),
+          firstName: (u.first_name || "").toLowerCase().trim(),
+          lastName: (u.last_name || "").toLowerCase().trim(),
+          fullName: ((u.first_name || "") + " " + (u.last_name || "")).toLowerCase().trim()
+        };
+      }
+    } catch (e) {}
+    return null;
+  })();
+
+  function isCurrentUser(playerName) {
+    if (!CURRENT_USER || !playerName) return false;
+    var norm = String(playerName).toLowerCase().trim();
+    if (CURRENT_USER.username && (norm === CURRENT_USER.username || norm === "@" + CURRENT_USER.username)) return true;
+    if (CURRENT_USER.fullName && norm === CURRENT_USER.fullName) return true;
+    if (CURRENT_USER.firstName && norm === CURRENT_USER.firstName) return true;
+    return false;
+  }
+
   /* ---------- Tabs / navigation ---------- */
   var LB = [], CUR = "current";
 
@@ -836,15 +942,43 @@
     document.querySelectorAll(".tab").forEach(function (t) {
       t.classList.toggle("on", t.getAttribute("data-tab") === name);
     });
+    // Нативная кнопка Telegram "Назад" для подэкранов
+    updateBackButton(name === "player" || name === "faq");
   }
 
   document.querySelectorAll(".tab").forEach(function (t) {
-    t.addEventListener("click", function () { goTo(this.getAttribute("data-tab")); });
+    t.addEventListener("click", function () {
+      haptic("light");
+      goTo(this.getAttribute("data-tab"));
+    });
   });
 
   document.getElementById("help-btn").addEventListener("click", function () {
+    haptic("light");
     showPanel("faq");
   });
+
+  var refreshBtn = document.getElementById("refresh-btn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", function () {
+      forceRefresh();
+    });
+  }
+
+  var isRefreshing = false;
+  function forceRefresh() {
+    if (isRefreshing) return;
+    isRefreshing = true;
+    haptic("medium");
+    if (refreshBtn) refreshBtn.classList.add("spin");
+
+    fetchBundle(function () {
+      isRefreshing = false;
+      if (refreshBtn) refreshBtn.classList.remove("spin");
+      haptic("success");
+      loadLeaderboard();
+    }, true);
+  }
 
   function goTo(name) {
     if (name === "lb") { showPanel("lb"); loadLeaderboard(); }
@@ -854,6 +988,7 @@
 
   document.querySelectorAll(".seg button").forEach(function (b) {
     b.addEventListener("click", function () {
+      haptic("light");
       document.querySelectorAll(".seg button").forEach(function (x) { x.classList.remove("on"); x.setAttribute("aria-selected", "false"); });
       this.classList.add("on"); this.setAttribute("aria-selected", "true");
       CUR = this.getAttribute("data-per");
@@ -894,8 +1029,6 @@
 
   function fetchLb(key, isAll, isRefresh) {
     getJson(isAll ? "leaderboard" : "current", "", function (data) {
-      // Ответ мог прийти после переключения периода/вкладки — игнорируем устаревший,
-      // чтобы не перетереть актуальные данные пустым/чужим списком.
       if ((CUR === "all") !== isAll) return;
       LB = data || [];
       setCached(key, LB);
@@ -909,14 +1042,12 @@
     });
   }
 
-  function failLb() {}
-
   function stateHtml(title, text, retry) {
     return '<div class="state">'
       + '<svg class="emblem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v6M12 16h.01" stroke-linecap="round"/></svg>'
       + '<h3>' + esc(title) + '</h3>'
       + '<p>' + esc(text) + '</p>'
-      + (retry ? '<button class="btn btn--gold" onclick="location.reload()">Повторить</button>' : '')
+      + (retry ? '<button class="btn btn--gold" onclick="forceRefresh()">Повторить</button>' : '')
       + '</div>';
   }
 
@@ -925,6 +1056,9 @@
     var q = (searchEl.value || "").trim().toLowerCase();
     var html = "";
     var count = 0;
+    var myRowData = null;
+    var myRowIdx = -1;
+
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
       var name, rankText, trend;
@@ -938,16 +1072,38 @@
         rankText = '<span class="rank-chip ' + rank.cls + '"></span><span>' + esc(rank.label) + (rank.sub ? " " + esc(rank.sub) : "") + '</span>';
         trend = parseTrend(r[1]);
       }
-      if (!name || (q && name.toLowerCase().indexOf(q) === -1)) continue;
+      if (!name) continue;
+
+      var isMe = isCurrentUser(name);
+      var pts = isAll ? (Number(r.totalPoints) || 0) : (Number(r[3]) || 0);
+
+      if (isMe && !myRowData) {
+        myRowData = { pos: i + 1, name: name, points: pts, rankText: rankText };
+        myRowIdx = i;
+      }
+
+      if (q && name.toLowerCase().indexOf(q) === -1) continue;
       count++;
-      html += lbRow(i, name, isAll ? (Number(r.totalPoints) || 0) : (Number(r[3]) || 0), rankText, trend);
+      html += lbRow(i, name, pts, rankText, trend, isMe);
     }
-    document.getElementById("lb-list").innerHTML = html || (q
+
+    var bannerHtml = "";
+    if (myRowData && !q && myRowIdx > 3) {
+      bannerHtml = '<div class="my-rank-banner" onclick="openPlayer(' + myRowIdx + ')">'
+        + '<div class="my-rank-left">'
+        +   '<div class="my-rank-pos">#' + myRowData.pos + '</div>'
+        +   '<div class="my-rank-info"><div class="my-rank-name">' + esc(myRowData.name) + ' <span class="you-badge">ВЫ</span></div><div class="my-rank-sub">Ваша позиция в рейтинге</div></div>'
+        + '</div>'
+        + '<div class="my-rank-pts">' + myRowData.points + ' очк.</div>'
+        + '</div>';
+    }
+
+    document.getElementById("lb-list").innerHTML = (bannerHtml + html) || (q
       ? stateHtml("Никого нет", "По запросу «" + esc(q) + "» игроки не найдены.", false)
       : stateHtml("Пока пусто", "За этот период игр ещё не было.", false));
   }
 
-  function lbRow(i, name, points, rankText, trend) {
+  function lbRow(i, name, points, rankText, trend, isMe) {
     var pos = i + 1;
     var pCls = pos === 1 ? "p1" : (pos === 2 ? "p2" : (pos === 3 ? "p3" : ""));
     var trendIcon = I.trendSame;
@@ -955,10 +1111,12 @@
     else if (trend.dir === "down") trendIcon = I.trendDown;
     else if (trend.dir === "new") trendIcon = I.trendNew;
     var trendTxt = trend.val ? (trend.dir === "down" ? "-" + trend.val : "+" + trend.val) : "";
-    return '<div class="lb-row" onclick="openPlayer(' + i + ')">'
+    var youTag = isMe ? '<span class="you-badge">ВЫ</span>' : '';
+
+    return '<div class="lb-row' + (isMe ? " is-me" : "") + '" onclick="openPlayer(' + i + ')">'
       + '<div class="lb-pos ' + pCls + '">' + pos + '</div>'
       + '<div class="lb-main">'
-      +   '<div class="lb-name">' + esc(name) + '</div>'
+      +   '<div class="lb-name">' + esc(name) + youTag + '</div>'
       +   '<div class="lb-meta">' + rankText + '</div>'
       + '</div>'
       + '<div class="lb-right">'
@@ -970,6 +1128,7 @@
 
   /* ---------- Player card ---------- */
   function openPlayer(idx) {
+    haptic("light");
     if (!LB[idx]) return;
     var r = LB[idx];
     var name = r[2] !== undefined ? r[2] : (r.player || r.realName || "");
@@ -1341,13 +1500,17 @@
       Telegram.WebApp.expand();
       Telegram.WebApp.setHeaderColor("#0b1830");
       Telegram.WebApp.setBackgroundColor("#0b1830");
+      if (Telegram.WebApp.BackButton) {
+        Telegram.WebApp.BackButton.onClick(function () {
+          haptic("light");
+          goBackToLb();
+        });
+      }
     }
   } catch (e) {}
 
-  // Один запрос bundle при старте: кэшируем все вкладки сразу,
-  // чтобы переключение между ними было мгновенным.
-  // Дополнительно сохраняем bundle в localStorage — при повторном открытии
-  // Mini App рендерится мгновенно, а свежие данные подгружаются фоном.
+  // Бандл-кэширование в localStorage:
+  // При открытии Mini App рендерится мгновенно (0ms), а свежие данные подгружаются фоном.
   var LS_KEY = "atmos_bundle_v2";
   var LS_TTL = 300000; // 5 минут
 
@@ -1357,10 +1520,12 @@
     if (b.all) setCached("lb-all", b.all);
     if (b.hof) setCached("hof", b.hof);
     if (b.dealers) setCached("dealers", b.dealers);
+    dataCacheTs["bundle"] = Date.now();
   }
 
-  function fetchBundle(onDone) {
-    getJson("bundle", "", function (b) {
+  function fetchBundle(onDone, isForce) {
+    var extra = isForce ? ("&_t=" + Date.now()) : "";
+    getJson("bundle", extra, function (b) {
       if (b) {
         applyBundle(b);
         try {
@@ -1379,19 +1544,32 @@
       var raw = localStorage.getItem(LS_KEY);
       if (raw) {
         var obj = JSON.parse(raw);
-        if (obj && obj.bundle && obj.ts && Date.now() - obj.ts < LS_TTL) saved = obj.bundle;
+        if (obj && obj.bundle) saved = obj.bundle;
       }
     } catch (e) {}
 
+    // Stale-While-Revalidate: если есть любой сохранённый кэш — рендерим мгновенно
     if (saved) {
       applyBundle(saved);
       if (onDone) onDone();
-      fetchBundle(onDone); // фоновая актуализация
+      fetchBundle(onDone, false); // фоновая синхронизация
       return;
     }
+
+    // Первый вход без кэша — показываем скелетоны
     document.getElementById("lb-list").innerHTML = skeletons(7);
-    fetchBundle(onDone);
+    fetchBundle(onDone, false);
   }
+
+  // Фоновая актуализация при возвращении в Mini App
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      var lastTs = Number(dataCacheTs["bundle"] || 0);
+      if (Date.now() - lastTs > 60000) {
+        fetchBundle(function () { loadLeaderboard(); }, false);
+      }
+    }
+  });
 
   loadBundle(function () { loadLeaderboard(); });
 </script>
