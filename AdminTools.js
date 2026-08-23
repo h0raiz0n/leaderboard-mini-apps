@@ -172,14 +172,20 @@ function adminSaveGame(gameId, dateStr, dealer, playersObj, formatName) {
     }
   }
 
-  // Удаляем старые строки игры (снизу вверх) и пишем новые
-  for (var r2 = data.length - 1; r2 >= 1; r2--) {
-    if (String(data[r2][CONFIG.DB_COL.GAME_ID] || "").trim() === gameId) {
-      resultsSheet.deleteRow(r2 + 1);
+  // Перезаписываем строки DB_Results для gameId пакетно (в памяти)
+  var keptRows = [data[0]]; // заголовок
+  for (var r2 = 1; r2 < data.length; r2++) {
+    if (String(data[r2][CONFIG.DB_COL.GAME_ID] || "").trim() !== gameId) {
+      keptRows.push(data[r2]);
     }
   }
-  if (rows.length) {
-    resultsSheet.getRange(resultsSheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  for (var nr = 0; nr < rows.length; nr++) {
+    keptRows.push(rows[nr]);
+  }
+
+  resultsSheet.clearContents();
+  if (keptRows.length > 0) {
+    resultsSheet.getRange(1, 1, keptRows.length, keptRows[0].length).setValues(keptRows);
   }
 
   // Best-effort синхронизация сырого листа формы
@@ -209,11 +215,21 @@ function adminDeleteGame(gameId) {
 
   gameId = String(gameId).trim();
   var data = resultsSheet.getDataRange().getValues();
+  var keptRows = [data[0]]; // заголовок
   var deleted = 0;
-  for (var r = data.length - 1; r >= 1; r--) {
+
+  for (var r = 1; r < data.length; r++) {
     if (String(data[r][CONFIG.DB_COL.GAME_ID] || "").trim() === gameId) {
-      resultsSheet.deleteRow(r + 1);
       deleted++;
+    } else {
+      keptRows.push(data[r]);
+    }
+  }
+
+  if (deleted > 0) {
+    resultsSheet.clearContents();
+    if (keptRows.length > 0) {
+      resultsSheet.getRange(1, 1, keptRows.length, keptRows[0].length).setValues(keptRows);
     }
   }
 

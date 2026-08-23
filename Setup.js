@@ -79,8 +79,13 @@ function extractSpreadsheetId(urlOrId) {
 function showConfiguredSecrets() {
   var props = PropertiesService.getScriptProperties();
   var token = props.getProperty("TELEGRAM_BOT_TOKEN") || "";
-  var masked = token ? token.substring(0, 8) + "…" : "(не задан)";
-  Logger.log("TELEGRAM_BOT_TOKEN: " + masked);
+  var maskedToken = token ? token.substring(0, 8) + "…" : "(не задан)";
+  var adminKey = props.getProperty("ADMIN_KEY") || "";
+  var maskedAdminKey = adminKey ? adminKey.substring(0, 4) + "…" : "(не задан)";
+
+  Logger.log("TELEGRAM_BOT_TOKEN: " + maskedToken);
   Logger.log("TELEGRAM_CHAT_ID: " + (props.getProperty("TELEGRAM_CHAT_ID") || "(не задан)"));
   Logger.log("PUBLIC_SPREADSHEET_ID: " + (props.getProperty("PUBLIC_SPREADSHEET_ID") || "(не задан)"));
+  Logger.log("ADMIN_KEY: " + maskedAdminKey);
 }
+

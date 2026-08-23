@@ -128,16 +128,6 @@ function applyLeaderboardFormatting() {
   // ---------------------------------------------------------
   // 6. ШИРИНА КОЛОНОК И ВЫРАВНИВАНИЕ (для читаемости)
   // ---------------------------------------------------------
-  sheet.setColumnWidth(1, 40);   // позиция
-  sheet.setColumnWidth(2, 90);   // тренд
-  sheet.setColumnWidth(3, 160);  // ник
-  sheet.setColumnWidth(4, 70);   // очки
-  sheet.setColumnWidth(5, 120);  // ранг
-  sheet.setColumnWidth(6, 150);  // ITM stack
-  sheet.setColumnWidth(7, 160);  // full set
-  sheet.setColumnWidth(8, 120);  // бонусы
-  sheet.setColumnWidth(9, 300);  // детализация
-
   // Выравнивание текста по центру для числовых колонок
   sheet.getRange(2, 1, lastRow - 1, 1).setHorizontalAlignment("center");
   sheet.getRange(2, 2, lastRow - 1, 1).setHorizontalAlignment("center");

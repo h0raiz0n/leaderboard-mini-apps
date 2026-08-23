@@ -63,6 +63,7 @@ function reconcileRawToDb(commit) {
   }
 
   var result = { success: true, commit: !!commit, games: [], skippedRawRows: [], replacementCandidates: [] };
+  var rowsToAppend = [];
 
   for (var sheetKey in CONFIG.FORMATS) {
     var cfg = CONFIG.FORMATS[sheetKey];
@@ -162,7 +163,7 @@ function reconcileRawToDb(commit) {
         });
         if (commit) {
           for (var m = 0; m < missing.length; m++) {
-            resultsSheet.appendRow([
+            rowsToAppend.push([
               matchGame.gameId, row[1], fmtS2, dlrS2,
               missing[m].player, missing[m].event, missing[m].points, missing[m].isItm
             ]);
@@ -171,6 +172,10 @@ function reconcileRawToDb(commit) {
         }
       }
     }
+  }
+
+  if (commit && rowsToAppend.length > 0) {
+    resultsSheet.getRange(resultsSheet.getLastRow() + 1, 1, rowsToAppend.length, 8).setValues(rowsToAppend);
   }
 
   if (commit && result.games.length) {

@@ -685,7 +685,15 @@
 </div>
 
 <script>
-  var API = "https://script.google.com/macros/s/AKfycbwXrgT_FBDueyA4ap3gryOQQfxBqiv2GJL_H4Ejt3bQhOdZThoMW_j61T-C7Oq4ZTTseg/exec";
+  var DEFAULT_API = "https://script.google.com/macros/s/AKfycbwXrgT_FBDueyA4ap3gryOQQfxBqiv2GJL_H4Ejt3bQhOdZThoMW_j61T-C7Oq4ZTTseg/exec";
+  var API = (function() {
+    try {
+      if (window.location && window.location.hostname === "script.google.com" && window.location.pathname.indexOf("/exec") > -1) {
+        return window.location.href.split("?")[0].split("#")[0];
+      }
+    } catch (e) {}
+    return DEFAULT_API;
+  })();
 
   function esc(s) {
     if (s === null || s === undefined) return "";

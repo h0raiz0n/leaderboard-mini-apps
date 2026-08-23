@@ -93,6 +93,8 @@ function backfillHistoricalData() {
   var processed = 0;
   var chunk = CONFIG.BACKFILL_CHUNK || 100;
   var totalNew = 0;
+  var allDbRows = [];
+  var logRows = [];
 
   for (var sheetKey in CONFIG.FORMATS) {
     var cfg = CONFIG.FORMATS[sheetKey];
@@ -135,14 +137,16 @@ function backfillHistoricalData() {
       var rowsToInsert = buildDbRows(normalized, gameId, row[1]);
 
       if (rowsToInsert.length > 0) {
-        resultsSheet.getRange(resultsSheet.getLastRow() + 1, 1, rowsToInsert.length, 8).setValues(rowsToInsert);
+        for (var ri = 0; ri < rowsToInsert.length; ri++) {
+          allDbRows.push(rowsToInsert[ri]);
+        }
         totalNew += rowsToInsert.length;
         // жёстко отметить в существующих, чтобы в одной порции не было дублей при повторе
         existingIds[gameId] = true;
       }
 
       // Логируем в журнал (с детализацией состава мест/нокаутов)
-      logSheet.appendRow([
+      logRows.push([
         gameId, sheetKey, normalizeDate(row[1]), normalized.dealer, normalized.format,
         rowsToInsert.length > 0 ? "ADDED(" + rowsToInsert.length + ")" : "EMPTY/SKIPPED",
         formatGameLineup(rowsToInsert, sheetKey)
@@ -156,6 +160,14 @@ function backfillHistoricalData() {
     props.setProperty(cursorKey, String(cursor));
 
     if (processed >= chunk) break;
+  }
+
+  // Пакетная вставка новых строк в DB_Results и журнал
+  if (allDbRows.length > 0) {
+    resultsSheet.getRange(resultsSheet.getLastRow() + 1, 1, allDbRows.length, 8).setValues(allDbRows);
+  }
+  if (logRows.length > 0) {
+    logSheet.getRange(logSheet.getLastRow() + 1, 1, logRows.length, 7).setValues(logRows);
   }
 
   Logger.log("Backfill: обработано строк=" + processed + ", добавлено записей=" + totalNew);

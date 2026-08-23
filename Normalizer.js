@@ -202,12 +202,11 @@ function countDealerGamesToday(ss, deploymentSheet, dateStr, dealer, currentGame
   // --- Логирование входа для диагностики ---
   Logger.log("countDealerGamesToday: dateStr=" + dateStr + " | dealer=" + dealer + " | gameId=" + currentGameId);
 
-  // Надёжная «сегодняшняя» дата в таймзоне проекта (формат можно игнорировать).
-  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
-  if (!dateStr) dateStr = today;
-  // Ключевое исправление: для live-игры всегда считаем за СЕГОДНЯ,
-  // чтобы не зависеть от формата даты в форме.
-  dateStr = today;
+  // Нормализованная дата игры (с fallback на сегодня в таймзоне проекта)
+  var targetDate = normalizeDate(dateStr);
+  if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+    targetDate = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
 
   // 1. Уникальные игры (gameId) дилера за дату из DB_Results.
   //    DB_Results уже содержит текущую игру (пишем перед этим вызовом).
@@ -222,7 +221,7 @@ function countDealerGamesToday(ss, deploymentSheet, dateStr, dealer, currentGame
       var dbDealer = resultsData[r0][CONFIG.DB_COL.DEALER]
         ? String(resultsData[r0][CONFIG.DB_COL.DEALER]).trim() : "";
       var dbGid = resultsData[r0][CONFIG.DB_COL.GAME_ID];
-      if (dbDate === dateStr && dbDealer.toLowerCase() === lowDealer && dbGid) {
+      if (dbDate === targetDate && dbDealer.toLowerCase() === lowDealer && dbGid) {
         if (!seenFromDb[dbGid]) { seenFromDb[dbGid] = true; countFromDb++; }
       }
     }
@@ -239,7 +238,7 @@ function countDealerGamesToday(ss, deploymentSheet, dateStr, dealer, currentGame
     for (var r = 1; r < data.length; r++) {
       var rowDateStr = normalizeDate(data[r][1]);
       var rowDealer = data[r][DEALER_COL] ? String(data[r][DEALER_COL]).trim().toLowerCase() : "";
-      if (rowDateStr === dateStr && rowDealer === lowDealer) {
+      if (rowDateStr === targetDate && rowDealer === lowDealer) {
         countFromRaw++;
       }
     }

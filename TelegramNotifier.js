@@ -129,12 +129,28 @@ function sendTelegramMessage(messageText, keyboard) {
   }
 }
 
+/**
+ * Экранирование спецсимволов HTML для безопасной отправки в Telegram (parse_mode: HTML).
+ * @param {*} str
+ * @returns {string}
+ */
+function escapeTelegramHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function notifyGameResult(format, date, dealer, gameNumber, items) {
   var titleEmoji = format === "Mystery Bounty" ? "🎯" : (format === "MTT" ? "🏆" : "🃏");
-  
-  var text = titleEmoji + " <b>РЕЗУЛЬТАТЫ ИГРЫ [" + format.toUpperCase() + "]</b>\n";
-  text += "📅 <b>Дата:</b> " + date + "\n";
-  text += "🎩 <b>Ведущий:</b> " + dealer + " (" + gameNumber + "-я игра за сегодня)\n";
+  var safeFormat = escapeTelegramHtml(format);
+  var safeDealer = escapeTelegramHtml(dealer);
+  var safeDate = escapeTelegramHtml(date);
+
+  var text = titleEmoji + " <b>РЕЗУЛЬТАТЫ ИГРЫ [" + safeFormat.toUpperCase() + "]</b>\n";
+  text += "📅 <b>Дата:</b> " + safeDate + "\n";
+  text += "🎩 <b>Ведущий:</b> " + safeDealer + " (" + Number(gameNumber || 1) + "-я игра за сегодня)\n";
   text += "───────────────────────────\n";
 
   var placesText = "";
@@ -143,6 +159,7 @@ function notifyGameResult(format, date, dealer, gameNumber, items) {
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
     var placePrefix = "";
+    var safeNick = escapeTelegramHtml(item.playerNick);
 
     if (item.event === "1 место") placePrefix = "🥇 <b>1 место:</b> ";
     else if (item.event === "2 место") placePrefix = "🥈 <b>2 место:</b> ";
@@ -152,12 +169,12 @@ function notifyGameResult(format, date, dealer, gameNumber, items) {
 
     if (placePrefix !== "") {
       if (item.isParticipating) {
-        placesText += placePrefix + item.playerNick + " (+" + item.points + " очков)\n";
+        placesText += placePrefix + safeNick + " (+" + item.points + " очков)\n";
       } else {
         placesText += placePrefix + "<i>не участвует в лидерборде</i>\n";
       }
     } else if (item.event === "Нокаут" && item.isParticipating) {
-      koText += "  🎯 " + item.playerNick + " (+" + item.points + " очков KO)\n";
+      koText += "  🎯 " + safeNick + " (+" + item.points + " очков KO)\n";
     }
   }
 
