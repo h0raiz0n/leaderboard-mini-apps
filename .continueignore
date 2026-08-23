@@ -1,0 +1,5 @@
+node_modules/
+.git/
+.clasp.json
+package-lock.json
+*.log

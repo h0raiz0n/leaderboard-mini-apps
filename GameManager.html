@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root { --accent:#1f6feb; --danger:#d1242f; --ok:#2da44e; --border:#d0d7de; }
+    * { box-sizing:border-box; }
+    body { font-family:Roboto, Arial, sans-serif; margin:0; background:#fff; color:#1f2328; font-size:14px; }
+    .bar { display:flex; gap:8px; padding:10px; background:#24292f; color:#fff; align-items:center; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
+    .bar label { display:flex; align-items:center; gap:4px; font-size:12px; color:#c8d1d9; }
+    .bar input { padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-size:13px; width:120px; }
+    .bar input.wide { width:140px; }
+    button { padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:#f6f8fa; cursor:pointer; font-size:13px; }
+    button:hover { background:#eef1f4; }
+    button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    button.primary:hover { background:#1558c6; }
+    button.danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+    button.danger:hover { background:#a21d26; }
+    .count { margin-left:auto; font-size:12px; color:#c8d1d9; }
+    .list { padding:10px; }
+    .card { border:1px solid var(--border); border-radius:8px; margin-bottom:8px; padding:10px 12px; background:#fff; }
+    .card .head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .card .head .date { font-weight:600; }
+    .card .head .dealer { color:#57606a; }
+    .card .head .fmt { background:#eef1f4; border-radius:10px; padding:1px 8px; font-size:12px; color:#57606a; }
+    .card .head .gid { font-size:11px; color:#8c959f; word-break:break-all; }
+    .card .head .acts { margin-left:auto; display:flex; gap:6px; }
+    .card .rows { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px 12px; }
+    .chip { font-size:12px; padding:1px 6px; border-radius:6px; background:#f6f8fa; }
+    .chip.win { background:#fff8c5; }
+    .empty { color:#8c959f; padding:20px; text-align:center; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-start; justify-content:center; z-index:20; padding:30px 10px; overflow:auto; }
+    .modal { background:#fff; border-radius:10px; max-width:560px; width:100%; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
+    .modal h3 { margin:0 0 12px; }
+    .modal .field { margin-bottom:10px; }
+    .modal .field label { display:block; font-size:12px; color:#57606a; margin-bottom:3px; }
+    .modal .field input { width:100%; padding:7px 9px; border:1px solid var(--border); border-radius:6px; font-size:14px; }
+    .modal .row2 { display:flex; gap:8px; }
+    .modal .row2 > div { flex:1; }
+    .modal .acts { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+    .toast { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#1f2328; color:#fff; padding:9px 16px; border-radius:8px; font-size:13px; opacity:0; transition:opacity .25s; z-index:30; max-width:90%; }
+    .toast.show { opacity:1; }
+    .hint { font-size:12px; color:#57606a; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <label>Дата <input id="f-date" type="date" title="Оставить пустым — последние 30 дней"></label>
+    <label>Дилер <input id="f-dealer" class="wide" placeholder="Например: Влад"></label>
+    <label>Игрок <input id="f-q" class="wide" placeholder="Иван"></label>
+    <button class="primary" onclick="loadGames()">Найти</button>
+    <button onclick="openNew()">+ Новая игра</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="list" id="list"><div class="empty">Загрузка…</div></div>
+
+  <div class="modal-overlay" id="overlay">
+    <div class="modal">
+      <h3 id="m-title">Игра</h3>
+      <input type="hidden" id="m-gameId">
+      <div class="row2">
+        <div class="field"><label>Дата (ГГГГ-ММ-ДД)</label><input id="m-date"></div>
+        <div class="field"><label>Дилер</label><input id="m-dealer"></div>
+      </div>
+      <div class="field" id="m-fmt-field" style="display:none">
+        <label>Формат</label>
+        <select id="m-fmt" style="width:100%;padding:7px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;"></select>
+      </div>
+      <div id="m-places"></div>
+      <p class="hint" id="m-hint">Очки за места считаются автоматически по правилам. Пустые/«Not participating» — пропускаются.</p>
+      <div class="acts">
+        <button onclick="closeModal()">Отмена</button>
+        <button class="primary" onclick="save()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var G = { formats: [], games: [] };
+
+    function toast(msg) {
+      var t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(function () { t.classList.remove("show"); }, 2200);
+    }
+
+    function esc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function fmtBy(name) {
+      for (var i = 0; i < G.formats.length; i++) if (G.formats[i].formatName === name) return G.formats[i];
+      return null;
+    }
+
+    function loadGames() {
+      var opts = {
+        date: document.getElementById("f-date").value,
+        dealer: document.getElementById("f-dealer").value,
+        q: document.getElementById("f-q").value,
+        limit: 200
+      };
+      document.getElementById("list").innerHTML = '<div class="empty">Загрузка…</div>';
+      google.script.run
+        .withSuccessHandler(renderGames)
+        .withFailureHandler(function (e) { toast("Ошибка: " + e.message); })
+        .adminListGames(opts);
+    }
+
+    function renderGames(games) {
+      G.games = games || [];
+      var el = document.getElementById("list");
+      document.getElementById("count").textContent = G.games.length ? ("Игр: " + G.games.length) : "";
+      if (!G.games.length) { el.innerHTML = '<div class="empty">Игр не найдено. Задайте дату или другие фильтры.</div>'; return; }
+
+      var html = "";
+      for (var i = 0; i < G.games.length; i++) {
+        var g = G.games[i];
+        var chips = "";
+        for (var j = 0; j < g.rows.length; j++) {
+          var ev = g.rows[j].event;
+          var isWin = ev === "1 место";
+          chips += '<span class="chip' + (isWin ? " win" : "") + '">' + esc(ev) + ": " + esc(g.rows[j].player) + " (+" + g.rows[j].points + ")</span>";
+        }
+        html += '<div class="card">' +
+          '<div class="head">' +
+            '<span class="date">' + esc(g.date) + '</span>' +
+            '<span class="dealer">🎩 ' + esc(g.dealer) + '</span>' +
+            '<span class="fmt">' + esc(g.format) + '</span>' +
+            '<span class="gid">' + esc(g.gameId) + '</span>' +
+            '<span class="acts">' +
+              '<button onclick="openEdit(' + i + ')">Изменить</button>' +
+              '<button class="danger" onclick="doDelete(' + i + ')">Удалить</button>' +
+            '</span>' +
+          '</div>' +
+          '<div class="rows">' + chips + '</div>' +
+        '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function openModal(title) {
+      document.getElementById("m-title").textContent = title;
+      document.getElementById("overlay").style.display = "flex";
+    }
+    function closeModal() { document.getElementById("overlay").style.display = "none"; }
+
+    function fillFormatSelect(selectedName) {
+      var sel = document.getElementById("m-fmt");
+      sel.innerHTML = "";
+      for (var i = 0; i < G.formats.length; i++) {
+        var f = G.formats[i];
+        var o = document.createElement("option");
+        o.value = f.formatName;
+        o.textContent = f.formatName;
+        if (f.formatName === selectedName) o.selected = true;
+        sel.appendChild(o);
+      }
+    }
+
+    function buildPlaceFields(f) {
+      var cur = {};
+      var kos = [];
+      if (G.editRows) {
+        for (var i = 0; i < G.editRows.length; i++) {
+          var row = G.editRows[i];
+          if (row.event === "Нокаут") kos.push(row.player);
+          else cur[row.event] = row.player;
+        }
+      }
+      var html = "";
+      for (var p = 0; p < f.places.length; p++) {
+        html += '<div class="field"><label>' + esc(f.places[p].name) + ' (+' + f.places[p].pts + ' очков)</label>' +
+          '<input id="place_' + esc(f.places[p].name) + '" value="' + esc(cur[f.places[p].name] || "") + '" placeholder="Не участвует — пусто"></div>';
+      }
+      for (var k = 0; k < f.koCount; k++) {
+        html += '<div class="field"><label>Нокаут ' + (k + 1) + ' (+20 очков)</label>' +
+          '<input id="ko_' + k + '" value="' + esc(kos[k] || "") + '"></div>';
+      }
+      return html;
+    }
+
+    function openEdit(idx) {
+      var g = G.games[idx];
+      var f = fmtBy(g.format);
+      if (!f) { toast("Формат не найден: " + g.format); return; }
+      G.editGameId = g.gameId;
+      G.editRows = g.rows;
+      document.getElementById("m-gameId").value = g.gameId;
+      document.getElementById("m-date").value = g.date;
+      document.getElementById("m-dealer").value = g.dealer;
+      document.getElementById("m-fmt-field").style.display = "none";
+      document.getElementById("m-places").innerHTML = buildPlaceFields(f);
+      openModal("Изменение игры — " + g.date + " (" + g.format + ")");
+    }
+
+    function openNew() {
+      G.editGameId = "";
+      G.editRows = [];
+      document.getElementById("m-gameId").value = "";
+      var d = new Date();
+      document.getElementById("m-date").value = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      document.getElementById("m-dealer").value = "";
+      fillFormatSelect(G.formats.length ? G.formats[0].formatName : "");
+      document.getElementById("m-fmt-field").style.display = "block";
+      var f = fmtBy(document.getElementById("m-fmt").value);
+      document.getElementById("m-places").innerHTML = f ? buildPlaceFields(f) : "";
+      openModal("Новая игра");
+    }
+
+    document.getElementById("m-fmt").addEventListener("change", function () {
+      var f = fmtBy(this.value);
+      if (f) document.getElementById("m-places").innerHTML = buildPlaceFields(f);
+    });
+
+    function collectPlayers() {
+      var f = fmtBy(currentFormatName());
+      if (!f) return {};
+      var players = {};
+      for (var p = 0; p < f.places.length; p++) {
+        players[f.places[p].name] = document.getElementById("place_" + f.places[p].name).value;
+      }
+      players.ko = [];
+      for (var k = 0; k < f.koCount; k++) {
+        players.ko.push(document.getElementById("ko_" + k).value);
+      }
+      return players;
+    }
+
+    function currentFormatName() {
+      if (document.getElementById("m-fmt-field").style.display !== "none") return document.getElementById("m-fmt").value;
+      // существующая игра: формат из редактируемых строк
+      var gid = document.getElementById("m-gameId").value;
+      for (var i = 0; i < G.games.length; i++) {
+        if (G.games[i].gameId === gid) return G.games[i].format;
+      }
+      return "";
+    }
+
+    function save() {
+      var fmtName = currentFormatName();
+      var players = collectPlayers();
+      var data = {
+        gameId: document.getElementById("m-gameId").value,
+        date: document.getElementById("m-date").value.trim(),
+        dealer: document.getElementById("m-dealer").value.trim(),
+        formatName: fmtName,
+        players: players
+      };
+      if (!data.date || !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) { toast("Укажите дату в формате ГГГГ-ММ-ДД"); return; }
+      if (!data.dealer) { toast("Укажите дилера"); return; }
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.success) {
+            closeModal();
+            toast("Сохранено: " + res.rows + " строк" + (res.rawUpdated ? " (синхронизировано с формой)" : ""));
+            loadGames();
+          } else {
+            toast("Ошибка: " + (res && res.error ? res.error : "неизвестная"));
+          }
+        })
+        .withFailureHandler(function (e) { toast("Ошибка: " + e.message); })
+        .adminSaveGame(data.gameId, data.date, data.dealer, data.players, data.formatName);
+    }
+
+    function doDelete(idx) {
+      var g = G.games[idx];
+      if (!g) return;
+      var ok = confirm("Удалить игру " + g.date + " / " + g.dealer + " (" + g.gameId + ")?\nВсе строки этой игры будут удалены из лидерборда.");
+      if (!ok) return;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.success) {
+            toast("Удалено строк: " + res.deleted);
+            loadGames();
+          } else {
+            toast("Ошибка: " + (res && res.error ? res.error : "неизвестная"));
+          }
+        })
+        .withFailureHandler(function (e) { toast("Ошибка: " + e.message); })
+        .adminDeleteGame(g.gameId);
+    }
+
+    google.script.run
+      .withSuccessHandler(function (fmts) {
+        G.formats = fmts || [];
+        loadGames();
+      })
+      .withFailureHandler(function (e) { toast("Ошибка загрузки форматов: " + e.message); })
+      .adminGetFormats();
+  </script>
+</body>
+</html>
