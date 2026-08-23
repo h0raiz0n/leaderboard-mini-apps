@@ -121,44 +121,6 @@
   .help-btn.spin svg { animation: iconSpin 0.75s cubic-bezier(.4, 0, .2, 1) infinite; color: var(--chip-gold); }
   @keyframes iconSpin { 100% { transform: rotate(360deg); } }
 
-  /* Подсветка "Вы / Моё место" */
-  .lb-row.is-me {
-    border-color: rgba(232,184,75,.45);
-    background: linear-gradient(90deg, rgba(232,184,75,.14) 0%, rgba(18,40,66,.9) 100%);
-    box-shadow: 0 0 12px rgba(232,184,75,.12);
-  }
-  .you-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: var(--chip-gold);
-    color: var(--accent-ink);
-    margin-left: 6px;
-    vertical-align: middle;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-  }
-  .my-rank-banner {
-    display: flex; align-items: center; justify-content: space-between;
-    background: linear-gradient(135deg, rgba(232,184,75,.18) 0%, rgba(20,44,72,.9) 100%);
-    border: 1px solid rgba(232,184,75,.4);
-    border-radius: var(--r-md);
-    padding: 10px 14px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    transition: transform .14s var(--ease), border-color .14s var(--ease);
-  }
-  .my-rank-banner:active { transform: scale(.98); }
-  .my-rank-left { display: flex; align-items: center; gap: 10px; }
-  .my-rank-pos { font-family: var(--display); font-size: 24px; color: var(--chip-gold); font-weight: 700; line-height: 1; }
-  .my-rank-info { display: flex; flex-direction: column; gap: 2px; }
-  .my-rank-name { font-size: 13.5px; font-weight: 600; color: var(--ink); }
-  .my-rank-sub { font-size: 11.5px; color: var(--muted); }
-  .my-rank-pts { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--ink); }
-
   /* ---------- Panels ---------- */
   main {
     flex: 1 1 auto;
@@ -908,31 +870,6 @@
     } catch (e) {}
   }
 
-  var CURRENT_USER = (function () {
-    try {
-      if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user) {
-        var u = Telegram.WebApp.initDataUnsafe.user;
-        return {
-          id: u.id,
-          username: (u.username || "").toLowerCase().trim(),
-          firstName: (u.first_name || "").toLowerCase().trim(),
-          lastName: (u.last_name || "").toLowerCase().trim(),
-          fullName: ((u.first_name || "") + " " + (u.last_name || "")).toLowerCase().trim()
-        };
-      }
-    } catch (e) {}
-    return null;
-  })();
-
-  function isCurrentUser(playerName) {
-    if (!CURRENT_USER || !playerName) return false;
-    var norm = String(playerName).toLowerCase().trim();
-    if (CURRENT_USER.username && (norm === CURRENT_USER.username || norm === "@" + CURRENT_USER.username)) return true;
-    if (CURRENT_USER.fullName && norm === CURRENT_USER.fullName) return true;
-    if (CURRENT_USER.firstName && norm === CURRENT_USER.firstName) return true;
-    return false;
-  }
-
   /* ---------- Tabs / navigation ---------- */
   var LB = [], CUR = "current";
 
@@ -1056,8 +993,6 @@
     var q = (searchEl.value || "").trim().toLowerCase();
     var html = "";
     var count = 0;
-    var myRowData = null;
-    var myRowIdx = -1;
 
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
@@ -1072,38 +1007,19 @@
         rankText = '<span class="rank-chip ' + rank.cls + '"></span><span>' + esc(rank.label) + (rank.sub ? " " + esc(rank.sub) : "") + '</span>';
         trend = parseTrend(r[1]);
       }
-      if (!name) continue;
+      if (!name || (q && name.toLowerCase().indexOf(q) === -1)) continue;
 
-      var isMe = isCurrentUser(name);
       var pts = isAll ? (Number(r.totalPoints) || 0) : (Number(r[3]) || 0);
-
-      if (isMe && !myRowData) {
-        myRowData = { pos: i + 1, name: name, points: pts, rankText: rankText };
-        myRowIdx = i;
-      }
-
-      if (q && name.toLowerCase().indexOf(q) === -1) continue;
       count++;
-      html += lbRow(i, name, pts, rankText, trend, isMe);
+      html += lbRow(i, name, pts, rankText, trend);
     }
 
-    var bannerHtml = "";
-    if (myRowData && !q && myRowIdx > 3) {
-      bannerHtml = '<div class="my-rank-banner" onclick="openPlayer(' + myRowIdx + ')">'
-        + '<div class="my-rank-left">'
-        +   '<div class="my-rank-pos">#' + myRowData.pos + '</div>'
-        +   '<div class="my-rank-info"><div class="my-rank-name">' + esc(myRowData.name) + ' <span class="you-badge">ВЫ</span></div><div class="my-rank-sub">Ваша позиция в рейтинге</div></div>'
-        + '</div>'
-        + '<div class="my-rank-pts">' + myRowData.points + ' очк.</div>'
-        + '</div>';
-    }
-
-    document.getElementById("lb-list").innerHTML = (bannerHtml + html) || (q
+    document.getElementById("lb-list").innerHTML = html || (q
       ? stateHtml("Никого нет", "По запросу «" + esc(q) + "» игроки не найдены.", false)
       : stateHtml("Пока пусто", "За этот период игр ещё не было.", false));
   }
 
-  function lbRow(i, name, points, rankText, trend, isMe) {
+  function lbRow(i, name, points, rankText, trend) {
     var pos = i + 1;
     var pCls = pos === 1 ? "p1" : (pos === 2 ? "p2" : (pos === 3 ? "p3" : ""));
     var trendIcon = I.trendSame;
@@ -1111,12 +1027,11 @@
     else if (trend.dir === "down") trendIcon = I.trendDown;
     else if (trend.dir === "new") trendIcon = I.trendNew;
     var trendTxt = trend.val ? (trend.dir === "down" ? "-" + trend.val : "+" + trend.val) : "";
-    var youTag = isMe ? '<span class="you-badge">ВЫ</span>' : '';
 
-    return '<div class="lb-row' + (isMe ? " is-me" : "") + '" onclick="openPlayer(' + i + ')">'
+    return '<div class="lb-row" onclick="openPlayer(' + i + ')">'
       + '<div class="lb-pos ' + pCls + '">' + pos + '</div>'
       + '<div class="lb-main">'
-      +   '<div class="lb-name">' + esc(name) + youTag + '</div>'
+      +   '<div class="lb-name">' + esc(name) + '</div>'
       +   '<div class="lb-meta">' + rankText + '</div>'
       + '</div>'
       + '<div class="lb-right">'

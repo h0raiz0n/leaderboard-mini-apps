@@ -1,7 +1,7 @@
 /* Service Worker для мини-приложения «Атмосфера».
    Кэширует HTML, шрифт и данные API — повторные открытия мгновенны.
    При обновлении index.html — меняйте версию CACHE. */
-const CACHE = 'atmos-v8';
+const CACHE = 'atmos-v9';
 const API_PREFIX = 'https://script.google.com/macros/s/';
 const API_TTL = 120000; // 2 минуты
 
@@ -36,13 +36,12 @@ self.addEventListener('fetch', function (e) {
 
 async function cachedStatic(req) {
   var cache = await caches.open(CACHE);
-  var hit = await cache.match(req);
-  if (hit) return hit;
   try {
     var res = await fetch(req);
     if (res && res.ok) cache.put(req, res.clone());
     return res;
   } catch (err) {
+    var hit = await cache.match(req);
     return hit || new Response('', { status: 502 });
   }
 }
