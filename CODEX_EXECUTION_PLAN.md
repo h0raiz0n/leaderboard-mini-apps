@@ -102,13 +102,14 @@ It manages games across 3 formats (**SnG**, **MTT**, **Mystery Bounty**), aggreg
 
 ### PHASE 3: FRONTEND MINI APP DATA VISUALIZATION & FULL UTILIZATION
 
-- [ ] **TASK 3.1 [IMPLEMENTATION]: Render Format Breakdown, Win Dates & Rich Stats in Player Card**
+- [x] **TASK 3.1 [IMPLEMENTATION]: Render Format Breakdown, Win Dates & Rich Stats in Player Card**
   - **Files**: `index.html`.
-  - **Objectives**:
-    1. In `#panel-player` (`renderPlayer`): Visualize `pointsByFormat` and `winsByFormat` (SnG vs MTT vs Mystery chips/bars) so players see where their points come from.
-    2. Render `firstWinDate` and `lastWinDate` badges in the player's career statistics block.
-    3. Polish milestone cards (Top 9, Top 3, #1) with clear positive buffer indications for leaders and point-gap indicators for chasers.
-    4. Ensure clean fallback states for new players without monthly or all-time games.
+  - **Status**: Completed.
+  - **Execution Summary**:
+    * Added `goal-grid` & `goal-card` UI in `renderPlayer` with visual badges (`goal-badge.in`, `goal-badge.out`), displaying safety margins for leaders and exact win requirement hints for chasers.
+    * Added `fmt-stats-grid` format cards displaying wins (`🏆`) and points breakdown across SnG, MTT, and Mystery Bounty.
+    * Added `career-win-dates` chips for First Win (`🥇`) and Latest Win (`🔥`).
+    * Added responsive styles and graceful empty-state handling for players without monthly or historical games.
 
 - [ ] **TASK 3.2 [E2E VERIFICATION & DEPLOY]: Visual & Interaction Testing of Player Card**
   - **Action**:

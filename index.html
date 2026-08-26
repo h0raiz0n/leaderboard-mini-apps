@@ -397,8 +397,52 @@
   .ach-hint { font-size: 12px; color: var(--muted); line-height: 1.45; }
   .goal-line { margin: 0 0 7px; font-size: 13px; line-height: 1.5; color: var(--ink); }
   .goal-line b { color: #e8b84b; font-variant-numeric: tabular-nums; }
-  .goal-note { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
+  .goal-note { margin: 6px 0 0; font-size: 11.5px; color: var(--muted); }
   .break-line { margin-top: 10px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+  /* Goal Milestones Grid */
+  .goal-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .goal-card {
+    background: rgba(0,0,0,0.18); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .goal-card.in { border-color: rgba(232, 184, 75, 0.35); background: rgba(232, 184, 75, 0.06); }
+  .goal-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .goal-card-title { font-size: 13.5px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+  .goal-badge {
+    font-size: 11px; font-weight: 700; border-radius: 12px; padding: 2px 8px;
+    letter-spacing: .02em; font-variant-numeric: tabular-nums;
+  }
+  .goal-badge.in { background: rgba(232, 184, 75, 0.2); color: #e8b84b; border: 1px solid rgba(232, 184, 75, 0.4); }
+  .goal-badge.out { background: rgba(255, 255, 255, 0.08); color: var(--muted-2); border: 1px solid var(--line); }
+  .goal-card-body { font-size: 12.5px; color: var(--muted-2); line-height: 1.4; }
+  .goal-card-body b { color: var(--ink); font-weight: 700; }
+  .goal-card.in .goal-card-body b { color: #e8b84b; }
+
+  /* Format Stats Grid */
+  .fmt-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0; }
+  .fmt-stat-card {
+    background: rgba(0,0,0,0.18); border: 1px solid var(--line); border-radius: 9px;
+    padding: 8px 6px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px;
+  }
+  .fmt-stat-card .fsc-tag {
+    font-size: 10px; font-weight: 800; letter-spacing: .06em; border-radius: 4px; padding: 2px 6px;
+  }
+  .fmt-stat-card.sng .fsc-tag { background: #1f3550; color: #9db8e6; }
+  .fmt-stat-card.mtt .fsc-tag { background: #4a3a10; color: #e8b84b; }
+  .fmt-stat-card.mb .fsc-tag  { background: #4a1f2e; color: #e98f89; }
+  .fsc-wins { font-size: 11.5px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+  .fsc-pts { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .fsc-pts b { color: #e8b84b; }
+
+  /* Career Win Dates */
+  .career-win-dates { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+  .cwd-chip {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.03); border: 1px dashed var(--line);
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--muted-2);
+  }
+  .cwd-chip b { color: var(--ink); font-family: var(--display); letter-spacing: .02em; }
 
 
   /* history */
@@ -1367,36 +1411,46 @@
     }
 
     // Цель (значимые рубежи: топ-9, топ-3, 1-е место)
-    if (c.goal) {
+    if (c.goal && c.goal.milestones) {
       var gl = c.goal;
-      var goalHtml = '';
-      if (gl.isLeader) {
-        goalHtml += '<p class="goal-line">Вы лидируете в этом месяце 🥇</p>';
-      } else {
-        var glList = [];
-        for (var gi = 0; gi < (gl.milestones || []).length; gi++) {
-          var mk = gl.milestones[gi];
-          if (mk.in) continue;
-          var label = mk.pos === 1 ? '1-го места' : ('топ-' + mk.pos);
-          var txt;
-          if (mk.gap !== null && mk.gap <= 0) {
-            txt = 'Вы в шаге от ' + label + ' — равны по очкам';
+      var goalHtml = '<div class="goal-grid">';
+      var mTitles = { 1: "🥇 1-е место", 3: "🥉 Топ-3", 9: "🎯 Топ-9" };
+      for (var gi = 0; gi < gl.milestones.length; gi++) {
+        var mk = gl.milestones[gi];
+        var title = mTitles[mk.pos] || ("Топ-" + mk.pos);
+        var isInside = !!mk.in;
+        var badge = isInside
+          ? '<span class="goal-badge in">В диапазоне</span>'
+          : '<span class="goal-badge out">Разрыв ' + (mk.gap || 0) + '</span>';
+
+        var body = "";
+        if (isInside) {
+          if (gl.isLeader && mk.pos === 1) {
+            body = 'Вы лидируете! Запас перед 2-м местом: <b>+' + (mk.buffer || 0) + ' очков</b>';
           } else {
-            txt = 'До ' + label + ' не хватает <b>' + (mk.gap == null ? '—' : mk.gap) + '</b> очк.';
+            body = 'Вы на ' + gl.position + ' месте. Запас прочности: <b>+' + (mk.buffer || 0) + ' очков</b>';
           }
-          if (mk.minWin) {
-            var w;
-            if (mk.minWin === 10) w = 'хватит победы SnG (+10)';
-            else if (mk.minWin === 20) w = 'хватит двух побед (+20)';
-            else w = 'хватит MTT-победы (+30)';
-            txt += ' — ' + w;
-          }
-          glList.push('<p class="goal-line">' + txt + '</p>');
+        } else {
+          var winText = "";
+          if (mk.minWin === 10) winText = 'хватит победы SnG (+10)';
+          else if (mk.minWin === 20) winText = 'хватит двух побед (+20)';
+          else if (mk.minWin === 30) winText = 'хватит победы в MTT (+30)';
+          else winText = 'нужно более 30 очков';
+
+          body = 'До рубежа не хватает <b>' + (mk.gap || 0) + ' очков</b> (' + winText + ')';
         }
-        goalHtml += glList.join('');
+
+        goalHtml += '<div class="goal-card ' + (isInside ? 'in' : '') + '">'
+          + '<div class="goal-card-head">'
+          +   '<span class="goal-card-title">' + title + '</span>'
+          +   badge
+          + '</div>'
+          + '<div class="goal-card-body">' + body + '</div>'
+          + '</div>';
       }
+      goalHtml += '</div>';
       goalHtml += '<p class="goal-note">Прикидка при неизменных очках остальных игроков.</p>';
-      h += '<div class="block"><h3>Цель · месяц</h3>' + goalHtml + '</div>';
+      h += '<div class="block"><h3>Рубежи месяца</h3>' + goalHtml + '</div>';
     }
 
     h += '<div class="block"><h3>За всё время</h3>';
@@ -1415,17 +1469,36 @@
         + '<div class="tile"><div class="tl">Очки KO</div><div class="tv">' + at.koPoints + '</div></div>'
         + '</div>';
 
-      // Разбивка очков за места по форматам (SNG / MTT / Mystery)
+      // Разделение побед и очков по форматам (SNG / MTT / Mystery)
       var pf = at.pointsByFormat || {};
-      var pfParts = [];
-      if (pf["SnG"] > 0) pfParts.push('SNG ' + pf["SnG"]);
-      if (pf["MTT"] > 0) pfParts.push('MTT ' + pf["MTT"]);
-      if (pf["Mystery Bounty"] > 0) pfParts.push('Mystery ' + pf["Mystery Bounty"]);
-      if (pfParts.length) h += '<div class="break-line">🎮 Очки мест: ' + pfParts.join(' · ') + '</div>';
+      var wf = at.winsByFormat || {};
+      var sngPts = pf["SnG"] || 0, sngWins = wf["SnG"] || 0;
+      var mttPts = pf["MTT"] || 0, mttWins = wf["MTT"] || 0;
+      var mbPts = pf["Mystery Bounty"] || 0, mbWins = wf["Mystery Bounty"] || 0;
+
+      if (sngPts > 0 || mttPts > 0 || mbPts > 0 || sngWins > 0 || mttWins > 0 || mbWins > 0) {
+        h += '<div class="fmt-stats-grid">'
+          + '<div class="fmt-stat-card sng"><div class="fsc-tag">SNG</div><div class="fsc-wins">🏆 ' + sngWins + '</div><div class="fsc-pts"><b>' + sngPts + '</b> очк.</div></div>'
+          + '<div class="fmt-stat-card mtt"><div class="fsc-tag">MTT</div><div class="fsc-wins">🏆 ' + mttWins + '</div><div class="fsc-pts"><b>' + mttPts + '</b> очк.</div></div>'
+          + '<div class="fmt-stat-card mb"><div class="fsc-tag">MYSTERY</div><div class="fsc-wins">🏆 ' + mbWins + '</div><div class="fsc-pts"><b>' + mbPts + '</b> очк.</div></div>'
+          + '</div>';
+      }
+
+      // Даты первой и крайней победы
+      if (at.firstWinDate || at.lastWinDate) {
+        h += '<div class="career-win-dates">';
+        if (at.firstWinDate) {
+          h += '<div class="cwd-chip"><span>🥇 Первая победа</span> <b>' + esc(formatDate(at.firstWinDate)) + '</b></div>';
+        }
+        if (at.lastWinDate) {
+          h += '<div class="cwd-chip"><span>🔥 Крайняя победа</span> <b>' + esc(formatDate(at.lastWinDate)) + '</b></div>';
+        }
+        h += '</div>';
+      }
 
       var maxPlace = Math.max(1, at.place1, at.place2, at.place3);
       var pls = [{ n: 1, v: at.place1, c: "#d8a83a" }, { n: 2, v: at.place2, c: "#b9bfc9" }, { n: 3, v: at.place3, c: "#bd7c3c" }];
-      h += '<div class="bars">';
+      h += '<div class="bars" style="margin-top:14px">';
       for (var b = 0; b < pls.length; b++) {
         var hgt = Math.round((pls[b].v / maxPlace) * 100);
         h += '<div class="bar"><div class="bv">' + pls[b].v + '</div><div class="b" style="height:' + hgt + '%;background:' + pls[b].c + '"></div><div class="bl">' + pls[b].n + '</div></div>';
