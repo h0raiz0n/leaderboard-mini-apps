@@ -676,9 +676,9 @@
 
     <!-- Карточка игрока -->
     <section class="panel" id="panel-player">
-      <button class="back" onclick="goBackToLb()">
+      <button class="back" onclick="goBack()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-        К рейтингу
+        Назад
       </button>
       <div id="pl-content"></div>
     </section>
@@ -710,9 +710,9 @@
 
     <!-- Правила и очки -->
     <section class="panel" id="panel-faq">
-      <button class="back" onclick="goTo('lb')">
+      <button class="back" onclick="goBack()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-        К рейтингу
+        Назад
       </button>
       <div class="section-head">
         <h2>Правила и очки</h2>
@@ -986,17 +986,57 @@
     } catch (e) {}
   }
 
-  /* ---------- Tabs / navigation ---------- */
+  /* ---------- Tabs / navigation stack ---------- */
   var LB = [], CUR = "current";
+  var CURRENT_PANEL = "lb";
+  var PANEL_HISTORY = [];
 
-  function showPanel(name) {
+  function showPanel(name, isBack) {
+    if (!isBack && name !== CURRENT_PANEL) {
+      if (name === "player" || name === "faq") {
+        PANEL_HISTORY.push(CURRENT_PANEL);
+      } else {
+        PANEL_HISTORY = [];
+      }
+    }
+    CURRENT_PANEL = name;
+
     document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("active"); });
-    document.getElementById("panel-" + name).classList.add("active");
+    var pEl = document.getElementById("panel-" + name);
+    if (pEl) pEl.classList.add("active");
+
     document.querySelectorAll(".tab").forEach(function (t) {
       t.classList.toggle("on", t.getAttribute("data-tab") === name);
     });
-    // Нативная кнопка Telegram "Назад" для всех экранов кроме главного лидерборда
-    updateBackButton(name !== "lb");
+
+    updateBackButton(name !== "lb" || PANEL_HISTORY.length > 0);
+  }
+
+  function goBack() {
+    haptic("light");
+    if (PANEL_HISTORY.length > 0) {
+      var prev = PANEL_HISTORY.pop();
+      if (prev === "hof") {
+        showPanel("hof", true);
+        var cachedHof = getCached("hof");
+        if (cachedHof) renderHof(cachedHof);
+        else loadHof();
+      } else if (prev === "dealers") {
+        showPanel("dealers", true);
+        var cachedDe = getCached("dealers");
+        if (cachedDe) renderDealers(cachedDe);
+        else loadDealers();
+      } else {
+        showPanel("lb", true);
+        loadLeaderboard();
+      }
+    } else if (CURRENT_PANEL !== "lb") {
+      goTo("lb");
+    }
+  }
+
+  function goBackToLb() {
+    goBack();
   }
 
   document.querySelectorAll(".tab").forEach(function (t) {
@@ -1037,6 +1077,7 @@
     if (name === "lb") { showPanel("lb"); loadLeaderboard(); }
     else if (name === "hof") { showPanel("hof"); loadHof(); }
     else if (name === "dealers") { showPanel("dealers"); loadDealers(); }
+    else if (name === "faq") { showPanel("faq"); }
   }
 
   document.querySelectorAll("#lb-per-seg button").forEach(function (b) {
