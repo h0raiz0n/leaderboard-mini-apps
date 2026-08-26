@@ -68,12 +68,13 @@ It manages games across 3 formats (**SnG**, **MTT**, **Mystery Bounty**), aggreg
     * Harmonized all user-facing labels, toasts, placeholders, and confirmation modals in `GameManager.html` to use «Ведущий».
     * Updated comments and docstrings across `AdminTools.js` and `Config.js`.
 
-- [ ] **TASK 1.2 [E2E VERIFICATION & DEPLOY]: Validate AdminTools & Normalizer Suite**
-  - **Action**:
-    1. Run `node tests/test_engine.js` and verify zero errors.
-    2. Execute `clasp push && clasp deploy -i AKfycbwXrgT_FBDueyA4ap3gryOQQfxBqiv2GJL_H4Ejt3bQhOdZThoMW_j61T-C7Oq4ZTTseg -d "Phase 1 - AdminTools LockService & Host Terminology"`.
-    3. Git commit & push: `git commit -am "fix(core): harmonize host terminology and add LockService to admin tools" && git push origin main`.
-  - **Verification Log**: *(Record test output and deployment version)*
+- [x] **TASK 1.2 [E2E VERIFICATION & DEPLOY]: Validate AdminTools & Normalizer Suite**
+  - **Status**: Completed.
+  - **Verification Log**:
+    * Test Suite: `node tests/test_engine.js` -> 5/5 test suites passed (cleanPlayerName, normalizeFormRow, unifiedGameId, DynamicChunkedCache, achievements formulas).
+    * Deployment: Google Apps Script Web App deployed (version `@98`).
+    * Git: Committed and pushed to `origin/main` (`commit 60a6a12`).
+    * Clasp Hygiene: Created `.claspignore` to prevent test and documentation files from polluting Google Apps Script builds.
 
 ---
 
