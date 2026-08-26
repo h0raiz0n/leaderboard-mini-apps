@@ -111,13 +111,13 @@ It manages games across 3 formats (**SnG**, **MTT**, **Mystery Bounty**), aggreg
     * Added `career-win-dates` chips for First Win (`🥇`) and Latest Win (`🔥`).
     * Added responsive styles and graceful empty-state handling for players without monthly or historical games.
 
-- [ ] **TASK 3.2 [E2E VERIFICATION & DEPLOY]: Visual & Interaction Testing of Player Card**
-  - **Action**:
-    1. Run `node .agent/skills/impeccable/scripts/detect.mjs --json index.html` to audit UI patterns.
-    2. Verify live HTML rendering with sample player data.
-    3. Execute `clasp push && clasp deploy -i AKfycbwXrgT_FBDueyA4ap3gryOQQfxBqiv2GJL_H4Ejt3bQhOdZThoMW_j61T-C7Oq4ZTTseg -d "Phase 3 - Rich player card statistics and format breakdown"`.
-    4. Git commit & push: `git commit -am "feat(ui): visualize points by format, win dates, and milestone buffers in player card" && git push origin main`.
-  - **Verification Log**: *(Record test output and deployment version)*
+- [x] **TASK 3.2 [E2E VERIFICATION & DEPLOY]: Visual & Interaction Testing of Player Card**
+  - **Status**: Completed.
+  - **Verification Log**:
+    * Unit Tests: `node tests/test_engine.js` -> 6/6 test suites passed.
+    * UI Linter / Detector: `node .agent/skills/impeccable/scripts/detect.mjs --json index.html` -> 0 critical lint/style issues.
+    * Deployment: Google Apps Script Web App deployed (version `@100`).
+    * Git: Committed and pushed to `origin/main` (`commit 20b6d75`).
 
 ---
 
