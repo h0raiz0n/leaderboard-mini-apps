@@ -161,6 +161,12 @@ function pushNick(nickMap, realName) {
 
 function processFormSubmit(e) {
   var log = { time: new Date().toISOString(), step: "start" };
+  var lock = LockService.getScriptLock();
+  var hasLock = false;
+  try {
+    hasLock = lock.tryLock(25000); // 25 секунд ожидания блокировки
+  } catch (errLock) {}
+
   try {
     if (!e) return;
 
@@ -259,6 +265,10 @@ function processFormSubmit(e) {
   } catch (err) {
     log.step = "ERR: " + err.message;
     Logger.log("Ошибка processFormSubmit: " + err.message);
+  } finally {
+    if (hasLock) {
+      try { lock.releaseLock(); } catch (e) {}
+    }
   }
   saveSubmitLog(log);
 }

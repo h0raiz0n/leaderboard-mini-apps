@@ -11,45 +11,114 @@
  * При добавлении данных (игра/бэкфилл) кэш сбрасывается через invalidateAnalyticsCache().
  * @returns {Array} массив объектов с полной статистикой по каждому игроку
  */
-var ALL_TIME_STATS_CACHE_KEY = "ALL_TIME_STATS_V4";
+var ALL_TIME_STATS_CACHE_KEY = "ALL_TIME_STATS_V5";
+var CHUNK_SIZE = 90000; // 90 KB на чанк (укладывается в лимит 100 KB CacheService)
+
+/**
+ * Запись в кэш с автоматическим динамическим разбиением на чанки.
+ * Позволяет кэшировать JSON любого размера (300KB, 1MB, 5MB).
+ */
+function putChunkedCache(prefix, dataObj, ttlSec) {
+  var cache = CacheService.getScriptCache();
+  var str = JSON.stringify(dataObj);
+  var totalLen = str.length;
+  var numChunks = Math.ceil(totalLen / CHUNK_SIZE);
+  ttlSec = ttlSec || 900;
+
+  removeChunkedCache(prefix);
+
+  var entries = {};
+  var metaKey = prefix + "__meta";
+  entries[metaKey] = JSON.stringify({ count: numChunks, len: totalLen, ts: Date.now() });
+
+  for (var i = 0; i < numChunks; i++) {
+    var chunkKey = prefix + "__c" + i;
+    entries[chunkKey] = str.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+  }
+
+  try {
+    cache.putAll(entries, ttlSec);
+  } catch (e) {
+    Logger.log("Failed to put chunked cache for " + prefix + ": " + e.message);
+  }
+}
+
+/**
+ * Чтение из кэша с автоматической сборкой динамических чанков.
+ */
+function getChunkedCache(prefix) {
+  var cache = CacheService.getScriptCache();
+  try {
+    var metaRaw = cache.get(prefix + "__meta");
+    if (!metaRaw) return null;
+    var meta = JSON.parse(metaRaw);
+    if (!meta || !meta.count) return null;
+
+    var keys = [];
+    for (var i = 0; i < meta.count; i++) {
+      keys.push(prefix + "__c" + i);
+    }
+    var chunkMap = cache.getAll(keys);
+    var parts = [];
+    for (var j = 0; j < meta.count; j++) {
+      var k = prefix + "__c" + j;
+      if (chunkMap[k] === undefined || chunkMap[k] === null) {
+        return null; // неполный или вытесненный кэш
+      }
+      parts.push(chunkMap[k]);
+    }
+    return JSON.parse(parts.join(""));
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Очистка всех динамических чанков по префиксу.
+ */
+function removeChunkedCache(prefix) {
+  var cache = CacheService.getScriptCache();
+  try {
+    var metaRaw = cache.get(prefix + "__meta");
+    var keysToRemove = [prefix, prefix + "__meta"];
+    if (metaRaw) {
+      var meta = JSON.parse(metaRaw);
+      if (meta && meta.count) {
+        for (var i = 0; i < meta.count; i++) {
+          keysToRemove.push(prefix + "__c" + i);
+        }
+      }
+    }
+    for (var k = 0; k < 20; k++) {
+      keysToRemove.push(prefix + "__c" + k);
+    }
+    cache.removeAll(keysToRemove);
+  } catch (e) {}
+}
 
 // TTL кэшей API. Данные меняются ТОЛЬКО при записи (игра/бэкфилл/сверка/правка),
 // а каждая запись сбрасывает и прогревает кэши (см. invalidateAnalyticsCache).
-// Поэтому TTL можно держать большим — это лишь «максимальный возраст» между записями.
 var CACHE_TTL = {
   current: 900,   // месячный лидерборд
-  hof: 900,       // зал славы
+  hof: 900,       // история всех игр
   dealers: 900,   // дилеры
   mttpodium: 900, // MTT-подиум (карточка игрока)
-  player: 60      // карточка игрока (по игроку; нельзя сбросить по префиксу)
+  player: 120     // карточка игрока
 };
 
 function computeAllTimeStats() {
-  var cache = CacheService.getScriptCache();
-  try {
-    var cached = cache.get(ALL_TIME_STATS_CACHE_KEY);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-  } catch (e) {}
-
-  var result = computeAllTimeStatsRaw();
-
-  try {
-    cache.put(ALL_TIME_STATS_CACHE_KEY, JSON.stringify(result), CONFIG.ANALYTICS_CACHE_TTL || 300);
-  } catch (e) {}
-
-  return result;
+  return cachedJson(ALL_TIME_STATS_CACHE_KEY, CONFIG.ANALYTICS_CACHE_TTL || 900, function() {
+    return computeAllTimeStatsRaw();
+  });
 }
 
 /**
  * Прогрев всех кэшей аналитики (all-time, месячный, зал славы, дилеры, MTT-подиум).
- * Используется и в invalidateAnalyticsCache (прогрев при записи), и в фоновом
- * триггере warmCachesIfDirty (страховка, если прогрев при записи не удался).
  */
 function warmAllCaches() {
   computeAllTimeStats();
   cachedJson("DGET_current", CACHE_TTL.current, function() { return computeLeaderboardRows('month'); });
+  cachedJson("DGET_all_slim", CACHE_TTL.current, function() { return slimAllStats(computeAllTimeStats()); });
   cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame(); });
   cachedJson("DGET_dealers_cur", CACHE_TTL.dealers, function() { return computeDealersHeatmap(""); });
   cachedJson("DGET_mttpodium", CACHE_TTL.mttpodium, function() { return computeMttPodiumStats(); });
@@ -57,39 +126,27 @@ function warmAllCaches() {
 
 /**
  * Сброс кэша аналитики + ПРОГРЕВ ПРИ ЗАПИСИ.
- * Вызывается после любых изменений данных (processFormSubmit, backfillHistoricalData,
- * reconcileRawToDb, adminSaveGame/adminDeleteGame).
- *
- * Кэши не только очищаются, но и сразу пересчитываются и прогреваются, чтобы
- * первый открывший Mini App после игры не ждал холодный пересчёт (~8с) — он
- * получает тёплые данные за ~1.5–2с.
  */
 function invalidateAnalyticsCache() {
   try {
-    var cache = CacheService.getScriptCache();
-    cache.remove(ALL_TIME_STATS_CACHE_KEY);
-    cache.remove("DGET_current");
-    cache.remove("DGET_halloffame");
-    cache.remove("DGET_dealers_cur");
-    cache.remove("DGET_mttpodium");
+    removeChunkedCache(ALL_TIME_STATS_CACHE_KEY);
+    removeChunkedCache("DGET_current");
+    removeChunkedCache("DGET_all_slim");
+    removeChunkedCache("DGET_halloffame");
+    removeChunkedCache("DGET_dealers_cur");
+    removeChunkedCache("DGET_mttpodium");
   } catch (e) {}
 
   try {
     warmAllCaches();
-    // прогрев удался — фоновый триггер в ближайшие 5 минут можно не будить
     try { PropertiesService.getScriptProperties().deleteProperty("CACHE_DIRTY"); } catch (e) {}
   } catch (e) {
-    // не вышло (например, лимит времени) — оставляем флаг, триггер до-греет
     try { PropertiesService.getScriptProperties().setProperty("CACHE_DIRTY", "1"); } catch (e2) {}
   }
 }
 
 /**
  * Фоновый прогрев кэшей по расписанию (страховка).
- * Реальную работу делает только если данные менялись (CACHE_DIRTY).
- * Дополнительно ВСЕГДА пересчитывает и перевыгружает лист Leaderboard —
- * чтобы любые сбои при записи (например, дата ДД/ММ/ГГГГ из формы) не оставляли
- * таблицу устаревшей: она приходит в норму в течение 5 минут.
  */
 function warmCachesIfDirty() {
   var props = PropertiesService.getScriptProperties();
@@ -117,21 +174,16 @@ function warmCachesIfDirty() {
 }
 
 /**
- * Кэшированный вызов для JSON-эндпоинта: тяжёлые расчёты (лидерборд
- * месяца, подиум, дилеры, карточка игрока) держатся в CacheService,
- * чтобы Mini App не пересчитывал всё заново на каждый запрос.
- * Кэш сбрасывается invalidateAnalyticsCache() при записи данных.
+ * Кэшированный вызов для JSON-эндпоинта через DynamicChunkedCache.
  */
 function cachedJson(key, ttlSec, fn) {
-  var cache = CacheService.getScriptCache();
-  try {
-    var hit = cache.get(key);
-    if (hit) return JSON.parse(hit);
-  } catch (e) {}
+  var hit = getChunkedCache(key);
+  if (hit !== null && hit !== undefined) return hit;
+
   var data = fn();
-  try {
-    cache.put(key, JSON.stringify(data), ttlSec);
-  } catch (e) {}
+  if (data !== null && data !== undefined) {
+    putChunkedCache(key, data, ttlSec);
+  }
   return data;
 }
 
@@ -773,12 +825,11 @@ function doGet(e) {
         payload = { success: true, type: "current", data: slimCurrentRows(rows), generatedAt: new Date() };
         break;
       case "bundle":
-        // Все данные для вкладок одним запросом (всё берётся из кэша,
-        // списки — в облегчённом виде, чтобы ответ был меньше).
+        // Все данные для вкладок одним запросом (всё берётся из чанкового кэша)
         payload = {
           success: true, type: "bundle",
           current: slimCurrentRows(cachedJson("DGET_current", CACHE_TTL.current, function() { return computeLeaderboardRows('month'); })),
-          all: slimAllStats(computeAllTimeStats()),
+          all: cachedJson("DGET_all_slim", CACHE_TTL.current, function() { return slimAllStats(computeAllTimeStats()); }),
           hof: cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame(); }),
           dealers: cachedJson("DGET_dealers_cur", CACHE_TTL.dealers, function() { return computeDealersHeatmap(""); }),
           generatedAt: new Date()

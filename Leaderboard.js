@@ -334,14 +334,26 @@ function publishLeaderboard(rows, period) {
 }
 
 /**
- * Полный цикл: вычислить + выгрузить.
+ * Полный цикл: вычислить + выгрузить (с защитой от race condition через LockService).
  */
 function computeAndPublishLeaderboard(period, publish) {
-  var rows = computeLeaderboardRows(period);
-  if (publish) {
-    publishLeaderboard(rows, period);
+  var lock = LockService.getScriptLock();
+  var hasLock = false;
+  try {
+    hasLock = lock.tryLock(20000); // Ожидание до 20 сек при параллельных запусках
+  } catch (e) {}
+
+  try {
+    var rows = computeLeaderboardRows(period);
+    if (publish) {
+      publishLeaderboard(rows, period);
+    }
+    return rows;
+  } finally {
+    if (hasLock) {
+      try { lock.releaseLock(); } catch (e) {}
+    }
   }
-  return rows;
 }
 
 // ==========================================

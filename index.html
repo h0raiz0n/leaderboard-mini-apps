@@ -995,8 +995,8 @@
     document.querySelectorAll(".tab").forEach(function (t) {
       t.classList.toggle("on", t.getAttribute("data-tab") === name);
     });
-    // Нативная кнопка Telegram "Назад" для подэкранов
-    updateBackButton(name === "player" || name === "faq");
+    // Нативная кнопка Telegram "Назад" для всех экранов кроме главного лидерборда
+    updateBackButton(name !== "lb");
   }
 
   document.querySelectorAll(".tab").forEach(function (t) {
@@ -1054,14 +1054,20 @@
       haptic("light");
       document.querySelectorAll("#hof-fmt-seg button").forEach(function (x) { x.classList.remove("on"); x.setAttribute("aria-selected", "false"); });
       this.classList.add("on"); this.setAttribute("aria-selected", "true");
-      HOF_FMT = this.getAttribute("data-fmt") || "all";
+      HOF_FMT = this.getAttribute("data-fmt") || "MTT";
       var cached = getCached("hof");
       if (cached) renderHof(cached);
     });
   });
 
   var searchEl = document.getElementById("lb-search");
-  searchEl.addEventListener("input", function () { renderLb(LB); });
+  var searchDebounceTimer = null;
+  searchEl.addEventListener("input", function () {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(function () {
+      renderLb(LB);
+    }, 150);
+  });
 
   /* ---------- Leaderboard ---------- */
   function skeletons(n) {
@@ -1683,7 +1689,7 @@
       if (Telegram.WebApp.BackButton) {
         Telegram.WebApp.BackButton.onClick(function () {
           haptic("light");
-          goBackToLb();
+          goTo("lb");
         });
       }
     }
@@ -1691,7 +1697,7 @@
 
   // Бандл-кэширование в localStorage:
   // При открытии Mini App рендерится мгновенно (0ms), а свежие данные подгружаются фоном.
-  var LS_KEY = "atmos_bundle_v2";
+  var LS_KEY = "atmos_bundle_v3";
   var LS_TTL = 300000; // 5 минут
 
   function applyBundle(b) {
@@ -1728,17 +1734,30 @@
       }
     } catch (e) {}
 
-    // Stale-While-Revalidate: если есть любой сохранённый кэш — рендерим мгновенно
+    // Stale-While-Revalidate: если есть сохранённый кэш — рендерим мгновенно за 0мс
     if (saved) {
       applyBundle(saved);
       if (onDone) onDone();
-      fetchBundle(onDone, false); // фоновая синхронизация
+      fetchBundle(function () {
+        var cur = getCached("lb-cur");
+        if (cur && CUR === "current") renderLb(cur);
+      }, false);
       return;
     }
 
-    // Первый вход без кэша — показываем скелетоны
+    // Первый вход: Progressive Hydration
+    // 1) Сначала запрашиваем быстрый месячный лидерборд (6 КБ, мгновенный показ)
     document.getElementById("lb-list").innerHTML = skeletons(7);
-    fetchBundle(onDone, false);
+    getJson("current", "", function (res) {
+      if (res && res.data) {
+        setCached("lb-cur", res.data);
+        if (CUR === "current") renderLb(res.data);
+      }
+      // 2) Фоном догружаем полный бандл со всеми вкладками
+      fetchBundle(onDone, false);
+    }, function () {
+      fetchBundle(onDone, false);
+    });
   }
 
   // Фоновая актуализация при возвращении в Mini App
@@ -1746,7 +1765,10 @@
     if (document.visibilityState === "visible") {
       var lastTs = Number(dataCacheTs["bundle"] || 0);
       if (Date.now() - lastTs > 60000) {
-        fetchBundle(function () { loadLeaderboard(); }, false);
+        fetchBundle(function () {
+          var cur = getCached("lb-cur");
+          if (cur && CUR === "current") renderLb(cur);
+        }, false);
       }
     }
   });
