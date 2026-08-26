@@ -1,20 +1,10 @@
-# Инструменты агентов / impeccable — не в Apps Script-проект
-.opencode/**
+# Clasp Ignore Rules
+**/**
+!*.js
+!*.html
+!appsscript.json
+tests/**
 .agent/**
-.cursor/**
-.gemini/**
-.impeccable/**
-
-# Service Worker — только для GitHub Pages, в Apps Script не нужен
-sw.js
-
-# Tooling и конфиги
-.clasp.json
-.claspignore
-.continueignore
-node_modules/**
-package.json
-package-lock.json
-
-# Документация (всё равно не пушится, но явно)
 *.md
+.git/**
+sw.js

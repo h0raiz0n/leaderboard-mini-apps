@@ -113,141 +113,167 @@ function adminListGames(opts) {
 /**
  * Сохранить игру: перезаписать строки DB_Results для gameId и (best-effort)
  * обновить соответствующую строку в сыром листе формы.
+ * Операция защищена блокировкой LockService от race conditions.
  *
  * @param {string} gameId      gameId существующей игры или ""/null для новой
  * @param {string} dateStr     Дата "ГГГГ-ММ-ДД"
- * @param {string} dealer      Дилер
+ * @param {string} dealer      Ведущий
  * @param {Object} playersObj  { "1 место": "Имя", ..., "ko": ["a","b"] }
  * @param {string} formatName  Формат ("SnG"/"MTT"/"Mystery Bounty"); для новой игры обязателен
  * @returns {Object} { success, gameId, rows, rawUpdated, error? }
  */
 function adminSaveGame(gameId, dateStr, dealer, playersObj, formatName) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var resultsSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
-  if (!resultsSheet) return { success: false, error: "Нет листа DB_Results" };
+  var lock = LockService.getScriptLock();
+  var hasLock = false;
+  try {
+    hasLock = lock.tryLock(25000); // 25 сек ожидания блокировки
+  } catch (errLock) {}
 
-  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) return { success: false, error: "Некорректная дата: " + dateStr };
-  if (!dealer || !String(dealer).trim()) return { success: false, error: "Не указан дилер" };
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var resultsSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
+    if (!resultsSheet) return { success: false, error: "Нет листа DB_Results" };
 
-  gameId = gameId ? String(gameId).trim() : ("M_" + new Date().getTime());
-  playersObj = playersObj || {};
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) return { success: false, error: "Некорректная дата: " + dateStr };
+    if (!dealer || !String(dealer).trim()) return { success: false, error: "Не указан ведущий" };
 
-  // Определяем формат (существующий по БД, либо заданный для новой игры)
-  var formatName2 = formatName ? String(formatName) : "";
-  var data = resultsSheet.getDataRange().getValues();
-  if (!formatName2) {
-    for (var r = 1; r < data.length; r++) {
-      if (String(data[r][CONFIG.DB_COL.GAME_ID] || "").trim() === gameId) {
-        formatName2 = String(data[r][CONFIG.DB_COL.FORMAT] || "").trim();
-        break;
+    gameId = gameId ? String(gameId).trim() : ("M_" + new Date().getTime());
+    playersObj = playersObj || {};
+
+    // Определяем формат (существующий по БД, либо заданный для новой игры)
+    var formatName2 = formatName ? String(formatName) : "";
+    var data = resultsSheet.getDataRange().getValues();
+    if (!formatName2) {
+      for (var r = 1; r < data.length; r++) {
+        if (String(data[r][CONFIG.DB_COL.GAME_ID] || "").trim() === gameId) {
+          formatName2 = String(data[r][CONFIG.DB_COL.FORMAT] || "").trim();
+          break;
+        }
       }
     }
-  }
-  if (!formatName2) return { success: false, error: "Не определён формат игры" };
+    if (!formatName2) return { success: false, error: "Не определён формат игры" };
 
-  var fmtKey = null;
-  for (var k in CONFIG.FORMATS) {
-    if (CONFIG.FORMATS[k].formatName === formatName2) { fmtKey = k; break; }
-  }
-  var cfg = fmtKey ? CONFIG.FORMATS[fmtKey] : null;
-  if (!cfg) return { success: false, error: "Неизвестный формат: " + formatName2 };
-
-  // Собираем новые строки (очки/ITM — из правил CONFIG)
-  var rows = [];
-  for (var pi = 0; pi < cfg.places.length; pi++) {
-    var ev = cfg.places[pi].name;
-    var pRaw = playersObj[ev];
-    var pName = cleanPlayerName(pRaw);
-    if (pName && isParticipating(pName)) {
-      rows.push([gameId, dateStr, formatName2, String(dealer).trim(), pName, ev, cfg.places[pi].pts, cfg.places[pi].isItm]);
+    var fmtKey = null;
+    for (var k in CONFIG.FORMATS) {
+      if (CONFIG.FORMATS[k].formatName === formatName2) { fmtKey = k; break; }
     }
-  }
-  if (cfg.koStartCol !== null && Array.isArray(playersObj.ko)) {
-    for (var ki = 0; ki < cfg.koCount; ki++) {
-      var kRaw = playersObj.ko[ki];
-      var kName = cleanPlayerName(kRaw);
-      if (kName && isParticipating(kName)) {
-        rows.push([gameId, dateStr, formatName2, String(dealer).trim(), kName, "Нокаут", cfg.koPts, cfg.koColIsItm]);
+    var cfg = fmtKey ? CONFIG.FORMATS[fmtKey] : null;
+    if (!cfg) return { success: false, error: "Неизвестный формат: " + formatName2 };
+
+    // Собираем новые строки (очки/ITM — из правил CONFIG)
+    var rows = [];
+    for (var pi = 0; pi < cfg.places.length; pi++) {
+      var ev = cfg.places[pi].name;
+      var pRaw = playersObj[ev];
+      var pName = cleanPlayerName(pRaw);
+      if (pName && isParticipating(pName)) {
+        rows.push([gameId, dateStr, formatName2, String(dealer).trim(), pName, ev, cfg.places[pi].pts, cfg.places[pi].isItm]);
       }
     }
-  }
-
-  // Перезаписываем строки DB_Results для gameId пакетно (в памяти)
-  var keptRows = [data[0]]; // заголовок
-  for (var r2 = 1; r2 < data.length; r2++) {
-    if (String(data[r2][CONFIG.DB_COL.GAME_ID] || "").trim() !== gameId) {
-      keptRows.push(data[r2]);
+    if (cfg.koStartCol !== null && Array.isArray(playersObj.ko)) {
+      for (var ki = 0; ki < cfg.koCount; ki++) {
+        var kRaw = playersObj.ko[ki];
+        var kName = cleanPlayerName(kRaw);
+        if (kName && isParticipating(kName)) {
+          rows.push([gameId, dateStr, formatName2, String(dealer).trim(), kName, "Нокаут", cfg.koPts, cfg.koColIsItm]);
+        }
+      }
     }
-  }
-  for (var nr = 0; nr < rows.length; nr++) {
-    keptRows.push(rows[nr]);
-  }
 
-  resultsSheet.clearContents();
-  if (keptRows.length > 0) {
-    resultsSheet.getRange(1, 1, keptRows.length, keptRows[0].length).setValues(keptRows);
-  }
-
-  // Best-effort синхронизация сырого листа формы
-  var rawUpdated = false;
-  var rawInfo = findRawRowForGameId(gameId);
-  if (rawInfo && cfg) {
-    try {
-      applyGameToRawRow(rawInfo, cfg, String(dealer).trim(), dateStr, playersObj);
-      rawUpdated = true;
-    } catch (e) {
-      rawUpdated = false;
+    // Перезаписываем строки DB_Results для gameId пакетно (в памяти)
+    var keptRows = [data[0]]; // заголовок
+    for (var r2 = 1; r2 < data.length; r2++) {
+      if (String(data[r2][CONFIG.DB_COL.GAME_ID] || "").trim() !== gameId) {
+        keptRows.push(data[r2]);
+      }
     }
-  }
-
-  calculateLeaderboard();
-  invalidateAnalyticsCache();
-  return { success: true, gameId: gameId, rows: rows.length, rawUpdated: rawUpdated };
-}
-
-/**
- * Удалить игру из DB_Results и (best-effort) очистить участников в сыром листе.
- */
-function adminDeleteGame(gameId) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var resultsSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
-  if (!resultsSheet || !gameId) return { success: false, error: "Нет данных" };
-
-  gameId = String(gameId).trim();
-  var data = resultsSheet.getDataRange().getValues();
-  var keptRows = [data[0]]; // заголовок
-  var deleted = 0;
-
-  for (var r = 1; r < data.length; r++) {
-    if (String(data[r][CONFIG.DB_COL.GAME_ID] || "").trim() === gameId) {
-      deleted++;
-    } else {
-      keptRows.push(data[r]);
+    for (var nr = 0; nr < rows.length; nr++) {
+      keptRows.push(rows[nr]);
     }
-  }
 
-  if (deleted > 0) {
     resultsSheet.clearContents();
     if (keptRows.length > 0) {
       resultsSheet.getRange(1, 1, keptRows.length, keptRows[0].length).setValues(keptRows);
     }
-  }
 
-  // Очищаем участников в сырой строке, чтобы сверка/бэкфилл не вернули игру
-  var rawUpdated = false;
-  var rawInfo = findRawRowForGameId(gameId);
-  if (rawInfo) {
-    try {
-      clearRawRowPlayers(rawInfo);
-      rawUpdated = true;
-    } catch (e) {}
-  }
+    // Best-effort синхронизация сырого листа формы
+    var rawUpdated = false;
+    var rawInfo = findRawRowForGameId(gameId);
+    if (rawInfo && cfg) {
+      try {
+        applyGameToRawRow(rawInfo, cfg, String(dealer).trim(), dateStr, playersObj);
+        rawUpdated = true;
+      } catch (e) {
+        rawUpdated = false;
+      }
+    }
 
-  if (deleted > 0) {
     calculateLeaderboard();
     invalidateAnalyticsCache();
+    return { success: true, gameId: gameId, rows: rows.length, rawUpdated: rawUpdated };
+  } finally {
+    if (hasLock) {
+      try { lock.releaseLock(); } catch (e) {}
+    }
   }
-  return { success: true, deleted: deleted, rawUpdated: rawUpdated };
+}
+
+/**
+ * Удалить игру из DB_Results и (best-effort) очистить участников в сыром листе.
+ * Операция защищена блокировкой LockService от race conditions.
+ */
+function adminDeleteGame(gameId) {
+  var lock = LockService.getScriptLock();
+  var hasLock = false;
+  try {
+    hasLock = lock.tryLock(25000); // 25 сек ожидания блокировки
+  } catch (errLock) {}
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var resultsSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
+    if (!resultsSheet || !gameId) return { success: false, error: "Нет данных" };
+
+    gameId = String(gameId).trim();
+    var data = resultsSheet.getDataRange().getValues();
+    var keptRows = [data[0]]; // заголовок
+    var deleted = 0;
+
+    for (var r = 1; r < data.length; r++) {
+      if (String(data[r][CONFIG.DB_COL.GAME_ID] || "").trim() === gameId) {
+        deleted++;
+      } else {
+        keptRows.push(data[r]);
+      }
+    }
+
+    if (deleted > 0) {
+      resultsSheet.clearContents();
+      if (keptRows.length > 0) {
+        resultsSheet.getRange(1, 1, keptRows.length, keptRows[0].length).setValues(keptRows);
+      }
+    }
+
+    // Очищаем участников в сырой строке, чтобы сверка/бэкфилл не вернули игру
+    var rawUpdated = false;
+    var rawInfo = findRawRowForGameId(gameId);
+    if (rawInfo) {
+      try {
+        clearRawRowPlayers(rawInfo);
+        rawUpdated = true;
+      } catch (e) {}
+    }
+
+    if (deleted > 0) {
+      calculateLeaderboard();
+      invalidateAnalyticsCache();
+    }
+    return { success: true, deleted: deleted, rawUpdated: rawUpdated };
+  } finally {
+    if (hasLock) {
+      try { lock.releaseLock(); } catch (e) {}
+    }
+  }
 }
 
 /**

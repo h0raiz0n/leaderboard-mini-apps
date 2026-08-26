@@ -60,12 +60,13 @@ It manages games across 3 formats (**SnG**, **MTT**, **Mystery Bounty**), aggreg
 
 ### PHASE 1: BACKEND LOGIC HARDENING, TERMINOLOGY & RACE-SAFETY
 
-- [ ] **TASK 1.1 [IMPLEMENTATION]: Unified Host Terminology & AdminTools Concurrency Lock**
+- [x] **TASK 1.1 [IMPLEMENTATION]: Unified Host Terminology & AdminTools Concurrency Lock**
   - **Files**: `AdminTools.js`, `GameManager.html`, `Formatting.js`, `Config.js`, `TelegramNotifier.js`.
-  - **Objectives**:
-    1. Replace all occurrences of "дилер", "dealer" in UI labels, placeholders, logs, and toasts with "Ведущий" / "ведущий".
-    2. Wrap `adminSaveGame` and `adminDeleteGame` in `AdminTools.js` with `LockService.getScriptLock()` (25s timeout) to prevent data corruption during simultaneous form submits.
-    3. Ensure `AdminTools.js` properly refreshes analytics cache (`invalidateAnalyticsCache()`) upon save or delete.
+  - **Status**: Completed.
+  - **Execution Summary**:
+    * Wrapped `adminSaveGame` and `adminDeleteGame` in `AdminTools.js` with `LockService.getScriptLock(25000)` with safe `try...finally { lock.releaseLock(); }` blocks.
+    * Harmonized all user-facing labels, toasts, placeholders, and confirmation modals in `GameManager.html` to use «Ведущий».
+    * Updated comments and docstrings across `AdminTools.js` and `Config.js`.
 
 - [ ] **TASK 1.2 [E2E VERIFICATION & DEPLOY]: Validate AdminTools & Normalizer Suite**
   - **Action**:
