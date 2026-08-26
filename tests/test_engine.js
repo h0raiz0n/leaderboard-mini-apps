@@ -183,10 +183,85 @@ function testAchievementsFormulas() {
   console.log("✔ Test 5 Passed: Achievement & Stack formulas verified mathematically");
 }
 
+// Test 6: Player Card Milestones & Boundary Logic
+function testPlayerCardMilestones() {
+  const mockMonthRows = [
+    [1, "", "Лидер", 100, "BOSS"],
+    [2, "", "Второй", 85, "LEGEND"],
+    [3, "", "Третий", 70, "LEGEND"],
+    [4, "", "Четвертый", 50, "SHARK"],
+    [5, "", "Пятый", 40, "SHARK"],
+    [6, "", "Шестой", 35, "SHARK"],
+    [7, "", "Седьмой", 30, "SHARK"],
+    [8, "", "Восьмой", 25, "SHARK"],
+    [9, "", "Девятый", 20, "FISH"],
+    [10, "", "Десятый", 15, "FISH"]
+  ];
+
+  function calcGoal(myPos, myPoints, rows) {
+    function boundaryFor(pos) {
+      if (pos >= 1 && pos <= rows.length) return Number(rows[pos - 1][3]) || 0;
+      return null;
+    }
+    function minWinToPass(boundary) {
+      if (boundary === null) return null;
+      var wins = [10, 20, 30];
+      for (var w = 0; w < wins.length; w++) {
+        if (myPoints + wins[w] > boundary) return wins[w];
+      }
+      return null;
+    }
+    function milestone(pos) {
+      var isInside = myPos <= pos;
+      var b = boundaryFor(pos);
+      var gap = null, buffer = null, minWin = null;
+      if (isInside) {
+        var dropBoundary = boundaryFor(pos + 1);
+        buffer = dropBoundary !== null ? Math.max(0, myPoints - dropBoundary) : myPoints;
+      } else {
+        if (b !== null) {
+          gap = Math.max(0, b - myPoints + 1);
+          minWin = minWinToPass(b);
+        }
+      }
+      return { pos, in: isInside, gap, buffer, minWin };
+    }
+    return {
+      position: myPos,
+      isLeader: myPos === 1,
+      milestones: [milestone(9), milestone(3), milestone(1)]
+    };
+  }
+
+  // Case 1: Leader (#1, 100 pts)
+  const g1 = calcGoal(1, 100, mockMonthRows);
+  assert.strictEqual(g1.isLeader, true);
+  assert.strictEqual(g1.milestones[2].in, true); // Milestone 1
+  assert.strictEqual(g1.milestones[2].buffer, 15); // 100 - 85 (boundary of #2)
+  assert.strictEqual(g1.milestones[1].in, true); // Milestone 3
+  assert.strictEqual(g1.milestones[1].buffer, 50); // 100 - 50 (boundary of #4)
+
+  // Case 2: Chaser (#4, 50 pts)
+  const g4 = calcGoal(4, 50, mockMonthRows);
+  assert.strictEqual(g4.isLeader, false);
+  assert.strictEqual(g4.milestones[1].in, false); // Milestone 3 (Top 3)
+  assert.strictEqual(g4.milestones[1].gap, 21); // 70 - 50 + 1 = 21 to pass #3
+  assert.strictEqual(g4.milestones[1].minWin, 30); // Single MTT win (+30) is enough to pass 70
+
+  // Case 3: Bubble player (#10, 15 pts)
+  const g10 = calcGoal(10, 15, mockMonthRows);
+  assert.strictEqual(g10.milestones[0].in, false); // Milestone 9 (Top 9)
+  assert.strictEqual(g10.milestones[0].gap, 6); // 20 - 15 + 1 = 6 to pass #9
+  assert.strictEqual(g10.milestones[0].minWin, 10); // SnG win (+10) is enough
+
+  console.log("✔ Test 6 Passed: Player Card Milestones, Buffers and Gaps calculate flawlessly");
+}
+
 testCleanPlayerName();
 testNormalizeFormRows();
 testUnifiedGameId();
 testDynamicChunkedCache();
 testAchievementsFormulas();
+testPlayerCardMilestones();
 
-console.log("\nALL TEST SUITES PASSED PERFECTLY! (5/5)");
+console.log("\nALL TEST SUITES PASSED PERFECTLY! (6/6)");

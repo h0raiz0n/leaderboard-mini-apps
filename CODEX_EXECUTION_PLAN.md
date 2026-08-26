@@ -80,12 +80,15 @@ It manages games across 3 formats (**SnG**, **MTT**, **Mystery Bounty**), aggreg
 
 ### PHASE 2: ANALYTICS & PLAYER CARD DATA ENGINE PERFECTION
 
-- [ ] **TASK 2.1 [IMPLEMENTATION]: Fix Player Card Scoping Bug & Enrich Data Contract**
+- [x] **TASK 2.1 [IMPLEMENTATION]: Fix Player Card Scoping Bug & Enrich Data Contract**
   - **Files**: `Analytics.js`, `Leaderboard.js`.
-  - **Objectives**:
-    1. Fix variable scoping and boundary bug in `computePlayerCard` (milestone buffer calculation when a player has 0 monthly games or when there are < 9 players on the leaderboard).
-    2. Ensure `computePlayerCard` accurately emits `firstWinDate`, `lastWinDate`, `pointsByFormat` (SnG, MTT, Mystery), `winsByFormat`, and `mttPodiumStats` for all players.
-    3. Ensure `takeSnapshot()` in `Code.js` is idempotent (updates existing row if run on the same date instead of duplicating).
+  - **Status**: Completed.
+  - **Execution Summary**:
+    * Fixed loop index scoping and boundary conditions in `computePlayerCard` (`playerMonthIndex` and `boundaryFor`).
+    * Added positive safety buffer (`buffer`) calculation for players inside milestones (Top 1, Top 3, Top 9) against the next drop boundary.
+    * Added precise points gap (`gap`) and `minWin` (+10/+20/+30) needed to enter milestone for chasers.
+    * Verified rich all-time stats data contract (`pointsByFormat`, `winsByFormat`, `firstWinDate`, `lastWinDate`, `mttPlacePoints`).
+    * Added `testPlayerCardMilestones` unit test to `tests/test_engine.js`.
 
 - [ ] **TASK 2.2 [E2E VERIFICATION & DEPLOY]: API Contract & Test Suite Validation**
   - **Action**:

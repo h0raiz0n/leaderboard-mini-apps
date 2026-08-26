@@ -675,32 +675,36 @@ function computePlayerCard(query) {
   // --- За текущий месяц (из месячного лидерборда; берём кэш, чтобы не пересчитывать) ---
   var monthRows = cachedJson("DGET_current", CACHE_TTL.current, function() { return computeLeaderboardRows('month'); });
   var monthCard = null;
-  var m = 0;
-  for (m = 0; m < monthRows.length; m++) {
-    if (monthRows[m][2] === displayName || monthRows[m][2] === realName) {
-      monthCard = {
-        position: monthRows[m][0], trend: monthRows[m][1], points: monthRows[m][3],
-        rank: monthRows[m][4], itmStack: monthRows[m][5], fullSet: monthRows[m][6],
-        bonuses: monthRows[m][7], breakdown: monthRows[m][8],
-        meta: monthRows[m][9] || null
-      };
-      break;
+  var playerMonthIndex = -1;
+  if (Array.isArray(monthRows)) {
+    for (var m = 0; m < monthRows.length; m++) {
+      if (monthRows[m][2] === displayName || monthRows[m][2] === realName) {
+        playerMonthIndex = m;
+        monthCard = {
+          position: monthRows[m][0], trend: monthRows[m][1], points: monthRows[m][3],
+          rank: monthRows[m][4], itmStack: monthRows[m][5], fullSet: monthRows[m][6],
+          bonuses: monthRows[m][7], breakdown: monthRows[m][8],
+          meta: monthRows[m][9] || null
+        };
+        break;
+      }
     }
   }
 
   // --- Цель (значимые рубежи по текущему месячному лидерборду) ---
   // Игрокам важны не «обойти соседа», а попадание в рубежи: топ-9 и топ-3
   // (из-за наград в конце месяца) и 1-е место. Для каждого рубежа считаем,
-  // сколько не хватает очков и хватит ли победы (+10 SnG / +20 две / +30 MTT)
-  // при неизменных очках остальных.
+  // сколько не хватает очков (gap) или какой запас (buffer), и хватит ли победы.
   var goal = null;
-  if (monthCard) {
-    var myPoints = Number(monthRows[m][3]) || 0;
-    var myPos = m + 1;
+  if (monthCard && playerMonthIndex >= 0 && Array.isArray(monthRows) && monthRows.length > 0) {
+    var myPoints = Number(monthRows[playerMonthIndex][3]) || 0;
+    var myPos = playerMonthIndex + 1;
+
     function boundaryFor(pos) {
-      if (pos - 1 < monthRows.length) return Number(monthRows[pos - 1][3]) || 0;
+      if (pos >= 1 && pos <= monthRows.length) return Number(monthRows[pos - 1][3]) || 0;
       return null;
     }
+
     function minWinToPass(boundary) {
       if (boundary === null) return null;
       var wins = [10, 20, 30];
@@ -709,15 +713,39 @@ function computePlayerCard(query) {
       }
       return null;
     }
+
     function milestone(pos) {
+      var isInside = myPos <= pos;
       var b = boundaryFor(pos);
+      var gap = null;
+      var buffer = null;
+      var minWin = null;
+
+      if (isInside) {
+        // Игрок уже внутри рубежа — считаем запас очков до вылета
+        var dropBoundary = boundaryFor(pos + 1);
+        if (dropBoundary !== null) {
+          buffer = Math.max(0, myPoints - dropBoundary);
+        } else {
+          buffer = myPoints;
+        }
+      } else {
+        // Игрок вне рубежа — считаем, сколько очков не хватает, чтобы войти в рубеж
+        if (b !== null) {
+          gap = Math.max(0, b - myPoints + 1);
+          minWin = minWinToPass(b);
+        }
+      }
+
       return {
         pos: pos,
-        in: myPos <= pos,
-        gap: b === null ? null : Math.max(0, b - myPoints),
-        minWin: b === null ? null : minWinToPass(b)
+        in: isInside,
+        gap: gap,
+        buffer: buffer,
+        minWin: minWin
       };
     }
+
     goal = {
       position: myPos,
       isLeader: myPos === 1,
