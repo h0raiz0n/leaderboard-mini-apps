@@ -1786,8 +1786,7 @@
       Telegram.WebApp.setBackgroundColor("#0b1830");
       if (Telegram.WebApp.BackButton) {
         Telegram.WebApp.BackButton.onClick(function () {
-          haptic("light");
-          goTo("lb");
+          goBack();
         });
       }
     }
