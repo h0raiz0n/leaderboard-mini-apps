@@ -219,8 +219,7 @@ function computeLeaderboardRows(period, targetMonthStr) {
     var breakdownStr = breakdownParts.length ? breakdownParts.join(" | ") : "0 очков";
 
     var itmStackCol = "Уровень " + itmStackCount + " (" + p.itmCount + "/" + currentThreshold + ")";
-    var remG = p.gold - fullSets, remS = p.silver - fullSets, remB = p.bronze - fullSets;
-    var fullSetCol = fullSets + " наб. (🥇" + remG + " 🥈" + remS + " 🥉" + remB + ")";
+    var fullSetCol = fullSets + " наб. (🥇" + p.gold + " 🥈" + p.silver + " 🥉" + p.bronze + ")";
 
     var bonusArr = [];
     if (p.doubleCount > 0) bonusArr.push("⚡x" + p.doubleCount);
