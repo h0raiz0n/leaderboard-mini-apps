@@ -417,23 +417,119 @@
   .fmt-chip.sng { background: #1f3550; color: #9db8e6; }
   .fmt-chip.mb  { background: #4a1f2e; color: #e98f89; }
 
-  /* ---------- Podium ---------- */
-  .podium { display: flex; align-items: flex-end; gap: 10px; margin: 10px 2px 16px; height: 108px; }
-  .pod { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; }
-  .pod .pn { font-family: var(--display); font-size: 14.5px; letter-spacing: .02em; width: 100%; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; color: var(--ink); font-weight: 600; line-height: 1.2; }
-  .pod .pb {
-    width: 100%; max-width: 74px; border-radius: 10px 10px 4px 4px;
-    display: flex; align-items: flex-start; justify-content: center; padding-top: 6px;
-    font-family: var(--display); font-size: 22px; color: rgba(0,0,0,.55);
-    box-shadow: inset 0 2px 0 rgba(255,255,255,.45), 0 6px 16px -10px rgba(0,0,0,.5);
+  /* ---------- MTT Podium ---------- */
+  .mtt-podium {
+    display: flex; align-items: flex-end; justify-content: center; gap: 8px;
+    margin: 16px 0 14px; min-height: 120px;
   }
-  .pod.gold .pb { background: linear-gradient(180deg,#f3cd6b,#d8a83a); }
-  .pod.silver .pb { background: linear-gradient(180deg,#e2e5ea,#b9bfc9); }
-  .pod.bronze .pb { background: linear-gradient(180deg,#e0a469,#bd7c3c); }
-  .pod.other .pb { background: linear-gradient(180deg,#224a68,#1a3a54); }
+  .mtt-pod {
+    flex: 1; max-width: 100px; display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-end; gap: 5px; cursor: pointer; min-width: 0;
+  }
+  .mtt-pod .pn {
+    font-family: var(--display); font-size: 13.5px; letter-spacing: .02em;
+    width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: center; color: var(--ink); font-weight: 600; line-height: 1.2;
+  }
+  .mtt-pod.gold .pn { color: var(--chip-gold); font-size: 14.5px; font-weight: 700; }
+  .mtt-pod .pts-sub {
+    font-size: 11px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .mtt-pod.gold .pts-sub { color: #e8b84b; }
+  .mtt-pod .pb {
+    width: 100%; border-radius: 8px 8px 3px 3px;
+    display: flex; align-items: flex-start; justify-content: center; padding-top: 5px;
+    font-family: var(--display); font-size: 20px; color: rgba(0,0,0,.6);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.4), 0 4px 12px -6px rgba(0,0,0,.5);
+  }
+  .mtt-pod.gold .pb { height: 76px; background: linear-gradient(180deg,#f3cd6b,#d8a83a); }
+  .mtt-pod.silver .pb { height: 56px; background: linear-gradient(180deg,#e2e5ea,#b9bfc9); }
+  .mtt-pod.bronze .pb { height: 40px; background: linear-gradient(180deg,#e0a469,#bd7c3c); }
+  .mtt-pod.other .pb { height: 26px; background: linear-gradient(180deg,#224a68,#1a3a54); }
 
-  .hof-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px dashed var(--line); }
-  .hof-row:last-child { border-bottom: 0; }
+  .mtt-places-rest {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .mtt-rest-card {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    background: rgba(0,0,0,0.18); border-radius: 8px; border: 1px solid var(--line);
+    cursor: pointer; min-width: 0;
+  }
+  .mtt-rest-card .n {
+    font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mtt-rest-card .pts {
+    margin-left: auto; font-size: 11.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- SnG Protocol ---------- */
+  .sng-table {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .sng-winner-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: linear-gradient(90deg, rgba(232, 184, 75, 0.14), rgba(232, 184, 75, 0.03));
+    border: 1px solid rgba(232, 184, 75, 0.35); border-radius: 10px;
+    cursor: pointer;
+  }
+  .sng-winner-name {
+    font-size: 14.5px; font-weight: 700; color: var(--ink);
+  }
+  .sng-winner-pts {
+    margin-left: auto; font-family: var(--display); font-size: 16px;
+    color: var(--chip-gold); font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .sng-sub-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    background: rgba(0,0,0,0.14); border: 1px solid var(--line); border-radius: 8px;
+    cursor: pointer;
+  }
+  .sng-sub-name {
+    font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  }
+  .sng-sub-pts {
+    margin-left: auto; font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Mystery Bounty View ---------- */
+  .mb-pod-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;
+  }
+  .mb-place-cell {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: 8px 6px; background: rgba(0,0,0,0.18); border: 1px solid var(--line);
+    border-radius: 8px; cursor: pointer; gap: 4px; min-width: 0;
+  }
+  .mb-place-cell.p1 { border-color: rgba(232, 184, 75, 0.4); background: rgba(232, 184, 75, 0.08); }
+  .mb-place-name {
+    font-size: 12.5px; font-weight: 600; color: var(--ink); width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mb-place-pts {
+    font-size: 11.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .mb-place-cell.p1 .mb-place-pts { color: var(--chip-gold); }
+
+  .mb-ko-block {
+    background: rgba(224, 89, 79, 0.08); border: 1px solid rgba(224, 89, 79, 0.25);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .mb-ko-head {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    color: #e98f89; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+  }
+  .mb-ko-items {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .mb-ko-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(224, 89, 79, 0.18); border: 1px solid rgba(224, 89, 79, 0.4);
+    border-radius: 16px; padding: 4px 10px; font-size: 12px; color: var(--ink);
+    cursor: pointer;
+  }
+  .mb-ko-chip b { color: #f2a8a4; font-weight: 700; }
+
   .hof-place {
     width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
@@ -445,14 +541,11 @@
   .hof-place.pl3 { background: #cf8b4b; }
   .hof-place.pl4 { background: var(--chip-blue); color: #fff; }
   .hof-place.pl5 { background: var(--chip-white); color: #1a2635; border: 1px solid var(--line-2); }
-  .hof-name { font-weight: 700; font-size: 14px; color: var(--ink); }
-  .hof-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 
   .day-head {
     font-family: var(--display); font-size: 14px; letter-spacing: .09em; text-transform: uppercase;
     color: var(--muted); margin: 18px 0 14px; display: flex; align-items: center; gap: 8px; font-weight: 600;
   }
-  .day-head .day-dealer { color: #e8b84b; letter-spacing: .03em; }
   .day-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
   .game-card {
@@ -472,22 +565,6 @@
   .game-dealer {
     font-size: 12px; color: var(--chip-gold); font-weight: 600;
   }
-  .game-kos {
-    margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
-  }
-  .game-kos-title {
-    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .05em; color: var(--muted); margin-bottom: 6px;
-  }
-  .game-kos-list {
-    display: flex; flex-wrap: wrap; gap: 6px;
-  }
-  .ko-pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: rgba(224, 89, 79, 0.15); border: 1px solid rgba(224, 89, 79, 0.35);
-    border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--ink);
-  }
-  .ko-pill b { color: #e98f89; font-weight: 700; }
 
   /* ---------- Dealers ---------- */
   .dealer-total { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
@@ -613,10 +690,9 @@
         <p>Результаты турниров и столов · свежие сверху</p>
       </div>
       <div class="seg" id="hof-fmt-seg" role="tablist" aria-label="Формат игр">
-        <button class="on" data-fmt="all" role="tab" aria-selected="true">Все</button>
-        <button data-fmt="SnG" role="tab" aria-selected="false">SnG</button>
-        <button data-fmt="MTT" role="tab" aria-selected="false">MTT</button>
+        <button class="on" data-fmt="MTT" role="tab" aria-selected="true">MTT</button>
         <button data-fmt="Mystery Bounty" role="tab" aria-selected="false">Mystery</button>
+        <button data-fmt="SnG" role="tab" aria-selected="false">SnG</button>
       </div>
       <div id="hof-list"></div>
       <div id="hof-state"></div>
@@ -1319,7 +1395,7 @@
     });
   }
 
-  var HOF_FMT = "all";
+  var HOF_FMT = "MTT";
 
   function renderHof(list) {
     if (!list || !list.length) {
@@ -1328,7 +1404,6 @@
     }
 
     var filtered = list.filter(function (it) {
-      if (HOF_FMT === "all") return true;
       var fmt = (it.format || "").toLowerCase();
       if (HOF_FMT === "SnG") return fmt === "sng" || fmt === "data";
       if (HOF_FMT === "MTT") return fmt === "mtt";
@@ -1337,7 +1412,8 @@
     });
 
     if (!filtered.length) {
-      document.getElementById("hof-list").innerHTML = stateHtml("Игры не найдены", "Для выбранного формата пока нет сохранённых игр.", false);
+      var fmtLabel = HOF_FMT === "MTT" ? "MTT" : (HOF_FMT === "SnG" ? "SnG" : "Mystery Bounty");
+      document.getElementById("hof-list").innerHTML = stateHtml("Игры не найдены", "Для формата " + fmtLabel + " пока нет сохранённых игр.", false);
       return;
     }
 
@@ -1385,57 +1461,121 @@
       html += '<div class="day-head">' + esc(formatDate(d)) + '</div>';
 
       dayGames.forEach(function (g) {
+        var fmtNorm = (g.format || "").toLowerCase();
+        var isMtt = fmtNorm.indexOf("mtt") > -1;
+        var isMb = fmtNorm.indexOf("mystery") > -1 || fmtNorm.indexOf("bounty") > -1;
+
         html += '<div class="game-card">';
         html += '<div class="game-card-head">'
-          + '<div class="game-card-title">' + fmtTag(g.format) + '<span>' + esc(g.format) + '</span></div>'
-          + (g.dealer ? '<div class="game-dealer">дилер ' + esc(g.dealer) + '</div>' : '')
+          + '<div class="game-card-title">' + fmtTag(g.format) + '</div>'
+          + (g.dealer ? '<div class="game-dealer">ведущий ' + esc(g.dealer) + '</div>' : '')
           + '</div>';
 
-        // Подиум для мест 1-3
-        var pod = [];
-        for (var p = 1; p <= 3; p++) {
-          for (var r = 0; r < g.places.length; r++) {
-            if (Number(g.places[r].place) === p) { pod[p] = g.places[r]; break; }
-          }
-        }
-        var hasPod = pod[1] || pod[2] || pod[3];
-        if (hasPod) {
-          html += '<div class="podium">';
-          for (var q = 1; q <= 3; q++) {
-            if (pod[q]) {
-              var cls = q === 1 ? "gold" : (q === 2 ? "silver" : "bronze");
-              var hgt = q === 1 ? 108 : (q === 2 ? 82 : 62);
-              html += '<div class="pod ' + cls + '" onclick="openPlayerByName(\'' + esc(pod[q].player).replace(/'/g, "\\'") + '\')" style="cursor:pointer">'
-                + '<div class="pn">' + esc(pod[q].player) + '</div>'
-                + '<div class="pb" style="height:' + hgt + 'px">' + q + '</div>'
-                + '</div>';
-            } else {
-              html += '<div class="pod other"><div class="pn" style="color:var(--muted-2)">—</div><div class="pb" style="height:30px">·</div></div>';
+        g.places.sort(function (a, b) { return (Number(a.place) || 0) - (Number(b.place) || 0); });
+
+        if (isMtt) {
+          // --- MTT: 3D-Подиум + места 4-5 ---
+          var pod = [];
+          for (var p = 1; p <= 3; p++) {
+            for (var r = 0; r < g.places.length; r++) {
+              if (Number(g.places[r].place) === p) { pod[p] = g.places[r]; break; }
             }
           }
-          html += '</div>';
-        }
+          if (pod[1] || pod[2] || pod[3]) {
+            html += '<div class="mtt-podium">';
+            var podOrder = [2, 1, 3];
+            for (var qi = 0; qi < podOrder.length; qi++) {
+              var q = podOrder[qi];
+              if (pod[q]) {
+                var cls = q === 1 ? "gold" : (q === 2 ? "silver" : "bronze");
+                html += '<div class="mtt-pod ' + cls + '" onclick="openPlayerByName(\'' + esc(pod[q].player).replace(/'/g, "\\'") + '\')">'
+                  + '<div class="pn">' + esc(pod[q].player) + '</div>'
+                  + '<div class="pts-sub">+' + esc(pod[q].points) + '</div>'
+                  + '<div class="pb">' + q + '</div>'
+                  + '</div>';
+              } else {
+                html += '<div class="mtt-pod other">'
+                  + '<div class="pn" style="color:var(--muted-2)">—</div>'
+                  + '<div class="pts-sub"></div>'
+                  + '<div class="pb" style="height:26px">·</div>'
+                  + '</div>';
+              }
+            }
+            html += '</div>';
+          }
 
-        // Список призовых мест
-        g.places.sort(function(a, b) { return (Number(a.place) || 0) - (Number(b.place) || 0); });
-        for (var i = 0; i < g.places.length; i++) {
-          var it = g.places[i];
-          html += '<div class="hof-row" onclick="openPlayerByName(\'' + esc(it.player).replace(/'/g, "\\'") + '\')" style="cursor:pointer">'
-            + medalChip(Number(it.place) || 1)
-            + '<div><div class="hof-name">' + esc(it.player) + '</div>'
-            + '<div class="hof-sub">+' + esc(it.points) + ' очков</div></div>'
-            + '</div>';
-        }
+          var restMtt = g.places.filter(function (it) { var pl = Number(it.place); return pl === 4 || pl === 5; });
+          if (restMtt.length) {
+            html += '<div class="mtt-places-rest">';
+            restMtt.forEach(function (it) {
+              html += '<div class="mtt-rest-card" onclick="openPlayerByName(\'' + esc(it.player).replace(/'/g, "\\'") + '\')">'
+                + medalChip(Number(it.place) || 4)
+                + '<span class="n">' + esc(it.player) + '</span>'
+                + '<span class="pts">+' + esc(it.points) + '</span>'
+                + '</div>';
+            });
+            html += '</div>';
+          }
 
-        // Нокауты (Mystery Bounty)
-        if (g.knockouts.length) {
-          html += '<div class="game-kos">';
-          html += '<div class="game-kos-title">🎯 Выбивания (нокауты)</div>';
-          html += '<div class="game-kos-list">';
-          g.knockouts.forEach(function (ko) {
-            html += '<span class="ko-pill" onclick="openPlayerByName(\'' + esc(ko.player).replace(/'/g, "\\'") + '\')" style="cursor:pointer">🎯 ' + esc(ko.player) + ' <b>+' + esc(ko.points) + '</b></span>';
+        } else if (isMb) {
+          // --- Mystery Bounty: Призеры 1-3 в ячейках + Блок Нокаутов ---
+          if (g.places.length) {
+            html += '<div class="mb-pod-grid">';
+            for (var mi = 0; mi < g.places.length; mi++) {
+              var mp = g.places[mi];
+              var plNum = Number(mp.place) || (mi + 1);
+              html += '<div class="mb-place-cell' + (plNum === 1 ? ' p1' : '') + '" onclick="openPlayerByName(\'' + esc(mp.player).replace(/'/g, "\\'") + '\')">'
+                + medalChip(plNum)
+                + '<div class="mb-place-name">' + esc(mp.player) + '</div>'
+                + '<div class="mb-place-pts">+' + esc(mp.points) + '</div>'
+                + '</div>';
+            }
+            html += '</div>';
+          }
+
+          if (g.knockouts.length) {
+            var koCounts = {};
+            var koPts = {};
+            g.knockouts.forEach(function (ko) {
+              var pl = ko.player;
+              koCounts[pl] = (koCounts[pl] || 0) + 1;
+              koPts[pl] = (koPts[pl] || 0) + (Number(ko.points) || 20);
+            });
+
+            html += '<div class="mb-ko-block">';
+            html += '<div class="mb-ko-head"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg> Выбивания (нокауты)</div>';
+            html += '<div class="mb-ko-items">';
+            for (var koPlayer in koCounts) {
+              var count = koCounts[koPlayer];
+              var countBadge = count > 1 ? ' <small style="opacity:.85">x' + count + '</small>' : '';
+              html += '<span class="mb-ko-chip" onclick="openPlayerByName(\'' + esc(koPlayer).replace(/'/g, "\\'") + '\')">'
+                + '🎯 ' + esc(koPlayer) + countBadge + ' <b>+' + koPts[koPlayer] + '</b>'
+                + '</span>';
+            }
+            html += '</div></div>';
+          }
+
+        } else {
+          // --- SnG: Протокол стола (Победитель + призеры) ---
+          var winPl = g.places[0] || null;
+          var restPl = g.places.slice(1);
+
+          html += '<div class="sng-table">';
+          if (winPl) {
+            html += '<div class="sng-winner-row" onclick="openPlayerByName(\'' + esc(winPl.player).replace(/'/g, "\\'") + '\')">'
+              + medalChip(1)
+              + '<span class="sng-winner-name">' + esc(winPl.player) + '</span>'
+              + '<span class="sng-winner-pts">+' + esc(winPl.points) + '</span>'
+              + '</div>';
+          }
+          restPl.forEach(function (sp) {
+            html += '<div class="sng-sub-row" onclick="openPlayerByName(\'' + esc(sp.player).replace(/'/g, "\\'") + '\')">'
+              + medalChip(Number(sp.place) || 2)
+              + '<span class="sng-sub-name">' + esc(sp.player) + '</span>'
+              + '<span class="sng-sub-pts">+' + esc(sp.points) + '</span>'
+              + '</div>';
           });
-          html += '</div></div>';
+          html += '</div>';
         }
 
         html += '</div>'; // .game-card
