@@ -450,10 +450,44 @@
 
   .day-head {
     font-family: var(--display); font-size: 14px; letter-spacing: .09em; text-transform: uppercase;
-    color: var(--muted); margin: 18px 0 26px; display: flex; align-items: center; gap: 8px; font-weight: 600;
+    color: var(--muted); margin: 18px 0 14px; display: flex; align-items: center; gap: 8px; font-weight: 600;
   }
   .day-head .day-dealer { color: #e8b84b; letter-spacing: .03em; }
   .day-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .game-card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .game-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+    gap: 8px; flex-wrap: wrap;
+  }
+  .game-card-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; font-weight: 700; color: var(--ink);
+  }
+  .game-dealer {
+    font-size: 12px; color: var(--chip-gold); font-weight: 600;
+  }
+  .game-kos {
+    margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
+  }
+  .game-kos-title {
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--muted); margin-bottom: 6px;
+  }
+  .game-kos-list {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .ko-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(224, 89, 79, 0.15); border: 1px solid rgba(224, 89, 79, 0.35);
+    border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--ink);
+  }
+  .ko-pill b { color: #e98f89; font-weight: 700; }
 
   /* ---------- Dealers ---------- */
   .dealer-total { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
@@ -547,7 +581,7 @@
   <main id="view">
     <!-- Рейтинг -->
     <section class="panel active" id="panel-lb">
-      <div class="seg" role="tablist" aria-label="Период рейтинга">
+      <div class="seg" id="lb-per-seg" role="tablist" aria-label="Период рейтинга">
         <button class="on" data-per="current" role="tab" aria-selected="true">Месяц</button>
         <button data-per="all" role="tab" aria-selected="false">Всё время</button>
       </div>
@@ -572,11 +606,17 @@
       <div id="pl-content"></div>
     </section>
 
-    <!-- Подиум -->
+    <!-- Игры -->
     <section class="panel" id="panel-hof">
       <div class="section-head">
-        <h2>Подиум</h2>
-        <p>Призовые места в MTT · свежие сверху</p>
+        <h2>Игры</h2>
+        <p>Результаты турниров и столов · свежие сверху</p>
+      </div>
+      <div class="seg" id="hof-fmt-seg" role="tablist" aria-label="Формат игр">
+        <button class="on" data-fmt="all" role="tab" aria-selected="true">Все</button>
+        <button data-fmt="SnG" role="tab" aria-selected="false">SnG</button>
+        <button data-fmt="MTT" role="tab" aria-selected="false">MTT</button>
+        <button data-fmt="Mystery Bounty" role="tab" aria-selected="false">Mystery</button>
       </div>
       <div id="hof-list"></div>
       <div id="hof-state"></div>
@@ -693,7 +733,7 @@
       </button>
       <button class="tab" data-tab="hof">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l-2.5 2 4.5 4.5L12 21l4-5.5L20.5 11 18 9l-3 3H9z"/><path d="M8 4h8l-1.5 5h-5z"/></svg>
-        Подиум
+        Игры
       </button>
       <button class="tab" data-tab="dealers">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h16l-1.5 6.5a2 2 0 0 1-2 1.5h-9a2 2 0 0 1-2-1.5z"/><path d="M7 13c-.5-1.5-1.8-4-2-6.5A3 3 0 0 1 8 4h8a3 3 0 0 1 3 2.5c-.2 2.5-1.5 5-2 6.5"/></svg>
@@ -923,13 +963,24 @@
     else if (name === "dealers") { showPanel("dealers"); loadDealers(); }
   }
 
-  document.querySelectorAll(".seg button").forEach(function (b) {
+  document.querySelectorAll("#lb-per-seg button").forEach(function (b) {
     b.addEventListener("click", function () {
       haptic("light");
-      document.querySelectorAll(".seg button").forEach(function (x) { x.classList.remove("on"); x.setAttribute("aria-selected", "false"); });
+      document.querySelectorAll("#lb-per-seg button").forEach(function (x) { x.classList.remove("on"); x.setAttribute("aria-selected", "false"); });
       this.classList.add("on"); this.setAttribute("aria-selected", "true");
       CUR = this.getAttribute("data-per");
       loadLeaderboard();
+    });
+  });
+
+  document.querySelectorAll("#hof-fmt-seg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      haptic("light");
+      document.querySelectorAll("#hof-fmt-seg button").forEach(function (x) { x.classList.remove("on"); x.setAttribute("aria-selected", "false"); });
+      this.classList.add("on"); this.setAttribute("aria-selected", "true");
+      HOF_FMT = this.getAttribute("data-fmt") || "all";
+      var cached = getCached("hof");
+      if (cached) renderHof(cached);
     });
   });
 
@@ -1042,11 +1093,9 @@
   }
 
   /* ---------- Player card ---------- */
-  function openPlayer(idx) {
+  function openPlayerByName(name) {
+    if (!name) return;
     haptic("light");
-    if (!LB[idx]) return;
-    var r = LB[idx];
-    var name = r[2] !== undefined ? r[2] : (r.player || r.realName || "");
     showPanel("player");
     var key = "player-" + name;
     var cached = getCached(key);
@@ -1063,6 +1112,13 @@
     });
     if (cached) renderPlayer(cached);
     document.getElementById("view").scrollTop = 0;
+  }
+
+  function openPlayer(idx) {
+    if (!LB[idx]) return;
+    var r = LB[idx];
+    var name = r[2] !== undefined ? r[2] : (r.player || r.realName || "");
+    openPlayerByName(name);
   }
 
   function goBackToLb() { loadLeaderboard(); }
@@ -1263,60 +1319,129 @@
     });
   }
 
+  var HOF_FMT = "all";
+
   function renderHof(list) {
-    if (!list.length) {
-      document.getElementById("hof-list").innerHTML = stateHtml("Пока пусто", "Призовых мест в MTT ещё не было.", false);
+    if (!list || !list.length) {
+      document.getElementById("hof-list").innerHTML = stateHtml("Пока пусто", "Игр пока не зарегистрировано.", false);
       return;
     }
-    var days = [];
-    var order = [];
-    list.forEach(function (it) {
-      var d = it.date || "";
-      if (order.indexOf(d) === -1) order.push(d);
+
+    var filtered = list.filter(function (it) {
+      if (HOF_FMT === "all") return true;
+      var fmt = (it.format || "").toLowerCase();
+      if (HOF_FMT === "SnG") return fmt === "sng" || fmt === "data";
+      if (HOF_FMT === "MTT") return fmt === "mtt";
+      if (HOF_FMT === "Mystery Bounty") return fmt.indexOf("mystery") > -1 || fmt.indexOf("bounty") > -1;
+      return true;
     });
-    var html = "";
-    order.forEach(function (d) {
-      var rows = list.filter(function (it) { return (it.date || "") === d; });
 
-      var dealers = {};
-      rows.forEach(function (it) { if (it.dealer) dealers[String(it.dealer).trim()] = true; });
-      var dealerNames = Object.keys(dealers);
-      var dealerLine = dealerNames.length === 1
-        ? ' <span class="day-dealer">· ведущий ' + esc(dealerNames[0]) + '</span>'
-        : "";
+    if (!filtered.length) {
+      document.getElementById("hof-list").innerHTML = stateHtml("Игры не найдены", "Для выбранного формата пока нет сохранённых игр.", false);
+      return;
+    }
 
-      html += '<div class="day-head">' + esc(formatDate(d)) + dealerLine + '</div>';
+    var daysOrder = [];
+    var gamesByDay = {};
+    var seenGameInDay = {};
 
-      var pod = [];
-      for (var p = 1; p <= 3; p++) {
-        for (var r = 0; r < rows.length; r++) {
-          if (Number(rows[r].place) === p) { pod[p] = rows[r]; break; }
-        }
+    filtered.forEach(function (it) {
+      var d = it.date || "";
+      if (!d) return;
+      if (daysOrder.indexOf(d) === -1) {
+        daysOrder.push(d);
+        gamesByDay[d] = [];
       }
-      var hasPod = pod[1] || pod[2] || pod[3];
-      if (hasPod) {
-        html += '<div class="podium">';
-        for (var q = 1; q <= 3; q++) {
-          if (pod[q]) {
-            var cls = q === 1 ? "gold" : (q === 2 ? "silver" : "bronze");
-            var hgt = q === 1 ? 108 : (q === 2 ? 82 : 62);
-            html += '<div class="pod ' + cls + '"><div class="pn">' + esc(pod[q].player) + '</div><div class="pb" style="height:' + hgt + 'px">' + q + '</div></div>';
-          } else {
-            html += '<div class="pod other"><div class="pn" style="color:var(--muted-2)">—</div><div class="pb" style="height:30px">·</div></div>';
+      var gKey = it.gameId || (d + "||" + (it.format || "SnG") + "||" + (it.dealer || ""));
+      var lookupKey = d + "||" + gKey;
+
+      var gObj = seenGameInDay[lookupKey];
+      if (!gObj) {
+        gObj = {
+          gameId: it.gameId || "",
+          date: d,
+          format: it.format || "SnG",
+          dealer: it.dealer ? String(it.dealer).trim() : "",
+          places: [],
+          knockouts: []
+        };
+        seenGameInDay[lookupKey] = gObj;
+        gamesByDay[d].push(gObj);
+      }
+
+      var plNum = Number(it.place) || 0;
+      if (it.event === "Нокаут") {
+        gObj.knockouts.push(it);
+      } else if (plNum >= 1 && plNum <= 5) {
+        gObj.places.push(it);
+      }
+    });
+
+    var html = "";
+    daysOrder.forEach(function (d) {
+      var dayGames = gamesByDay[d] || [];
+      if (!dayGames.length) return;
+
+      html += '<div class="day-head">' + esc(formatDate(d)) + '</div>';
+
+      dayGames.forEach(function (g) {
+        html += '<div class="game-card">';
+        html += '<div class="game-card-head">'
+          + '<div class="game-card-title">' + fmtTag(g.format) + '<span>' + esc(g.format) + '</span></div>'
+          + (g.dealer ? '<div class="game-dealer">дилер ' + esc(g.dealer) + '</div>' : '')
+          + '</div>';
+
+        // Подиум для мест 1-3
+        var pod = [];
+        for (var p = 1; p <= 3; p++) {
+          for (var r = 0; r < g.places.length; r++) {
+            if (Number(g.places[r].place) === p) { pod[p] = g.places[r]; break; }
           }
         }
-        html += '</div>';
-      }
+        var hasPod = pod[1] || pod[2] || pod[3];
+        if (hasPod) {
+          html += '<div class="podium">';
+          for (var q = 1; q <= 3; q++) {
+            if (pod[q]) {
+              var cls = q === 1 ? "gold" : (q === 2 ? "silver" : "bronze");
+              var hgt = q === 1 ? 108 : (q === 2 ? 82 : 62);
+              html += '<div class="pod ' + cls + '" onclick="openPlayerByName(\'' + esc(pod[q].player).replace(/'/g, "\\'") + '\')" style="cursor:pointer">'
+                + '<div class="pn">' + esc(pod[q].player) + '</div>'
+                + '<div class="pb" style="height:' + hgt + 'px">' + q + '</div>'
+                + '</div>';
+            } else {
+              html += '<div class="pod other"><div class="pn" style="color:var(--muted-2)">—</div><div class="pb" style="height:30px">·</div></div>';
+            }
+          }
+          html += '</div>';
+        }
 
-      for (var i = 0; i < rows.length; i++) {
-        var it = rows[i];
-        html += '<div class="hof-row">'
-          + medalChip(Number(it.place) || 1)
-          + '<div><div class="hof-name">' + esc(it.player) + '</div>'
-          + '<div class="hof-sub">' + esc(it.format) + ' · ' + esc(it.points) + ' очков</div></div>'
-          + '</div>';
-      }
+        // Список призовых мест
+        g.places.sort(function(a, b) { return (Number(a.place) || 0) - (Number(b.place) || 0); });
+        for (var i = 0; i < g.places.length; i++) {
+          var it = g.places[i];
+          html += '<div class="hof-row" onclick="openPlayerByName(\'' + esc(it.player).replace(/'/g, "\\'") + '\')" style="cursor:pointer">'
+            + medalChip(Number(it.place) || 1)
+            + '<div><div class="hof-name">' + esc(it.player) + '</div>'
+            + '<div class="hof-sub">+' + esc(it.points) + ' очков</div></div>'
+            + '</div>';
+        }
+
+        // Нокауты (Mystery Bounty)
+        if (g.knockouts.length) {
+          html += '<div class="game-kos">';
+          html += '<div class="game-kos-title">🎯 Выбивания (нокауты)</div>';
+          html += '<div class="game-kos-list">';
+          g.knockouts.forEach(function (ko) {
+            html += '<span class="ko-pill" onclick="openPlayerByName(\'' + esc(ko.player).replace(/'/g, "\\'") + '\')" style="cursor:pointer">🎯 ' + esc(ko.player) + ' <b>+' + esc(ko.points) + '</b></span>';
+          });
+          html += '</div></div>';
+        }
+
+        html += '</div>'; // .game-card
+      });
     });
+
     document.getElementById("hof-list").innerHTML = html;
   }
 

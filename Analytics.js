@@ -50,7 +50,7 @@ function computeAllTimeStats() {
 function warmAllCaches() {
   computeAllTimeStats();
   cachedJson("DGET_current", CACHE_TTL.current, function() { return computeLeaderboardRows('month'); });
-  cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame("MTT"); });
+  cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame(); });
   cachedJson("DGET_dealers_cur", CACHE_TTL.dealers, function() { return computeDealersHeatmap(""); });
   cachedJson("DGET_mttpodium", CACHE_TTL.mttpodium, function() { return computeMttPodiumStats(); });
 }
@@ -377,10 +377,10 @@ function computeAllTimeStatsRaw() {
 }
 
 /**
- * Зал славы: призовые места (1-5) по форматам, преимущественно MTT.
- * Вы можете ограничить формат параметром formatName (например "MTT").
- * @param {string} [onlyFormat] ограничить по формату (например "MTT").
- * @returns {Array} записи призовых мест, новые сверху
+ * История всех игр и турниров (SnG, MTT, Mystery Bounty).
+ * Призовые места (1-5) и нокауты.
+ * @param {string} [onlyFormat] ограничить по формату (например "MTT"). Если не задан — все форматы.
+ * @returns {Array} записи игр, новые сверху
  */
 function computeHallOfFame(onlyFormat) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -405,31 +405,37 @@ function computeHallOfFame(onlyFormat) {
 
   for (var r = 1; r < results.length; r++) {
     var player = results[r][CONFIG.DB_COL.PLAYER] ? results[r][CONFIG.DB_COL.PLAYER].toString().trim() : "";
-    var event = results[r][CONFIG.DB_COL.EVENT];
-    var format = results[r][CONFIG.DB_COL.FORMAT] ? results[r][CONFIG.DB_COL.FORMAT].toString().trim() : "";
+    var event = results[r][CONFIG.DB_COL.EVENT] ? results[r][CONFIG.DB_COL.EVENT].toString().trim() : "";
+    var format = results[r][CONFIG.DB_COL.FORMAT] ? results[r][CONFIG.DB_COL.FORMAT].toString().trim() : "SnG";
     var dealer = results[r][CONFIG.DB_COL.DEALER];
-    var place = placeLabels[event];
+    var gameId = results[r][CONFIG.DB_COL.GAME_ID];
+    var place = placeLabels[event] || 0;
 
-    if (!player || !event || !place) continue;
+    if (!player || !event) continue;
     if (!isParticipating(player)) continue;
-    if (event === "Нокаут") continue;
     if (onlyFormat && format !== onlyFormat) continue;
 
     wins.push({
+      gameId: gameId ? String(gameId).trim() : "",
       date: normalizeDate(results[r][CONFIG.DB_COL.DATE]),
       player: nickMap[player] || player,
       format: format,
+      event: event,
       place: place,
       dealer: dealer ? dealer.toString().trim() : "",
-      points: results[r][CONFIG.DB_COL.POINTS] || 0
+      points: Number(results[r][CONFIG.DB_COL.POINTS]) || 0
     });
   }
 
-  // Сортировка: свежие сверху
+  // Сортировка: свежие сверху, по дате, затем по gameId, затем по местам (1..5, затем нокауты)
   wins.sort(function(a, b) {
     var byDate = (b.date || "").localeCompare(a.date || "");
     if (byDate !== 0) return byDate;
-    return (a.place || 0) - (b.place || 0);
+    var gidCmp = (b.gameId || "").localeCompare(a.gameId || "");
+    if (gidCmp !== 0) return gidCmp;
+    var pA = a.place || 99;
+    var pB = b.place || 99;
+    return pA - pB;
   });
   return wins;
 }
@@ -759,8 +765,8 @@ function doGet(e) {
         payload = { success: true, type: "leaderboard", data: slimAllStats(computeAllTimeStats()), generatedAt: new Date() };
         break;
       case "halloffame":
-        // Призовые места именно по MTT (зал славы)
-        payload = { success: true, type: "halloffame", data: cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame("MTT"); }), generatedAt: new Date() };
+        // История всех игр и призовых мест (все форматы)
+        payload = { success: true, type: "halloffame", data: cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame(); }), generatedAt: new Date() };
         break;
       case "current":
         var rows = cachedJson("DGET_current", CACHE_TTL.current, function() { return computeLeaderboardRows('month'); });
@@ -773,7 +779,7 @@ function doGet(e) {
           success: true, type: "bundle",
           current: slimCurrentRows(cachedJson("DGET_current", CACHE_TTL.current, function() { return computeLeaderboardRows('month'); })),
           all: slimAllStats(computeAllTimeStats()),
-          hof: cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame("MTT"); }),
+          hof: cachedJson("DGET_halloffame", CACHE_TTL.hof, function() { return computeHallOfFame(); }),
           dealers: cachedJson("DGET_dealers_cur", CACHE_TTL.dealers, function() { return computeDealersHeatmap(""); }),
           generatedAt: new Date()
         };
