@@ -90,13 +90,13 @@ It manages games across 3 formats (**SnG**, **MTT**, **Mystery Bounty**), aggreg
     * Verified rich all-time stats data contract (`pointsByFormat`, `winsByFormat`, `firstWinDate`, `lastWinDate`, `mttPlacePoints`).
     * Added `testPlayerCardMilestones` unit test to `tests/test_engine.js`.
 
-- [ ] **TASK 2.2 [E2E VERIFICATION & DEPLOY]: API Contract & Test Suite Validation**
-  - **Action**:
-    1. Add unit test to `tests/test_engine.js` covering `computePlayerCard` data structure and milestone edge cases. Run `node tests/test_engine.js`.
-    2. Verify live API response for `?type=player&name=Молодой%20Блондин` and `?type=bundle`.
-    3. Execute `clasp push && clasp deploy -i AKfycbwXrgT_FBDueyA4ap3gryOQQfxBqiv2GJL_H4Ejt3bQhOdZThoMW_j61T-C7Oq4ZTTseg -d "Phase 2 - Player Card engine bugfixes & snapshot idempotency"`.
-    4. Git commit & push: `git commit -am "fix(analytics): fix player card milestone calculation and snapshot idempotency" && git push origin main`.
-  - **Verification Log**: *(Record test output and deployment version)*
+- [x] **TASK 2.2 [E2E VERIFICATION & DEPLOY]: API Contract & Test Suite Validation**
+  - **Status**: Completed.
+  - **Verification Log**:
+    * Unit Tests: `node tests/test_engine.js` -> 6/6 test suites passed (cleanPlayerName, normalizeFormRow, unifiedGameId, DynamicChunkedCache, achievements formulas, testPlayerCardMilestones).
+    * Live API Verification: Successfully tested `?type=bundle` and `?type=player&name=Молодой Блондин` & `?type=player&name=Илья666`. Verified milestone buffers, gaps, win dates, and format points.
+    * Deployment: Deployed to Google Apps Script Web App (version `@99`).
+    * Git: Committed and pushed to `origin/main` (`commit ea355a9`).
 
 ---
 
