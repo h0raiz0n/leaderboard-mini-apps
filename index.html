@@ -986,10 +986,16 @@
     } catch (e) {}
   }
 
-  /* ---------- Tabs / navigation stack ---------- */
+  /* ---------- Tabs / navigation stack & Browser History ---------- */
   var LB = [], CUR = "current";
   var CURRENT_PANEL = "lb";
+  var CURRENT_PLAYER_NAME = "";
   var PANEL_HISTORY = [];
+  var isHistoryPopping = false;
+
+  try {
+    history.replaceState({ panel: "lb" }, "");
+  } catch (e) {}
 
   function showPanel(name, isBack) {
     if (!isBack && name !== CURRENT_PANEL) {
@@ -997,6 +1003,11 @@
         PANEL_HISTORY.push(CURRENT_PANEL);
       } else {
         PANEL_HISTORY = [];
+      }
+      if (!isHistoryPopping) {
+        try {
+          history.pushState({ panel: name, player: CURRENT_PLAYER_NAME }, "");
+        } catch (e) {}
       }
     }
     CURRENT_PANEL = name;
@@ -1035,6 +1046,33 @@
     }
   }
 
+  // Обработка системного свайпа/кнопки "Назад" браузера и Android
+  window.addEventListener("popstate", function (e) {
+    isHistoryPopping = true;
+    var state = e.state;
+    if (state && state.panel) {
+      if (state.panel === "player" && state.player) {
+        openPlayerByName(state.player);
+      } else if (state.panel === "hof") {
+        showPanel("hof", true);
+        var ch = getCached("hof");
+        if (ch) renderHof(ch); else loadHof();
+      } else if (state.panel === "dealers") {
+        showPanel("dealers", true);
+        var cd = getCached("dealers");
+        if (cd) renderDealers(cd); else loadDealers();
+      } else if (state.panel === "faq") {
+        showPanel("faq", true);
+      } else {
+        showPanel("lb", true);
+        loadLeaderboard();
+      }
+    } else {
+      goBack();
+    }
+    setTimeout(function () { isHistoryPopping = false; }, 50);
+  });
+
   function goBackToLb() {
     goBack();
   }
@@ -1069,7 +1107,25 @@
       isRefreshing = false;
       if (refreshBtn) refreshBtn.classList.remove("spin");
       haptic("success");
-      loadLeaderboard();
+
+      // Обновляем текущий открытый экран
+      if (CURRENT_PANEL === "hof") {
+        var cachedHof = getCached("hof");
+        if (cachedHof) renderHof(cachedHof);
+        else fetchHof(true);
+      } else if (CURRENT_PANEL === "dealers") {
+        var cachedDe = getCached("dealers");
+        if (cachedDe) renderDealers(cachedDe);
+        else fetchDealers(true);
+      } else if (CURRENT_PANEL === "player" && CURRENT_PLAYER_NAME) {
+        openPlayerByName(CURRENT_PLAYER_NAME, true);
+      } else if (CURRENT_PANEL === "faq") {
+        // FAQ
+      } else {
+        loadLeaderboard();
+      }
+
+      toast("Данные обновлены");
     }, true);
   }
 
@@ -1216,14 +1272,15 @@
   }
 
   /* ---------- Player card ---------- */
-  function openPlayerByName(name) {
+  function openPlayerByName(name, isForce) {
     if (!name) return;
+    CURRENT_PLAYER_NAME = name;
     haptic("light");
     showPanel("player");
     var key = "player-" + name;
-    var cached = getCached(key);
+    var cached = isForce ? null : getCached(key);
     document.getElementById("pl-content").innerHTML = cached ? "" : '<div>' + skeletons(4) + '</div>';
-    getJson("player", "&name=" + encodeURIComponent(name), function (c) {
+    getJson("player", "&name=" + encodeURIComponent(name) + (isForce ? ("&_t=" + Date.now()) : ""), function (c) {
       if (!c) {
         if (!cached) document.getElementById("pl-content").innerHTML = stateHtml("Игрок не найден", "Попробуйте другого игрока из рейтинга.", false);
         return;
