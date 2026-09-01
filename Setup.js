@@ -35,6 +35,18 @@ function setupSecrets() {
     msgs.push("TELEGRAM_CHAT_ID: НЕ задан — выполните setSecret(\"TELEGRAM_CHAT_ID\", \"ваш_chat_id\")");
   }
 
+  if (props.getProperty("DEALER_BOT_TOKEN")) {
+    msgs.push("DEALER_BOT_TOKEN: задан (для @atmosphere_dealer_bot)");
+  } else {
+    msgs.push("DEALER_BOT_TOKEN: НЕ задан — выполните setSecret(\"DEALER_BOT_TOKEN\", \"ваш_токен_дилер_бота\")");
+  }
+
+  if (props.getProperty("FIREBASE_DB_URL")) {
+    msgs.push("FIREBASE_DB_URL: задан");
+  } else {
+    msgs.push("FIREBASE_DB_URL: НЕ задан — выполните setSecret(\"FIREBASE_DB_URL\", \"https://ваш-проект.firebaseio.com\")");
+  }
+
   if (props.getProperty("ADMIN_KEY")) {
     msgs.push("ADMIN_KEY: задан");
   } else {
@@ -80,11 +92,15 @@ function showConfiguredSecrets() {
   var props = PropertiesService.getScriptProperties();
   var token = props.getProperty("TELEGRAM_BOT_TOKEN") || "";
   var maskedToken = token ? token.substring(0, 8) + "…" : "(не задан)";
+  var dealerToken = props.getProperty("DEALER_BOT_TOKEN") || "";
+  var maskedDealerToken = dealerToken ? dealerToken.substring(0, 8) + "…" : "(не задан)";
   var adminKey = props.getProperty("ADMIN_KEY") || "";
   var maskedAdminKey = adminKey ? adminKey.substring(0, 4) + "…" : "(не задан)";
 
   Logger.log("TELEGRAM_BOT_TOKEN: " + maskedToken);
   Logger.log("TELEGRAM_CHAT_ID: " + (props.getProperty("TELEGRAM_CHAT_ID") || "(не задан)"));
+  Logger.log("DEALER_BOT_TOKEN: " + maskedDealerToken);
+  Logger.log("FIREBASE_DB_URL: " + (props.getProperty("FIREBASE_DB_URL") || "(не задан)"));
   Logger.log("PUBLIC_SPREADSHEET_ID: " + (props.getProperty("PUBLIC_SPREADSHEET_ID") || "(не задан)"));
   Logger.log("ADMIN_KEY: " + maskedAdminKey);
 }

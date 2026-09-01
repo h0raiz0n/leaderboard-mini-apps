@@ -7,6 +7,7 @@ function onOpen() {
       .addItem('🕘 ЗАПОЛНИТЬ ИСТОРИЮ (БЭКФИЛЛ)', 'backfillHistoricalData')
       .addSeparator()
       .addItem('🔍 ДИАГНОСТИКА', 'diagnoseLeaderboard')
+      .addItem('🎛️ ДИАГНОСТИКА БОТА И ТВ', 'diagnoseDealerBotAndTv')
       .addItem('⏰ ПРОВЕРИТЬ ТРИГГЕРЫ', 'checkSnapshotTriggers')
       .addItem('🧹 СВЕРКА С СЫРЫМИ (ПРЕДПРОСМОТР)', 'reconcilePreview')
       .addItem('🧹 СВЕРКА С СЫРЫМИ (ПРИМЕНИТЬ)', 'reconcileCommit')
@@ -395,4 +396,44 @@ function checkSnapshotTriggers() {
   lines.push("Остальные дни пропускаются самой функцией.");
 
   ui.alert(lines.join("\n"));
+}
+
+/**
+ * Главный Webhook эндпоинт для обработки входящих HTTP POST запросов (Telegram Bot Webhook)
+ */
+function doPost(e) {
+  try {
+    if (typeof handleDealerBotWebhook === "function") {
+      return handleDealerBotWebhook(e);
+    }
+  } catch (err) {
+    Logger.log("Ошибка обработки doPost: " + err.message);
+  }
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Диагностика готовности дилерского бота и ТВ-инфраструктуры
+ */
+function diagnoseDealerBotAndTv() {
+  var props = PropertiesService.getScriptProperties();
+  var dealerToken = props.getProperty("DEALER_BOT_TOKEN") || props.getProperty("TELEGRAM_BOT_TOKEN") || "";
+  var firebaseUrl = props.getProperty("FIREBASE_DB_URL") || "";
+
+  var lines = [];
+  lines.push("=== ДИАГНОСТИКА БОТА И ТВ ===");
+  lines.push("1. Токен бота: " + (dealerToken ? "✅ Задан (" + dealerToken.substring(0, 8) + "…)" : "❌ НЕ задан (DEALER_BOT_TOKEN)"));
+  lines.push("2. База Firebase: " + (firebaseUrl ? "✅ Задана (" + firebaseUrl + ")" : "❌ НЕ задана (FIREBASE_DB_URL)"));
+  
+  var structures = Object.keys(CONFIG.BLIND_STRUCTURES || {});
+  lines.push("3. Пресеты блайндов: " + (structures.length > 0 ? "✅ " + structures.join(", ") : "❌ Не найдены"));
+  
+  lines.push("\nДля настройки секретов запустите Setup.js -> setupSecrets()");
+
+  try {
+    SpreadsheetApp.getUi().alert(lines.join("\n"));
+  } catch (e) {
+    Logger.log(lines.join("\n"));
+  }
 }
