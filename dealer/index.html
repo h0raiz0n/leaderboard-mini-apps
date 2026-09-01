@@ -79,6 +79,19 @@
       <div class="timer-state-label" id="timer-status">Стол ожидает старта</div>
     </div>
 
+    <!-- МТТ панель игроков (отображается при формате MTT) -->
+    <div class="mtt-control-box" id="mtt-control-box" style="display: none;">
+      <div class="mtt-header-row">
+        <span class="mtt-label">👥 Игроков за столом:</span>
+        <div class="mtt-counter-wrap">
+          <button type="button" class="btn-stepper" onclick="adjustPlayers(-1)">−</button>
+          <span class="mtt-count-val" id="mtt-players-val">9</span>
+          <button type="button" class="btn-stepper" onclick="adjustPlayers(1)">+</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-elimination" id="btn-elimination" onclick="eliminatePlayer()">💀 Аут игрока (-1)</button>
+    </div>
+
     <!-- Кнопки управления -->
     <div class="btn-stack">
       <button class="btn btn-start" id="btn-start">Запустить игру</button>
@@ -94,6 +107,24 @@
       <button class="btn btn-finish" id="btn-finish" style="display: none;">🏁 Завершить игру</button>
     </div>
   </main>
+
+  <!-- Модалка ребаланса столов МТТ -->
+  <div class="modal-backdrop" id="rebalance-modal">
+    <div class="modal-sheet rebalance-sheet">
+      <div class="modal-heading" style="color: #fbbf24;">⚠️ Ребаланс столов</div>
+      <div class="modal-caption" id="rebalance-text">
+        Пересадите игрока со своего стола за стол ведущего <b id="rebalance-target-dealer">...</b>
+      </div>
+      <div class="rebalance-box-card">
+        <div class="box-card-caption">Случайный бокс:</div>
+        <div class="box-card-number" id="rebalance-box-num">№ 4</div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" onclick="rerollRebalanceBox()">🎲 Реролл</button>
+        <button type="button" class="btn btn-form-action" onclick="confirmRebalance()">✅ Пересажен</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Модалка завершения игры и управления перерывом -->
   <div class="modal-backdrop" id="finish-modal">

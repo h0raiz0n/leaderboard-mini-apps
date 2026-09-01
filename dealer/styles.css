@@ -345,6 +345,107 @@ body {
   color: #ffffff;
 }
 
+/* МТТ панель игроков */
+.mtt-control-box {
+  background: var(--bg-0);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mtt-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mtt-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mtt-counter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-stepper {
+  background: var(--card-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btn-stepper:active {
+  background: var(--gold);
+  color: #08111e;
+}
+
+.mtt-players-val {
+  font-size: 20px;
+  font-weight: 900;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  text-align: center;
+}
+
+.btn-elimination {
+  background: rgba(224, 89, 79, 0.16);
+  border: 1px solid var(--red);
+  color: #fca5a5;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-elimination:active {
+  background: var(--red);
+  color: #ffffff;
+  transform: scale(0.98);
+}
+
+/* Плашка номера бокса при ребалансе */
+.rebalance-box-card {
+  background: var(--bg-0);
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  margin: 6px 0;
+}
+
+.box-card-caption {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.box-card-number {
+  font-size: 36px;
+  font-weight: 900;
+  color: #fbbf24;
+  margin-top: 4px;
+}
+
 .btn-form-action {
   background: var(--gold);
   color: #08111e;

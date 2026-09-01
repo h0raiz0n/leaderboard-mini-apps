@@ -386,6 +386,89 @@ function closeFinishModal() {
   renderDealerView();
 }
 
+let CURRENT_REBALANCE_BOX = 1;
+let TARGET_REBALANCE_TABLE_KEY = null;
+
+// Настройка игроков за столом (МТТ)
+function adjustPlayers(delta) {
+  triggerHaptic("light");
+  const table = getMyTable();
+  table.playersCount = Math.max(1, Math.min(12, (table.playersCount || 9) + delta));
+  saveState();
+  renderDealerView();
+}
+
+// Выбивание игрока (Аут)
+function eliminatePlayer() {
+  triggerHaptic("heavy");
+  const table = getMyTable();
+  table.playersCount = Math.max(1, (table.playersCount || 9) - 1);
+  saveState();
+  renderDealerView();
+  checkMttRebalance();
+}
+
+// Проверка необходимости ребаланса между столами
+function checkMttRebalance() {
+  const currentTable = getMyTable();
+  if (currentTable.format !== "MTT" || currentTable.status !== "running") return;
+
+  const mttTables = Object.keys(TABLES_STATE)
+    .map(k => TABLES_STATE[k])
+    .filter(t => t && t.format === "MTT" && t.status === "running");
+
+  if (mttTables.length < 2) return;
+
+  // Ищем стол с максимумом и минимумом игроков
+  let maxTable = mttTables[0];
+  let minTable = mttTables[0];
+
+  mttTables.forEach(t => {
+    const count = t.playersCount || 9;
+    if (count > (maxTable.playersCount || 9)) maxTable = t;
+    if (count < (minTable.playersCount || 9)) minTable = t;
+  });
+
+  const delta = (maxTable.playersCount || 9) - (minTable.playersCount || 9);
+
+  // Если разница 2 и более игроков -> запускаем ребаланс
+  if (delta >= 2) {
+    if (currentTable.id === maxTable.id) {
+      TARGET_REBALANCE_TABLE_KEY = minTable.id;
+      rerollRebalanceBox();
+      showRebalanceModal(minTable.dealerName || "второй стол");
+    }
+  }
+}
+
+function rerollRebalanceBox() {
+  CURRENT_REBALANCE_BOX = Math.floor(Math.random() * 10) + 1;
+  const boxEl = document.getElementById("rebalance-box-num");
+  if (boxEl) boxEl.textContent = `№ ${CURRENT_REBALANCE_BOX}`;
+}
+
+function showRebalanceModal(targetDealer) {
+  const modal = document.getElementById("rebalance-modal");
+  const targetEl = document.getElementById("rebalance-target-dealer");
+  if (targetEl) targetEl.textContent = targetDealer;
+  if (modal) modal.style.display = "flex";
+}
+
+function confirmRebalance() {
+  triggerHaptic("success");
+  const currentTable = getMyTable();
+  currentTable.playersCount = Math.max(1, (currentTable.playersCount || 9) - 1);
+
+  if (TARGET_REBALANCE_TABLE_KEY && TABLES_STATE[TARGET_REBALANCE_TABLE_KEY]) {
+    TABLES_STATE[TARGET_REBALANCE_TABLE_KEY].playersCount = (TABLES_STATE[TARGET_REBALANCE_TABLE_KEY].playersCount || 9) + 1;
+  }
+
+  saveState();
+  const modal = document.getElementById("rebalance-modal");
+  if (modal) modal.style.display = "none";
+  renderDealerView();
+}
+
 // Отрисовка состояния пульта
 function renderDealerView() {
   const table = getMyTable();
@@ -405,6 +488,17 @@ function renderDealerView() {
   const pauseBtn = document.getElementById("btn-pause");
   const resetBtn = document.getElementById("btn-reset");
   const finishBtn = document.getElementById("btn-finish");
+
+  // МТТ панель
+  const mttBox = document.getElementById("mtt-control-box");
+  const mttVal = document.getElementById("mtt-players-val");
+  if (mttBox) {
+    const isMtt = (table.format === "MTT" || SELECTED_FORMAT === "MTT");
+    mttBox.style.display = (isMtt && (table.status === "running" || table.status === "paused")) ? "flex" : "none";
+  }
+  if (mttVal) {
+    mttVal.textContent = table.playersCount || 9;
+  }
 
   if (roundEl) roundEl.textContent = currentLvl.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLvl.level}`;
   if (blindsValEl) blindsValEl.textContent = currentLvl.label;
