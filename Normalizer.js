@@ -269,3 +269,12 @@ function buildNickMap(ss) {
   }
   return map;
 }
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cleanPlayerName: cleanPlayerName,
+    normalizeFormRow: normalizeFormRow,
+    getFormatConfigByRawSheet: getFormatConfigByRawSheet,
+    buildNickMap: buildNickMap
+  };
+}
