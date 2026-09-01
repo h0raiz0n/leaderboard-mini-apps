@@ -21,8 +21,9 @@ global.CacheService = {
   })
 };
 
+process.env.DEALER_BOT_TOKEN = "TEST_TOKEN_12345";
 global.CONFIG = require("../shared/poker-config.js");
-global.getScriptProperty = (k, fb) => global.CONFIG[k] || fb;
+global.getScriptProperty = (k, fb) => global.CONFIG[k] || fb || "TEST_TOKEN_12345";
 
 let lastSentPayload = null;
 global.UrlFetchApp = {

@@ -23,8 +23,9 @@ global.ContentService = {
   })
 };
 
+process.env.DEALER_BOT_TOKEN = "TEST_TOKEN_12345";
 global.CONFIG = require("../shared/poker-config.js");
-global.getScriptProperty = (k, fb) => global.CONFIG[k] || fb;
+global.getScriptProperty = (k, fb) => global.CONFIG[k] || fb || "TEST_TOKEN_12345";
 
 let lastSentPayload = null;
 global.UrlFetchApp = {
@@ -46,6 +47,7 @@ const update1 = {
   update_id: 10001,
   message: {
     message_id: 50,
+    date: Math.floor(Date.now() / 1000),
     from: { first_name: "Влад", username: "h0raiz0n" },
     chat: { id: 123456 },
     text: "/start"
