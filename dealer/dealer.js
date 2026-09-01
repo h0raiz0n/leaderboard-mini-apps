@@ -43,12 +43,7 @@ function sanitizeDealerKey(name) {
 function initDealerIdentity() {
   const registry = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.DEALERS_REGISTRY)
     ? POKER_CONFIG.DEALERS_REGISTRY
-    : { LIST: ["Влад", "Арина", "Игорь", "Сергей", "Евгений", "Другое"], MAP: {} };
-
-  const savedName = localStorage.getItem("atmosphere_dealer_name");
-  if (savedName && registry.LIST.includes(savedName)) {
-    DEALER_NAME = savedName;
-  }
+    : { LIST: ["Арина", "Арташес", "Влад", "Всеволод", "Дима", "Маша", "Нинель", "Паша", "Рома", "Саша", "Тимур", "Эмилия"], MAP: {} };
 
   if (window.Telegram && window.Telegram.WebApp) {
     const tg = window.Telegram.WebApp;
@@ -60,26 +55,27 @@ function initDealerIdentity() {
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
       const u = tg.initDataUnsafe.user;
       const uid = String(u.id || "");
-      const uname = String(u.username || "").toLowerCase();
-      const ufirst = String(u.first_name || "").toLowerCase();
+      const uname = String(u.username || "").toLowerCase().replace(/^@/, "");
 
       // Поиск по реестру Telegram ID / Username
-      if (registry.MAP[uid]) {
-        DEALER_NAME = registry.MAP[uid];
-      } else if (registry.MAP[uname]) {
+      if (registry.MAP[uname]) {
         DEALER_NAME = registry.MAP[uname];
-      } else if (registry.MAP[ufirst]) {
-        DEALER_NAME = registry.MAP[ufirst];
-      } else if (!savedName && u.first_name) {
-        // Проверяем прямое совпадение с именами списка
-        const directMatch = registry.LIST.find(l => l.toLowerCase() === ufirst);
-        if (directMatch) DEALER_NAME = directMatch;
+      } else if (registry.MAP[uid]) {
+        DEALER_NAME = registry.MAP[uid];
+      } else {
+        showAccessDenied(uname || uid);
+        return;
       }
     }
   }
+
+  const savedName = localStorage.getItem("atmosphere_dealer_name");
+  if (savedName && registry.LIST.includes(savedName)) {
+    DEALER_NAME = savedName;
+  }
   
   if (!DEALER_NAME || DEALER_NAME === "Ведущий") {
-    DEALER_NAME = registry.LIST[0] || "Влад";
+    DEALER_NAME = registry.LIST[2] || "Влад"; // Дефолт Влад
   }
   
   DEALER_ID = sanitizeDealerKey(DEALER_NAME);
@@ -90,6 +86,20 @@ function initDealerIdentity() {
   if (nameEl) nameEl.textContent = DEALER_NAME;
 
   renderDealerPills(registry);
+}
+
+function showAccessDenied(identifier) {
+  if (typeof document === "undefined" || !document.body) return;
+  document.body.innerHTML = `
+    <div style="padding: 32px 24px; text-align: center; color: #f8fafc; font-family: sans-serif; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <div style="font-size: 54px; margin-bottom: 16px;">⛔️</div>
+      <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Доступ ограничен</h2>
+      <p style="font-size: 15px; color: #94a3b8; line-height: 1.6; max-width: 320px;">
+        Ваш Telegram-аккаунт (<b>@${identifier || "неизвестный"}</b>) не найден в списке ведущих покерного клуба «Атмосфера».
+      </p>
+      <div style="margin-top: 24px; font-size: 13px; color: #64748b;">Обратитесь к администратору клуба.</div>
+    </div>
+  `;
 }
 
 function renderDealerPills(registry) {

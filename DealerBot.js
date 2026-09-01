@@ -53,10 +53,37 @@ function handleDealerBotWebhook(e) {
  */
 function handleDealerMessage(msg) {
   var chatId = msg.chat.id;
-  var dealerName = msg.from.first_name || msg.from.username || "Ведущий";
+  var from = msg.from || {};
+  var username = String(from.username || "").toLowerCase().replace(/^@/, "");
+  var userId = String(from.id || "");
+  
+  var registry = (typeof CONFIG !== "undefined" && CONFIG.DEALERS_REGISTRY) 
+    ? CONFIG.DEALERS_REGISTRY 
+    : { LIST: [], MAP: {} };
+
+  // Проверка белого списка ведущих
+  var isAuthorized = false;
+  var realDealerName = "";
+
+  if (registry.MAP[username]) {
+    isAuthorized = true;
+    realDealerName = registry.MAP[username];
+  } else if (registry.MAP[userId]) {
+    isAuthorized = true;
+    realDealerName = registry.MAP[userId];
+  }
+
+  if (!isAuthorized) {
+    var deniedText = "⛔️ <b>Доступ ограничен</b>\n\n" +
+      "Этот бот предназначен исключительно для авторизованных ведущих покерного клуба «Атмосфера».\n\n" +
+      "Ваш Telegram: @" + escapeHtml(username || "не_задан") + " (ID: <code>" + escapeHtml(userId) + "</code>).\n" +
+      "Передайте его администратору для добавления в белый список.";
+    sendDealerTelegram(chatId, deniedText, null);
+    return;
+  }
 
   var text = "♠️ <b>ПУЛЬТ ВЕДУЩЕГО «АТМОСФЕРА»</b>\n\n" +
-    "Привет, <b>" + escapeHtml(dealerName) + "</b>!\n\n" +
+    "Привет, <b>" + escapeHtml(realDealerName) + "</b>!\n\n" +
     "Нажмите кнопку ниже, чтобы открыть быстрый пульт управления столами турнира (отклик 20мс):";
 
   var keyboard = [

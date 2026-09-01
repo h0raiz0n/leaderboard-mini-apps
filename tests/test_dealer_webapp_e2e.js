@@ -21,7 +21,9 @@ global.window = {
     WebApp: {
       ready: () => {},
       expand: () => {},
-      initDataUnsafe: { user: { first_name: "Влад" } },
+      initDataUnsafe: {
+        user: { id: 1001, username: "h0raiz0n", first_name: "Влад" }
+      },
       HapticFeedback: {
         impactOccurred: () => {},
         notificationOccurred: () => {}

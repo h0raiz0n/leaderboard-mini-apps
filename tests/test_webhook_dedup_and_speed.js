@@ -46,7 +46,7 @@ const update1 = {
   update_id: 10001,
   message: {
     message_id: 50,
-    from: { first_name: "Влад", username: "vlad_poker" },
+    from: { first_name: "Влад", username: "h0raiz0n" },
     chat: { id: 123456 },
     text: "/start"
   }

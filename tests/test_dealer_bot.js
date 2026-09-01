@@ -1,5 +1,5 @@
 /**
- * UNIT TEST: Dealer Bot Mini App Launcher
+ * UNIT TEST: Dealer Bot Mini App Launcher & Whitelist Guard
  * Антикафе «Атмосфера»
  */
 
@@ -36,26 +36,47 @@ global.UrlFetchApp = {
 
 const bot = require("../DealerBot.js");
 
-console.log("♠️ Тестирование Telegram-бота для запуска Mini App...\n");
+console.log("♠️ Тестирование Telegram-бота и белого списка доступа...\n");
 
-// 1. Тест отправки кнопки Mini App по команде /start
-console.log("1. Тест кнопки запуска Mini App:");
-const update = {
+// 1. Тест авторизованного ведущего (@h0raiz0n -> Влад)
+console.log("1. Тест авторизованного ведущего (@h0raiz0n):");
+const authUpdate = {
   update_id: 101,
   message: {
     message_id: 1,
     chat: { id: 12345 },
-    from: { first_name: "Влад" },
+    from: { id: 1001, username: "h0raiz0n", first_name: "Влад" },
     text: "/start"
   }
 };
 
-const res = bot.handleDealerBotWebhook({ postData: { contents: JSON.stringify(update) } });
-assert.strictEqual(JSON.parse(res.output).status, "ok");
+lastSentPayload = null;
+const resAuth = bot.handleDealerBotWebhook({ postData: { contents: JSON.stringify(authUpdate) } });
+assert.strictEqual(JSON.parse(resAuth.output).status, "ok");
 assert(lastSentPayload, "Сообщение должно быть отправлено");
-assert(lastSentPayload.text.includes("Привет, <b>Влад</b>!"), "Приветствие должно содержать имя");
+assert(lastSentPayload.text.includes("Привет, <b>Влад</b>!"), "Приветствие должно содержать имя Влад");
 assert(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app, "Кнопка должна содержать web_app");
 assert.strictEqual(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app.url, "https://h0raiz0n.github.io/leaderboard-mini-apps/dealer/");
+console.log("   ✅ Авторизованный ведущий получает приветствие и кнопку пульта.");
 
-console.log("   ✅ Бот успешно отправляет приветствие и кнопку запуска Mini App.");
-console.log("\n🎉 ВСЕ ТЕСТЫ БОТА УСПЕШНО ПРОЙДЕНЫ!");
+// 2. Тест блокировки постороннего пользователя (@intruder)
+console.log("\n2. Тест блокировки неавторизованного пользователя (@intruder):");
+const unauthUpdate = {
+  update_id: 102,
+  message: {
+    message_id: 2,
+    chat: { id: 99999 },
+    from: { id: 9999, username: "intruder", first_name: "Незнакомец" },
+    text: "/start"
+  }
+};
+
+lastSentPayload = null;
+const resUnauth = bot.handleDealerBotWebhook({ postData: { contents: JSON.stringify(unauthUpdate) } });
+assert.strictEqual(JSON.parse(resUnauth.output).status, "ok");
+assert(lastSentPayload, "Ответ о блокировке должен быть отправлен");
+assert(lastSentPayload.text.includes("Доступ ограничен"), "Должен сообщать об ограничении доступа");
+assert(!lastSentPayload.reply_markup, "Кнопка пульта НЕ должна выдаваться");
+console.log("   ✅ Посторонний пользователь корректно заблокирован без выдачи пульта.");
+
+console.log("\n🎉 ВСЕ ТЕСТЫ БОТА И ДОСТУПА УСПЕШНО ПРОЙДЕНЫ!");
