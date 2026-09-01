@@ -269,12 +269,46 @@ async function main() {
       console.log('🔗 Регистрируем Webhook в Telegram...');
       await registerTelegramWebhook(webAppUrl);
       await setBotCommands();
+      await setChatMenuButton();
     }
 
     console.log('\n🎉 ДЕПЛОЙ И НАСТРОЙКА ПОЛНОСТЬЮ ЗАВЕРШЕНЫ!');
   } catch (err) {
     console.error('❌ Ошибка:', err.message);
   }
+}
+
+async function setChatMenuButton() {
+  const token = "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
+  const payload = JSON.stringify({
+    menu_button: {
+      type: "web_app",
+      text: "🎛 Пульт",
+      web_app: {
+        url: "https://h0raiz0n.github.io/leaderboard-mini-apps/dealer/"
+      }
+    }
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request('https://api.telegram.org/bot' + token + '/setChatMenuButton', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        console.log('🔘 Постоянная кнопка меню Telegram установлена: ' + data);
+        resolve(data);
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
 }
 
 main();
