@@ -17,17 +17,17 @@ const activeTable = {
   id: "dealer_vlad",
   dealerName: "Влад",
   status: "running",
-  startedAt: Date.now() - 380000, // прошло 380 сек
-  durationSec: 420, // осталось 40 сек -> алерт!
+  startedAt: Date.now() - 395000, // прошло 395 сек
+  durationSec: 420, // осталось 25 сек -> алерт!
   elapsedBeforePause: 0
 };
 
 const timeResult = tvEngine.calculateTableTime(activeTable);
 assert.strictEqual(timeResult.minutes, 0);
-assert.strictEqual(timeResult.seconds, 40);
-assert.strictEqual(timeResult.formatted, "00:40");
-assert.strictEqual(timeResult.isAlert, true, "При времени <= 45 сек должен включаться визуальный алерт");
-console.log("   ✅ Таймер и визуальный алерт (40 сек) работают корректно.");
+assert.strictEqual(timeResult.seconds, 25);
+assert.strictEqual(timeResult.formatted, "00:25");
+assert.strictEqual(timeResult.isAlert, true, "При времени <= 30 сек должен включаться визуальный алерт");
+console.log("   ✅ Таймер и визуальный алерт (25 сек) работают корректно.");
 
 // 2. Тест различных форматов турниров
 console.log("\n2. Тест распознавания форматов столов:");

@@ -122,8 +122,8 @@ function getTableStructure(table) {
   ];
 }
 
-// Расчёт времени стола
-function calculateTableTime(table) {
+// Расчёт времени стола (с поддержкой алерта 30с и овертайма финала)
+function calculateTableTime(table, isFinalLevel = false) {
   const now = Date.now();
   let elapsed = table.elapsedBeforePause || 0;
   
@@ -131,17 +131,35 @@ function calculateTableTime(table) {
     elapsed += Math.floor((now - table.startedAt) / 1000);
   }
   
-  const remaining = Math.max(0, table.durationSec - elapsed);
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
+  const duration = table.durationSec || 420;
+  const isOvertime = isFinalLevel && (elapsed >= duration) && (table.status === "running");
   
-  const isAlert = table.status === "running" && remaining <= 45 && remaining > 0;
+  let remaining = 0;
+  let minutes = 0;
+  let seconds = 0;
+  let formatted = "00:00";
+  let isAlert = false;
+  
+  if (isOvertime) {
+    const overtimeSec = elapsed - duration;
+    minutes = Math.floor(overtimeSec / 60);
+    seconds = overtimeSec % 60;
+    formatted = `+${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  } else {
+    remaining = Math.max(0, duration - elapsed);
+    minutes = Math.floor(remaining / 60);
+    seconds = remaining % 60;
+    formatted = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    // Предупреждающий алерт за 30 секунд (вместо 45)
+    isAlert = table.status === "running" && remaining <= 30 && remaining > 0;
+  }
   
   return {
     remaining,
     minutes,
     seconds,
-    formatted: `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`,
+    isOvertime,
+    formatted,
     isAlert
   };
 }
@@ -184,8 +202,9 @@ function renderTables() {
   let html = "";
   tableKeys.slice(0, 4).forEach(key => {
     const table = ACTIVE_TABLES[key];
-    const time = calculateTableTime(table);
     const structure = getTableStructure(table);
+    const isFinalLevel = (table.levelIndex >= structure.length - 1);
+    const time = calculateTableTime(table, isFinalLevel);
     const currentLevel = structure[table.levelIndex] || structure[0];
     const nextLevel = structure[table.levelIndex + 1] || null;
     const formatLabel = getFormatLabel(table.format);
@@ -214,11 +233,14 @@ function renderTables() {
     if (time.isAlert) cardClass += " state-alert";
     if (currentLevel.isBreak) cardClass += " state-break";
     if (table.status === "paused") cardClass += " state-paused";
+    if (time.isOvertime) cardClass += " state-final-round";
     
     let subtext = "Идёт раунд";
     if (table.status === "paused") subtext = "Пауза";
+    else if (time.isOvertime) subtext = "Финальный раунд • Блайнды зафиксированы";
     else if (currentLevel.isBreak) subtext = "Размен фишек $25 / $50";
-    else if (time.isAlert) subtext = "Смена блайндов через 45 сек";
+    else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
+    else if (isFinalLevel) subtext = "Финальный раунд турнира";
     
     html += `
       <div class="${cardClass}" id="card-${table.id}">
@@ -246,11 +268,16 @@ function renderTables() {
         <div class="blinds-grid">
           <div class="blinds-item">
             <span class="blinds-caption">Текущие блайнды</span>
-            <span class="blinds-number">${currentLevel.label}</span>
+            <div class="blinds-main-row">
+              <span class="blinds-number current">${currentLevel.sb} / ${currentLevel.bb}</span>
+              ${currentLevel.ante > 0 ? `<span class="ante-badge">АНТЕ ${currentLevel.ante}</span>` : ""}
+            </div>
           </div>
           <div class="blinds-item">
             <span class="blinds-caption">Следующие</span>
-            <span class="blinds-number upcoming">${nextLevel ? nextLevel.label : "ФИНАЛ"}</span>
+            <span class="blinds-number upcoming">
+              ${nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "ФИНАЛ"}
+            </span>
           </div>
         </div>
       </div>

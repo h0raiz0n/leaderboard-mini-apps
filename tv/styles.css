@@ -239,12 +239,13 @@ body {
 /* Блок блайндов */
 .blinds-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 1.6fr 1fr;
   gap: 20px;
   background: var(--bg-0);
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   padding: 20px 24px;
+  align-items: center;
 }
 
 .blinds-item {
@@ -258,34 +259,82 @@ body {
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
-.blinds-number {
-  font-size: 32px;
-  font-weight: 800;
+.blinds-main-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.blinds-number.current {
+  font-size: 40px;
+  font-weight: 900;
   color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.ante-badge {
+  background: rgba(232, 184, 75, 0.15);
+  border: 1px solid rgba(232, 184, 75, 0.5);
+  color: #ffd276;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
 
 .blinds-number.upcoming {
-  color: var(--muted);
+  color: #64748b;
+  font-size: 22px;
+  font-weight: 700;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.tv-viewport[data-tables="1"] .blinds-number.current {
+  font-size: 56px;
+}
+
+.tv-viewport[data-tables="1"] .ante-badge {
+  font-size: 22px;
+  padding: 6px 16px;
+}
+
+.tv-viewport[data-tables="1"] .blinds-number.upcoming {
   font-size: 26px;
 }
 
-.tv-viewport[data-tables="4"] .blinds-number {
+.tv-viewport[data-tables="4"] .blinds-number.current {
   font-size: 26px;
+}
+
+.tv-viewport[data-tables="4"] .ante-badge {
+  font-size: 13px;
+  padding: 3px 8px;
 }
 
 .tv-viewport[data-tables="4"] .blinds-number.upcoming {
-  font-size: 20px;
+  font-size: 17px;
 }
 
 /* Состояния стола */
-/* Предупреждение о смене уровня (<= 45 сек) */
+/* Предупреждение о смене уровня (<= 30 сек) */
 .table-card.state-alert {
   border-color: var(--amber);
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, var(--card) 100%);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.06) 0%, var(--card) 100%);
+  animation: pulse-alert 2s infinite ease-in-out;
+}
+
+@keyframes pulse-alert {
+  0%, 100% { border-color: var(--amber); }
+  50% { border-color: rgba(245, 158, 11, 0.4); }
 }
 
 .table-card.state-alert .timer-digits {
@@ -294,6 +343,22 @@ body {
 
 .table-card.state-alert .timer-subtext {
   color: var(--amber);
+}
+
+/* Состояние финального уровня (Overtime) */
+.table-card.state-final-round {
+  border-color: rgba(232, 184, 75, 0.6);
+  box-shadow: 0 0 35px rgba(232, 184, 75, 0.2);
+}
+
+.table-card.state-final-round .timer-digits {
+  color: #ffd276;
+}
+
+.table-card.state-final-round .timer-subtext {
+  color: var(--gold);
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 /* Перерыв / Color-Up */

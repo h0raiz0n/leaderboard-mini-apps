@@ -48,7 +48,7 @@ function simulateTimer(startedAtOffsetMs, durationSec, status, elapsedBeforePaus
     elapsed += Math.floor((now - (now - startedAtOffsetMs)) / 1000);
   }
   const remaining = Math.max(0, durationSec - elapsed);
-  const isAlert = status === "running" && remaining <= 45 && remaining > 0;
+  const isAlert = status === "running" && remaining <= 30 && remaining > 0;
   return { remaining, isAlert };
 }
 
@@ -57,10 +57,10 @@ const midLevel = simulateTimer(120000, 420, "running");
 assert.strictEqual(midLevel.remaining, 300);
 assert.strictEqual(midLevel.isAlert, false);
 
-// Случай 2: Конец уровня (30 сек осталось — алерт!)
-const endLevel = simulateTimer(390000, 420, "running");
-assert.strictEqual(endLevel.remaining, 30);
-assert.strictEqual(endLevel.isAlert, true, "При остатке <= 45 сек должен срабатывать алерт");
+// Случай 2: Конец уровня (20 сек осталось — алерт!)
+const endLevel = simulateTimer(400000, 420, "running");
+assert.strictEqual(endLevel.remaining, 20);
+assert.strictEqual(endLevel.isAlert, true, "При остатке <= 30 сек должен срабатывать алерт");
 
 // Случай 3: Пауза (время не должно утекать)
 const pausedLevel = simulateTimer(0, 420, "paused", 150);
