@@ -16,15 +16,46 @@
 <body>
   <!-- Шапка ведущего -->
   <header class="dealer-header">
-    <span class="dealer-brand">Атмосфера</span>
-    <span class="dealer-tag" id="dealer-badge">Ведущий</span>
+    <div class="brand-group">
+      <span class="dealer-brand">Атмосфера</span>
+      <span class="dealer-tag" id="dealer-badge">Ведущий</span>
+    </div>
+    <div class="latency-indicator" id="latency-tag">⚡ 20ms</div>
   </header>
 
-  <!-- Карточка стола ведущего -->
-  <main class="control-card">
+  <!-- Экран выбора настроек перед стартом (если стол idle) -->
+  <section class="setup-panel" id="setup-panel">
+    <div class="section-title">Параметры турнира</div>
+    
+    <div class="selector-group">
+      <label class="selector-label">Формат игры</label>
+      <div class="pill-grid" id="format-pills">
+        <button type="button" class="pill active" data-format="SnG">🃏 SnG</button>
+        <button type="button" class="pill" data-format="Mystery">🎯 Mystery</button>
+        <button type="button" class="pill" data-format="MTT">🏆 MTT</button>
+      </div>
+    </div>
+
+    <div class="selector-group">
+      <label class="selector-label">Структура блайндов</label>
+      <div class="pill-grid vertical" id="struct-pills">
+        <button type="button" class="pill active" data-struct="SNG_STANDARD">
+          <span class="pill-title">5 000 стек / 7 мин</span>
+          <span class="pill-sub">Стандартная турнирная сетка</span>
+        </button>
+        <button type="button" class="pill" data-struct="SNG_TURBO">
+          <span class="pill-title">5 000 стек / 5 мин</span>
+          <span class="pill-sub">Турбо-режим</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Основная карточка стола ведущего -->
+  <main class="control-card" id="control-card">
     <div class="table-identity-bar">
       <div>
-        <div style="font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.06em;">Стол ведущего</div>
+        <div class="identity-sub">Стол ведущего</div>
         <div class="identity-dealer-name" id="identity-name">Ведущий</div>
       </div>
       <div class="identity-round" id="identity-round">Раунд 1</div>
@@ -43,30 +74,37 @@
     </div>
 
     <!-- Таймер -->
-    <div class="timer-container">
+    <div class="timer-container" id="timer-box">
       <div class="timer-readout" id="timer-digits">07:00</div>
       <div class="timer-state-label" id="timer-status">Стол ожидает старта</div>
     </div>
 
     <!-- Кнопки управления -->
     <div class="btn-stack">
-      <button class="btn btn-start" id="btn-start">Старт игры</button>
-      <button class="btn btn-pause" id="btn-pause" style="display: none;">Пауза</button>
-      <button class="btn btn-step" onclick="nextLevel()">Следующий уровень</button>
-      <button class="btn btn-finish" onclick="finishGame()">Завершить игру</button>
+      <button class="btn btn-start" id="btn-start">Запустить игру</button>
+      
+      <div class="btn-row" id="running-btn-row" style="display: none;">
+        <button class="btn btn-pause" id="btn-pause">⏸ Пауза</button>
+        <button class="btn btn-step" id="btn-step">⏩ След. раунд</button>
+      </div>
+
+      <!-- Кнопка сброса (исчезает через 3 мин) -->
+      <button class="btn btn-reset" id="btn-reset" style="display: none;">❌ Сбросить запуск (ошибка)</button>
+      
+      <button class="btn btn-finish" id="btn-finish" style="display: none;">🏁 Завершить игру</button>
     </div>
   </main>
 
   <!-- Модалка завершения игры -->
   <div class="modal-backdrop" id="finish-modal">
     <div class="modal-sheet">
-      <div class="modal-heading">Игра завершена</div>
+      <div class="modal-heading">🏁 Игра завершена</div>
       <div class="modal-caption">
-        На ТВ запущен 10-минутный перерыв до следующего стола.<br>
-        Нажмите кнопку для внесения призовых мест (1–3) в Google Form.
+        На телевизоре запущен 10-минутный перерыв до следующего стола.<br><br>
+        Нажмите кнопку для внесения призовых мест в Google Form:
       </div>
-      <button class="btn btn-form-action" id="open-form-btn">Внести результаты в форму</button>
-      <button class="btn" style="background: transparent; color: var(--muted); padding: 8px;" onclick="closeFinishModal()">Закрыть</button>
+      <button class="btn btn-form-action" id="open-form-btn">📝 Внести результаты в форму</button>
+      <button class="btn btn-secondary" onclick="closeFinishModal()">🃏 Запустить новый стол</button>
     </div>
   </div>
 </body>

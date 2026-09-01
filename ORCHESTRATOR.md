@@ -39,13 +39,13 @@
 
 ---
 
-#### [ ] TASK-A2: Сверхбыстрый пульт дилера (Direct-to-Firebase WebApp)
+#### [x] TASK-A2: Сверхбыстрый пульт дилера (Direct-to-Firebase WebApp)
 * **Суть:**
   1. Доработка `dealer/index.html` и `dealer/dealer.js` в Telegram Mini App, подключающегося **напрямую к Firebase Realtime DB** (задержка реакции ТВ на клик дилера: **$15–30$ миллисекунд**).
   2. Полный цикл: выбор формата (`SnG`, `Mystery`, `MTT`), выбор структуры (`Стандарт 7м`, `Турбо 5м`), кнопки `Пауза`, `След. раунд`, `Сброс (таймаут 3 мин)`, `Завершить игру`.
   3. Определение имени ведущего из Telegram (`user.first_name`).
 
-#### [ ] VERIFY-A2: E2E Тест пульта дилера в Playwright
+#### [x] VERIFY-A2: E2E Тест пульта дилера в Playwright
 * **Проверка:** Автотест на Playwright/Puppeteer (клик по кнопкам в мобильном эмуляторе $\rightarrow$ моментальное изменение состояния в Firebase и на ТВ). Git commit & deploy.
 
 ---
