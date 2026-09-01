@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Атмосфера — Tournament Board</title>
+  
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  
+  <script src="../shared/poker-config.js"></script>
+  <script src="tv.js" defer></script>
+</head>
+<body>
+  <!-- Верхняя панель -->
+  <header class="tv-header">
+    <div class="brand-section">
+      <span class="club-title">Атмосфера</span>
+      <div class="live-indicator">
+        <span class="live-indicator-dot"></span>
+        <span>LIVE</span>
+      </div>
+    </div>
+    
+    <div class="header-clock" id="header-clock">--:--:--</div>
+  </header>
+
+  <!-- Сетка столов -->
+  <main class="tv-viewport" id="tv-viewport" data-tables="1">
+    <!-- Столы рендерятся через tv.js -->
+  </main>
+</body>
+</html>

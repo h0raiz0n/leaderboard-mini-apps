@@ -1,0 +1,357 @@
+/* ==========================================
+   SMART TV 75" (4K UHD) BROADCAST HUD
+   Антикафе «Атмосфера» — Visual World: Chip Stack / Deep Navy
+   ========================================== */
+
+:root {
+  --bg-0: #08111e;
+  --bg-1: #0b1830;
+  --card: #122842;
+  --card-elevated: #162f4e;
+  --line: #1b3a5c;
+  --line-strong: #28507c;
+  
+  --ink: #e9f1f9;
+  --ink-secondary: #c2d4e8;
+  --muted: #9db6d0;
+  --muted-dark: #6b87a6;
+  
+  --gold: #e8b84b;
+  --gold-dim: #c6952e;
+  --green: #3fce8c;
+  --amber: #f59e0b;
+  --red: #e0594f;
+  --blue: #4b82d8;
+  
+  --radius-card: 20px;
+  --radius-panel: 14px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  background: radial-gradient(circle at 50% 10%, var(--bg-1) 0%, var(--bg-0) 100%);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Верхняя статусная панель */
+.tv-header {
+  height: 64px;
+  background: rgba(11, 24, 48, 0.95);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  z-index: 10;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.club-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(63, 206, 140, 0.1);
+  border: 1px solid rgba(63, 206, 140, 0.3);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.05em;
+}
+
+.live-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.header-clock {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* Главная сетка отображения */
+.tv-viewport {
+  flex: 1;
+  padding: 28px;
+  display: grid;
+  gap: 28px;
+  height: calc(100vh - 64px);
+}
+
+/* Адаптивная раскладка под количество столов */
+.tv-viewport[data-tables="1"] {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.tv-viewport[data-tables="2"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.tv-viewport[data-tables="3"] {
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.tv-viewport[data-tables="4"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* Карточка стола ведущего */
+.table-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 16px 36px rgba(4, 10, 20, 0.6);
+  position: relative;
+  transition: border-color 0.25s ease;
+}
+
+/* Заголовок стола */
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
+}
+
+.dealer-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dealer-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.dealer-name {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.round-pill {
+  background: var(--card-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-secondary);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 8px;
+  letter-spacing: 0.04em;
+}
+
+/* Центральный таймер */
+.timer-block {
+  text-align: center;
+  margin: 16px 0;
+}
+
+.timer-digits {
+  font-size: 130px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.tv-viewport[data-tables="1"] .timer-digits {
+  font-size: 200px;
+}
+
+.tv-viewport[data-tables="4"] .timer-digits {
+  font-size: 96px;
+}
+
+.timer-subtext {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 12px;
+}
+
+/* Блок блайндов */
+.blinds-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  padding: 20px 24px;
+}
+
+.blinds-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blinds-caption {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.blinds-number {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.blinds-number.upcoming {
+  color: var(--muted);
+  font-size: 26px;
+}
+
+.tv-viewport[data-tables="4"] .blinds-number {
+  font-size: 26px;
+}
+
+.tv-viewport[data-tables="4"] .blinds-number.upcoming {
+  font-size: 20px;
+}
+
+/* Состояния стола */
+/* Предупреждение о смене уровня (<= 45 сек) */
+.table-card.state-alert {
+  border-color: var(--amber);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, var(--card) 100%);
+}
+
+.table-card.state-alert .timer-digits {
+  color: #fbbf24;
+}
+
+.table-card.state-alert .timer-subtext {
+  color: var(--amber);
+}
+
+/* Перерыв / Color-Up */
+.table-card.state-break {
+  border-color: var(--red);
+}
+
+.table-card.state-break .timer-digits {
+  color: #f87171;
+}
+
+.table-card.state-break .timer-subtext {
+  color: var(--red);
+}
+
+/* Пауза */
+.table-card.state-paused {
+  opacity: 0.8;
+  border-color: var(--muted-dark);
+}
+
+.table-card.state-paused .timer-subtext {
+  color: var(--amber);
+}
+
+/* Завершение игры / 10-минутный перерыв */
+.break-screen-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.break-screen-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.break-screen-dealer {
+  font-size: 20px;
+  color: var(--ink-secondary);
+}
+
+.break-screen-digits {
+  font-size: 88px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+/* Состояние ожидания (Lounge Mode) */
+.lounge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  gap: 16px;
+}
+
+.lounge-brand {
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.lounge-status {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--muted);
+}
