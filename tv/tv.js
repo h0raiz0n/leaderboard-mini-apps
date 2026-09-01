@@ -6,15 +6,17 @@
 let ACTIVE_TABLES = {};
 let WAKE_LOCK = null;
 
-document.addEventListener("DOMContentLoaded", () => {
-  initClock();
-  initWakeLock();
-  initFullscreenShortcut();
-  initDataSource();
-  
-  // Регулярная перерисовка (каждые 500мс)
-  setInterval(renderTables, 500);
-});
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("DOMContentLoaded", () => {
+    initClock();
+    initWakeLock();
+    initFullscreenShortcut();
+    initDataSource();
+    
+    // Регулярная перерисовка каждые 250 мс
+    setInterval(renderTables, 250);
+  });
+}
 
 // Часы в шапке
 function initClock() {
@@ -28,10 +30,10 @@ function initClock() {
   setInterval(update, 1000);
 }
 
-// Защита от засыпания экрана
+// Защита от засыпания экрана (Samsung Smart TV)
 async function initWakeLock() {
   try {
-    if ("wakeLock" in navigator) {
+    if (typeof navigator !== "undefined" && "wakeLock" in navigator) {
       WAKE_LOCK = await navigator.wakeLock.request("screen");
     }
   } catch (err) {
@@ -41,6 +43,7 @@ async function initWakeLock() {
 
 // Горячие клавиши (F / Enter = Fullscreen)
 function initFullscreenShortcut() {
+  if (typeof document === "undefined") return;
   document.addEventListener("keydown", (e) => {
     if (e.key === "f" || e.key === "F" || e.key === "Enter") {
       toggleFullscreen();
@@ -54,6 +57,7 @@ function initFullscreenShortcut() {
 }
 
 function toggleFullscreen() {
+  if (typeof document === "undefined") return;
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(err => console.log(err));
   } else {
@@ -75,7 +79,7 @@ function initDataSource() {
         ACTIVE_TABLES = snapshot.val() || {};
         renderTables();
       });
-      console.log("⚡ Успешно подключено к Firebase Realtime DB (europe-west1)");
+      console.log("⚡ ТВ подключен к Firebase Realtime DB (europe-west1)");
       return;
     } catch (err) {
       console.warn("Ошибка подключения к Firebase, переключение на локальный fallback:", err);
@@ -83,7 +87,8 @@ function initDataSource() {
   }
 
   // Fallback на LocalStorage для локальной разработки / оффлайна
-  window.addEventListener("storage", (e) => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
       if (e.key === "atmosphere_tables") {
         ACTIVE_TABLES = JSON.parse(e.newValue || "{}");
         renderTables();
@@ -93,33 +98,28 @@ function initDataSource() {
     const saved = localStorage.getItem("atmosphere_tables");
     if (saved) {
       ACTIVE_TABLES = JSON.parse(saved);
-    } else {
-      // Начальное демо-состояние с именами ведущих
-      ACTIVE_TABLES = {
-        dealer_vlad: {
-          id: "dealer_vlad",
-          dealerName: "Влад",
-          format: "SnG",
-          status: "running",
-          levelIndex: 1, // Раунд 2 (50/100)
-          startedAt: Date.now() - 180000,
-          durationSec: 420,
-          elapsedBeforePause: 0
-        },
-        dealer_arina: {
-          id: "dealer_arina",
-          dealerName: "Арина",
-          format: "SnG",
-          status: "running",
-          levelIndex: 4, // Раунд 5 (150/300, алерт < 45 сек)
-          startedAt: Date.now() - 390000,
-          durationSec: 420,
-          elapsedBeforePause: 0
-        }
-      };
-      localStorage.setItem("atmosphere_tables", JSON.stringify(ACTIVE_TABLES));
     }
   }
+}
+
+// Определение структуры уровней стола
+function getTableStructure(table) {
+  const cfg = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.BLIND_STRUCTURES)
+    ? POKER_CONFIG.BLIND_STRUCTURES
+    : {};
+
+  if (table && table.structKey && cfg[table.structKey]) {
+    return cfg[table.structKey].levels;
+  }
+
+  if (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.SNG_STRUCTURE) {
+    return POKER_CONFIG.SNG_STRUCTURE.levels;
+  }
+
+  return [
+    { level: 1, sb: 25, bb: 50, ante: 0, durationSec: 420, label: "25 / 50" },
+    { level: 2, sb: 50, bb: 100, ante: 0, durationSec: 420, label: "50 / 100" }
+  ];
 }
 
 // Расчёт времени стола
@@ -146,21 +146,35 @@ function calculateTableTime(table) {
   };
 }
 
+function getFormatLabel(formatKey) {
+  if (formatKey === "Data" || formatKey === "SnG") return "SnG";
+  if (formatKey === "Mystery" || formatKey === "Mystery Bounty") return "Mystery";
+  if (formatKey === "MTT") return "MTT";
+  return formatKey || "SnG";
+}
+
 // Отрисовка сетки столов
 function renderTables() {
+  if (typeof document === "undefined") return;
   const viewport = document.getElementById("tv-viewport");
   if (!viewport) return;
   
-  const tableKeys = Object.keys(ACTIVE_TABLES).filter(k => ACTIVE_TABLES[k] && (ACTIVE_TABLES[k].status !== "idle" || ACTIVE_TABLES[k].isPostGameBreak));
+  const tableKeys = Object.keys(ACTIVE_TABLES).filter(k => {
+    const t = ACTIVE_TABLES[k];
+    if (!t) return false;
+    if (t.status === "running" || t.status === "paused") return true;
+    if (t.isPostGameBreak && t.nextGameAt && (t.nextGameAt > Date.now())) return true;
+    return false;
+  });
+
   const count = tableKeys.length;
-  
   viewport.dataset.tables = count === 0 ? "1" : String(Math.min(4, count));
   
   if (count === 0) {
     viewport.innerHTML = `
       <div class="lounge-container">
         <div class="lounge-brand">АТМОСФЕРА</div>
-        <div class="lounge-status">Ожидание запуска турниров</div>
+        <div class="lounge-status">Покерный клуб • Ожидание запуска столов</div>
       </div>
     `;
     return;
@@ -170,13 +184,13 @@ function renderTables() {
   tableKeys.slice(0, 4).forEach(key => {
     const table = ACTIVE_TABLES[key];
     const time = calculateTableTime(table);
-    
-    const structure = POKER_CONFIG.SNG_STRUCTURE.levels;
+    const structure = getTableStructure(table);
     const currentLevel = structure[table.levelIndex] || structure[0];
     const nextLevel = structure[table.levelIndex + 1] || null;
+    const formatLabel = getFormatLabel(table.format);
     
     // Состояние перерыва после игры (10 мин отсчет)
-    if (table.isPostGameBreak) {
+    if (table.isPostGameBreak && table.nextGameAt) {
       const breakRemaining = Math.max(0, Math.floor((table.nextGameAt - Date.now()) / 1000));
       const bMin = Math.floor(breakRemaining / 60);
       const bSec = breakRemaining % 60;
@@ -184,8 +198,8 @@ function renderTables() {
       
       html += `
         <div class="table-card break-screen-card">
-          <div class="break-screen-title">Игра завершена</div>
-          <div class="break-screen-dealer">Стол ведущего ${table.dealerName}</div>
+          <div class="break-screen-title">🏁 Игра завершена</div>
+          <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
           <div class="break-screen-digits">${bFormatted}</div>
           <div style="font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;">До старта следующей игры</div>
         </div>
@@ -210,10 +224,13 @@ function renderTables() {
         <div class="card-top">
           <div class="dealer-identity">
             <span class="dealer-label">Стол ведущего</span>
-            <span class="dealer-name">${table.dealerName}</span>
+            <span class="dealer-name">${table.dealerName || "Ведущий"}</span>
           </div>
-          <div class="round-pill">
-            ${currentLevel.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLevel.level}`}
+          <div class="pill-group">
+            <span class="format-badge">${formatLabel}</span>
+            <div class="round-pill">
+              ${currentLevel.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLevel.level}`}
+            </div>
           </div>
         </div>
         
@@ -239,4 +256,18 @@ function renderTables() {
   });
   
   viewport.innerHTML = html;
+}
+
+function setActiveTables(tables) {
+  ACTIVE_TABLES = tables || {};
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    setActiveTables,
+    calculateTableTime,
+    getTableStructure,
+    getFormatLabel,
+    renderTables
+  };
 }
