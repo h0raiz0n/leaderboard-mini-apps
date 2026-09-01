@@ -23,7 +23,7 @@ global.CacheService = {
 
 process.env.DEALER_BOT_TOKEN = "TEST_TOKEN_12345";
 global.CONFIG = require("../shared/poker-config.js");
-global.getScriptProperty = (k, fb) => global.CONFIG[k] || fb || "TEST_TOKEN_12345";
+global.getScriptProperty = (k, fb) => (k === "DEALER_BOT_TOKEN" ? "TEST_TOKEN_12345" : fb);
 
 let lastSentPayload = null;
 global.UrlFetchApp = {
@@ -56,8 +56,7 @@ const resAuth = bot.handleDealerBotWebhook({ postData: { contents: JSON.stringif
 assert.strictEqual(JSON.parse(resAuth.output).status, "ok");
 assert(lastSentPayload, "Сообщение должно быть отправлено");
 assert(lastSentPayload.text.includes("Привет, <b>Влад</b>!"), "Приветствие должно содержать имя Влад");
-assert(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app, "Кнопка должна содержать web_app");
-assert.strictEqual(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app.url, "https://h0raiz0n.github.io/leaderboard-mini-apps/dealer/");
+assert(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app.url.includes("/dealer/"), "Кнопка должна содержать путь к пульту /dealer/");
 console.log("   ✅ Авторизованный ведущий получает приветствие и кнопку пульта.");
 
 // 2. Тест блокировки постороннего пользователя (@intruder)

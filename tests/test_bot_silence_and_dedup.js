@@ -24,7 +24,7 @@ global.CacheService = {
 
 process.env.DEALER_BOT_TOKEN = "TEST_TOKEN_12345";
 global.CONFIG = require("../shared/poker-config.js");
-global.getScriptProperty = (k, fb) => global.CONFIG[k] || fb || "TEST_TOKEN_12345";
+global.getScriptProperty = (k, fb) => (k === "DEALER_BOT_TOKEN" ? "TEST_TOKEN_12345" : fb);
 
 let lastSentPayload = null;
 global.UrlFetchApp = {

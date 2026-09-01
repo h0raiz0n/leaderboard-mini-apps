@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "name": "atmosphere-poker",
+  "cleanUrls": true,
+  "trailingSlash": true,
+  "rewrites": [
+    { "source": "/tv", "destination": "/tv/index.html" },
+    { "source": "/tv/", "destination": "/tv/index.html" },
+    { "source": "/dealer", "destination": "/dealer/index.html" },
+    { "source": "/dealer/", "destination": "/dealer/index.html" },
+    { "source": "/", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
+  ]
+}

@@ -1,9 +1,16 @@
-// ==========================================
-// ДВИЖОК ДИЛЕРСКОГО TELEGRAM-БОТА (Mini App Launch Edition)
-// @atmosphere_poker_dealer_bot
-// ==========================================
-
-const MINI_APP_URL = "https://h0raiz0n.github.io/leaderboard-mini-apps/dealer/";
+function getDealerMiniAppUrl() {
+  if (typeof getScriptProperty === "function") {
+    var u = getScriptProperty("DEALER_APP_URL", "");
+    if (u) return u;
+  }
+  if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+    try {
+      var pu = PropertiesService.getScriptProperties().getProperty("DEALER_APP_URL");
+      if (pu) return pu;
+    } catch (e) {}
+  }
+  return "https://atmosphere-poker.vercel.app/dealer/";
+}
 
 /**
  * Главный диспетчер входящих Webhook-запросов от Telegram
@@ -103,7 +110,7 @@ function handleDealerMessage(msg) {
     [
       {
         text: "🎛 Открыть пульт ведущего",
-        web_app: { url: MINI_APP_URL }
+        web_app: { url: getDealerMiniAppUrl() }
       }
     ]
   ];
@@ -183,6 +190,6 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     handleDealerBotWebhook,
     handleDealerMessage,
-    MINI_APP_URL
+    getDealerMiniAppUrl
   };
 }
