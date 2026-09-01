@@ -84,8 +84,6 @@ function initDealerIdentity() {
   const nameEl = document.getElementById("identity-name");
   if (badgeEl) badgeEl.textContent = DEALER_NAME;
   if (nameEl) nameEl.textContent = DEALER_NAME;
-
-  renderDealerPills(registry);
 }
 
 function showAccessDenied(identifier) {
@@ -100,38 +98,6 @@ function showAccessDenied(identifier) {
       <div style="margin-top: 24px; font-size: 13px; color: #64748b;">Обратитесь к администратору клуба.</div>
     </div>
   `;
-}
-
-function renderDealerPills(registry) {
-  const container = document.getElementById("dealer-pills");
-  if (!container) return;
-
-  const list = registry.LIST || ["Влад", "Арина", "Игорь", "Сергей", "Евгений", "Другое"];
-  container.innerHTML = list.map(name => {
-    const isActive = name === DEALER_NAME ? "active" : "";
-    return `<button type="button" class="pill ${isActive}" data-dealer="${name}">${name}</button>`;
-  }).join("");
-
-  if (container.querySelectorAll) {
-    container.querySelectorAll(".pill").forEach(pill => {
-      pill.addEventListener("click", () => {
-        container.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
-        pill.classList.add("active");
-        
-        DEALER_NAME = pill.dataset.dealer;
-        DEALER_ID = sanitizeDealerKey(DEALER_NAME);
-        localStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
-        
-        const badgeEl = document.getElementById("dealer-badge");
-        const nameEl = document.getElementById("identity-name");
-        if (badgeEl) badgeEl.textContent = DEALER_NAME;
-        if (nameEl) nameEl.textContent = DEALER_NAME;
-        
-        triggerHaptic("light");
-        renderDealerView();
-      });
-    });
-  }
 }
 
 function triggerHaptic(type = "light") {
