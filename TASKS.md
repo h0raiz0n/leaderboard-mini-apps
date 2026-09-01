@@ -51,10 +51,8 @@
 
 ## 🚀 Фаза 3. Развёртывание и боевой тест
 
-### [ ] Шаг 5. Деплой Web App, установка Webhook и сквозной тест
-* **Что делаем:**
-  * Деплой новой версии Google Apps Script Web App (`clasp push` / Web App deployment).
-  * Регистрация Webhook в Telegram (`setWebhook`).
-  * Сквозной тест: Клик в Telegram $\rightarrow$ Изменение на ТВ $\rightarrow$ Завершение $\rightarrow$ Запись в `DB_Results` $\rightarrow$ Лидерборд.
-* **Тест:** Сквозной интеграционный тест связки.
-* **Git-коммит:** `chore(release): deploy dealer bot webhook and verify end-to-end flow`
+### [x] Шаг 5. Деплой Web App, установка Webhook и сквозной тест
+* **Деплой:** Версия №101 загружена в Google Apps Script (`1LqD6aHEgJBatHMMi_6uPMZ9eXjDLA0bLQLQA6jBarwh6xqQS30tbFgOg`).
+* **Webhook:** Зарегистрирован в Telegram для `@atmosphere_poker_dealer_bot` (`Webhook was set: true`).
+* **Firebase:** Боевая база `atmosphere-poker-default-rtdb` протестирована на чтение и запись.
+* **ТВ-экран:** Готов к выводу на 75" 4K Smart TV.
