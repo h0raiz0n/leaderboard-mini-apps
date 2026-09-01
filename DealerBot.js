@@ -20,6 +20,22 @@ function handleDealerBotWebhook(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  // Защита от дублей повторных вебхуков Telegram (Webhook Retry Storm Protection)
+  if (update.update_id) {
+    try {
+      var cache = CacheService.getScriptCache();
+      var key = "TG_UPD_" + update.update_id;
+      if (cache.get(key)) {
+        Logger.log("Дубликат Telegram update_id: " + update.update_id + ", пропуск.");
+        return ContentService.createTextOutput(JSON.stringify({ status: "duplicate_skipped" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      cache.put(key, "1", 300); // 5 минут кэша
+    } catch (cacheErr) {
+      Logger.log("Cache error: " + cacheErr.message);
+    }
+  }
+
   // 1. Обработка обычных текстовых сообщений (/start, /help)
   if (update.message) {
     handleDealerMessage(update.message);
@@ -42,6 +58,17 @@ function handleDealerMessage(msg) {
   var dealerName = msg.from.first_name || msg.from.username || "Ведущий";
 
   if (text.indexOf("/start") === 0 || text === "/new" || text === "Новая игра") {
+    // Защита от спама кнопкой /start (cooldown 2 сек)
+    try {
+      var startKey = "TG_START_" + chatId;
+      var cache = CacheService.getScriptCache();
+      if (cache.get(startKey)) {
+        Logger.log("Игнорирование повторного /start за 2 секунды от " + chatId);
+        return;
+      }
+      cache.put(startKey, "1", 2);
+    } catch (e) {}
+
     sendFormatSelectionMenu(chatId, dealerName);
   } else {
     var helpText = "♠️ <b>Управление турнирами «Атмосфера»</b>\n\n" +
@@ -113,8 +140,20 @@ function handleDealerCallback(query) {
   var dealerName = query.from.first_name || query.from.username || "Ведущий";
   var dealerId = "dealer_" + String(dealerName).toLowerCase().replace(/[^a-zа-я0-9]/gi, "_");
 
-  // Ответ на callback, чтобы Telegram снял часики с кнопки
+  // Мгновенный ответ на callback, чтобы Telegram сразу снял индикатор загрузки с кнопки
   answerCallbackQuery(query.id);
+
+  // Защита от повторной обработки одного и того же нажатия кнопки
+  if (query.id) {
+    try {
+      var cache = CacheService.getScriptCache();
+      var cbKey = "TG_CB_" + query.id;
+      if (cache.get(cbKey)) {
+        return;
+      }
+      cache.put(cbKey, "1", 300);
+    } catch (e) {}
+  }
 
   // Маршрутизация действий
   var parts = data.split(":");
@@ -276,9 +315,11 @@ function buildDealerControlView(table, structureConfig) {
     statusLine = "☕️ <b>ПЕРЕРЫВ + COLOR-UP</b> (" + timeFormatted + ")";
   }
 
+  var formatDisplay = (table.format === "Data" || table.format === "SnG") ? "SnG" : (table.format === "Mystery" ? "Mystery Bounty" : table.format);
+
   var text = "♠️ <b>СТОЛ ВЕДУЩЕГО " + escapeHtml(table.dealerName).toUpperCase() + "</b>\n" +
     "───────────────────────────\n" +
-    "🏆 <b>Формат:</b> " + escapeHtml(table.format) + " (" + structureConfig.stack + " стек)\n" +
+    "🏆 <b>Формат:</b> " + escapeHtml(formatDisplay) + " (" + structureConfig.stack + " стек)\n" +
     "⏱ <b>" + (currentLvl.isBreak ? "Перерыв" : "Раунд " + currentLvl.level) + ":</b> " + currentLvl.label + "\n" +
     "👉 <b>Следующий:</b> " + (nextLvl ? nextLvl.label : "ФИНАЛ") + "\n" +
     "📊 <b>Статус:</b> " + statusLine + "\n" +
