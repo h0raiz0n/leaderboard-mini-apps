@@ -177,3 +177,21 @@ function getDealerBotWebhookInfo() {
   }
 }
 
+/**
+ * Очистка всех лишних фоновых триггеров (оставляем только триггер отправки формы)
+ */
+function cleanAllOrphanTriggers() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    var fnName = triggers[i].getHandlerFunction();
+    // Удаляем любые периодические таймерные триггеры, которые могут спамить
+    if (triggers[i].getEventType() === ScriptApp.EventType.CLOCK) {
+      ScriptApp.deleteTrigger(triggers[i]);
+      removed++;
+    }
+  }
+  Logger.log("Удалено периодических триггеров: " + removed);
+  return removed;
+}
+
