@@ -42,11 +42,10 @@
 
 ## 🛑 Фаза 2. Точка передачи параметров (Требуются действия пользователя)
 
-### [ ] Шаг 4. Ввод внешних доступов и настройка сервисов
-> **В этот момент код полностью готов и протестирован. Требуются 3 действия от пользователя:**
-1. **Токен бота:** Создать `@atmosphere_dealer_bot` в `@BotFather` и скопировать токен.
-2. **База Firebase:** Создать бесплатный проект в [console.firebase.google.com](https://console.firebase.google.com/) и скопировать URL базы данных.
-3. **ID полей Google Forms:** Скопировать шаблоны предзаполнения из Google Forms для SnG/Mystery.
+### [x] Шаг 4. Ввод внешних доступов и настройка сервисов
+* **Токен дилерского бота:** `@atmosphere_poker_dealer_bot` (привязан в `Setup.js`).
+* **База Firebase:** `https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app` (привязана в `Config.js`, `Setup.js`, `tv.js`).
+* **Поля предзаполнения Google Form:** `entry.1615126251` (Дата) и `entry.1887911518` (Ведущий) (привязаны в `Config.js` и `DealerBot.js`).
 
 ---
 
