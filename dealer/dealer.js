@@ -102,24 +102,26 @@ function renderDealerPills(registry) {
     return `<button type="button" class="pill ${isActive}" data-dealer="${name}">${name}</button>`;
   }).join("");
 
-  container.querySelectorAll(".pill").forEach(pill => {
-    pill.addEventListener("click", () => {
-      container.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
-      pill.classList.add("active");
-      
-      DEALER_NAME = pill.dataset.dealer;
-      DEALER_ID = sanitizeDealerKey(DEALER_NAME);
-      localStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
-      
-      const badgeEl = document.getElementById("dealer-badge");
-      const nameEl = document.getElementById("identity-name");
-      if (badgeEl) badgeEl.textContent = DEALER_NAME;
-      if (nameEl) nameEl.textContent = DEALER_NAME;
-      
-      triggerHaptic("light");
-      renderDealerView();
+  if (container.querySelectorAll) {
+    container.querySelectorAll(".pill").forEach(pill => {
+      pill.addEventListener("click", () => {
+        container.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        
+        DEALER_NAME = pill.dataset.dealer;
+        DEALER_ID = sanitizeDealerKey(DEALER_NAME);
+        localStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
+        
+        const badgeEl = document.getElementById("dealer-badge");
+        const nameEl = document.getElementById("identity-name");
+        if (badgeEl) badgeEl.textContent = DEALER_NAME;
+        if (nameEl) nameEl.textContent = DEALER_NAME;
+        
+        triggerHaptic("light");
+        renderDealerView();
+      });
     });
-  });
+  }
 }
 
 function triggerHaptic(type = "light") {
@@ -319,14 +321,58 @@ function resetTable() {
 function finishGame() {
   triggerHaptic("success");
   const table = getMyTable();
-  table.isPostGameBreak = true;
-  table.nextGameAt = Date.now() + 10 * 60 * 1000; // 10 мин на ТВ
-  table.status = "idle";
+  table.status = "finished";
+  table.isBreakActive = false;
+  table.breakEndsAt = null;
+  table.isPostGameBreak = false;
+  table.nextGameAt = null;
   table.startedAt = null;
   table.elapsedBeforePause = 0;
   saveState();
 
-  openFinishModal(table);
+  openFinishModal();
+  renderDealerView();
+}
+
+function startCustomBreak(minutes = 10) {
+  triggerHaptic("medium");
+  const table = getMyTable();
+  table.isBreakActive = true;
+  table.breakDurationMin = minutes;
+  table.breakEndsAt = Date.now() + minutes * 60 * 1000;
+  table.status = "idle";
+  saveState();
+  updateBreakModalUi(table);
+  renderDealerView();
+}
+
+function stopBreak() {
+  triggerHaptic("heavy");
+  const table = getMyTable();
+  table.isBreakActive = false;
+  table.breakEndsAt = null;
+  table.status = "idle";
+  saveState();
+  updateBreakModalUi(table);
+  renderDealerView();
+}
+
+function updateBreakModalUi(table) {
+  const breakPanel = document.getElementById("active-break-panel");
+  const breakOptions = document.getElementById("break-options-row");
+  const digitsEl = document.getElementById("active-break-digits");
+
+  if (table && table.isBreakActive && table.breakEndsAt && table.breakEndsAt > Date.now()) {
+    if (breakPanel) breakPanel.style.display = "block";
+    if (breakOptions) breakOptions.style.opacity = "0.4";
+    const rem = Math.max(0, Math.floor((table.breakEndsAt - Date.now()) / 1000));
+    const m = Math.floor(rem / 60);
+    const s = rem % 60;
+    if (digitsEl) digitsEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  } else {
+    if (breakPanel) breakPanel.style.display = "none";
+    if (breakOptions) breakOptions.style.opacity = "1";
+  }
 }
 
 // Генерация предзаполненной Google Form
@@ -343,16 +389,24 @@ function openFinishModal() {
   const formBtn = document.getElementById("open-form-btn");
   
   const url = generatePreFilledFormUrl();
-  formBtn.onclick = () => {
-    window.open(url, "_blank");
-    modal.style.display = "none";
-  };
+  if (formBtn) {
+    formBtn.onclick = () => {
+      window.open(url, "_blank");
+    };
+  }
   
-  modal.style.display = "flex";
+  updateBreakModalUi(getMyTable());
+  if (modal) modal.style.display = "flex";
 }
 
 function closeFinishModal() {
-  document.getElementById("finish-modal").style.display = "none";
+  const table = getMyTable();
+  table.status = "idle";
+  table.isBreakActive = false;
+  table.breakEndsAt = null;
+  saveState();
+  const modal = document.getElementById("finish-modal");
+  if (modal) modal.style.display = "none";
   renderDealerView();
 }
 

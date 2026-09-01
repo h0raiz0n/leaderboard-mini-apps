@@ -102,16 +102,32 @@
     </div>
   </main>
 
-  <!-- Модалка завершения игры -->
+  <!-- Модалка завершения игры и управления перерывом -->
   <div class="modal-backdrop" id="finish-modal">
     <div class="modal-sheet">
       <div class="modal-heading">🏁 Игра завершена</div>
       <div class="modal-caption">
-        На телевизоре запущен 10-минутный перерыв до следующего стола.<br><br>
-        Нажмите кнопку для внесения призовых мест в Google Form:
+        Внесите призовые места в Google Form:
       </div>
       <button class="btn btn-form-action" id="open-form-btn">📝 Внести результаты в форму</button>
-      <button class="btn btn-secondary" onclick="closeFinishModal()">🃏 Запустить новый стол</button>
+
+      <div class="modal-divider"></div>
+
+      <div class="break-prompt-title">☕ Перерыв на ТВ (по желанию):</div>
+      <div class="break-pill-row" id="break-options-row">
+        <button type="button" class="btn-break-pill" onclick="startCustomBreak(5)">5 мин</button>
+        <button type="button" class="btn-break-pill" onclick="startCustomBreak(10)">10 мин</button>
+        <button type="button" class="btn-break-pill" onclick="startCustomBreak(15)">15 мин</button>
+      </div>
+
+      <div id="active-break-panel" style="display: none;">
+        <div class="active-break-timer" id="active-break-digits">10:00</div>
+        <button type="button" class="btn btn-stop-break" onclick="stopBreak()">⏹ Завершить перерыв</button>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeFinishModal()">🃏 Новая игра</button>
+      </div>
     </div>
   </div>
 </body>

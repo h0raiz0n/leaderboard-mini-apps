@@ -70,14 +70,13 @@ table = dealerEngine.getMyTable();
 assert.strictEqual(table.levelIndex, 1);
 console.log("   ✅ Уровень успешно переключен на Раунд 2 (50/100).");
 
-// 4. Финиш игры и перерыв 10 минут
+// 4. Финиш игры и гибкий перерыв
 console.log("\n4. Тест завершения игры:");
 dealerEngine.finishGame();
 table = dealerEngine.getMyTable();
-assert.strictEqual(table.status, "idle");
-assert.strictEqual(table.isPostGameBreak, true);
-assert(table.nextGameAt > Date.now() + 500000, "Таймер перерыва на ТВ должен быть установлен на 10 минут");
-console.log("   ✅ Игра завершена, на ТВ запущен 10-минутный перерыв.");
+assert.strictEqual(table.status, "finished");
+assert.strictEqual(table.isBreakActive, false);
+console.log("   ✅ Игра завершена без принудительного перерыва.");
 
 // 5. Тест ссылки на предзаполненную форму
 console.log("\n5. Тест генерации ссылки на форму:");

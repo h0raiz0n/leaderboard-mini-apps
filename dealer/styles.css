@@ -395,3 +395,57 @@ body {
   color: var(--muted);
   line-height: 1.5;
 }
+
+.modal-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 0;
+}
+
+.break-prompt-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.break-pill-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.btn-break-pill {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-break-pill:active {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.active-break-timer {
+  font-size: 32px;
+  font-weight: 900;
+  color: #60a5fa;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+
+.btn-stop-break {
+  background: rgba(224, 89, 79, 0.15);
+  border: 1px solid var(--red);
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+}

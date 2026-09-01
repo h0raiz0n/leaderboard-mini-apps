@@ -163,6 +163,7 @@ function renderTables() {
     const t = ACTIVE_TABLES[k];
     if (!t) return false;
     if (t.status === "running" || t.status === "paused") return true;
+    if (t.isBreakActive && t.breakEndsAt && (t.breakEndsAt > Date.now())) return true;
     if (t.isPostGameBreak && t.nextGameAt && (t.nextGameAt > Date.now())) return true;
     return false;
   });
@@ -189,16 +190,17 @@ function renderTables() {
     const nextLevel = structure[table.levelIndex + 1] || null;
     const formatLabel = getFormatLabel(table.format);
     
-    // Состояние перерыва после игры (10 мин отсчет)
-    if (table.isPostGameBreak && table.nextGameAt) {
-      const breakRemaining = Math.max(0, Math.floor((table.nextGameAt - Date.now()) / 1000));
+    // Состояние перерыва (ручного или послеигрового)
+    const breakEndTime = (table.isBreakActive && table.breakEndsAt) ? table.breakEndsAt : (table.isPostGameBreak ? table.nextGameAt : null);
+    if (breakEndTime && breakEndTime > Date.now()) {
+      const breakRemaining = Math.max(0, Math.floor((breakEndTime - Date.now()) / 1000));
       const bMin = Math.floor(breakRemaining / 60);
       const bSec = breakRemaining % 60;
       const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
       
       html += `
         <div class="table-card break-screen-card">
-          <div class="break-screen-title">🏁 Игра завершена</div>
+          <div class="break-screen-title">☕ ПЕРЕРЫВ</div>
           <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
           <div class="break-screen-digits">${bFormatted}</div>
           <div style="font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;">До старта следующей игры</div>
