@@ -199,7 +199,75 @@ function renderTables() {
     return;
   }
   
-  let html = "";
+  // Анализ режима МТТ
+  const activeMttTables = tableKeys
+    .map(k => ACTIVE_TABLES[k])
+    .filter(t => t && t.format === "MTT" && (t.status === "running" || t.status === "paused"));
+
+  let mttHeaderHtml = "";
+  if (activeMttTables.length > 0) {
+    let totalPlayers = 0;
+    let totalStarting = 0;
+    activeMttTables.forEach(t => {
+      totalPlayers += (t.playersCount !== undefined ? t.playersCount : 9);
+      totalStarting += (t.initialPlayers !== undefined ? t.initialPlayers : 9);
+    });
+
+    const stack = 5000;
+    const totalChips = (totalStarting || 9) * stack;
+    const avgStack = totalPlayers > 0 ? Math.round(totalChips / totalPlayers) : stack;
+
+    // Проверка ребаланса между столами
+    let rebalanceBanner = "";
+    if (activeMttTables.length >= 2) {
+      let maxT = activeMttTables[0];
+      let minT = activeMttTables[0];
+      activeMttTables.forEach(t => {
+        const c = t.playersCount !== undefined ? t.playersCount : 9;
+        if (c > (maxT.playersCount !== undefined ? maxT.playersCount : 9)) maxT = t;
+        if (c < (minT.playersCount !== undefined ? minT.playersCount : 9)) minT = t;
+      });
+      const delta = (maxT.playersCount !== undefined ? maxT.playersCount : 9) - (minT.playersCount !== undefined ? minT.playersCount : 9);
+      if (delta >= 2) {
+        rebalanceBanner = `
+          <div class="mtt-rebalance-ticker">
+            ⚠️ <b>РЕБАЛАНС СТОЛОВ:</b> Пересадка игрока со стола ${maxT.dealerName || "Стол 1"} за стол ${minT.dealerName || "Стол 2"}
+          </div>
+        `;
+      }
+    }
+
+    // Проверка объединения за финальный стол
+    if (totalPlayers <= 10 && activeMttTables.length > 1) {
+      rebalanceBanner = `
+        <div class="mtt-final-ticker">
+          🔥 <b>ФИНАЛЬНЫЙ СТОЛ СФОРМИРОВАН:</b> Объединение всех участников за столом ${activeMttTables[0].dealerName || "Стол 1"}!
+        </div>
+      `;
+    }
+
+    mttHeaderHtml = `
+      <div class="mtt-top-bar">
+        <div class="mtt-stat-box">
+          <span class="mtt-stat-lbl">Осталось игроков</span>
+          <span class="mtt-stat-num">${totalPlayers} <span class="mtt-stat-sub">/ ${totalStarting}</span></span>
+        </div>
+        <div class="mtt-bar-divider"></div>
+        <div class="mtt-stat-box">
+          <span class="mtt-stat-lbl">Средний стек</span>
+          <span class="mtt-stat-num gold">${avgStack.toLocaleString("ru-RU")}</span>
+        </div>
+        <div class="mtt-bar-divider"></div>
+        <div class="mtt-stat-box">
+          <span class="mtt-stat-lbl">Столов в игре</span>
+          <span class="mtt-stat-num">${activeMttTables.length}</span>
+        </div>
+      </div>
+      ${rebalanceBanner}
+    `;
+  }
+
+  let html = mttHeaderHtml;
   tableKeys.slice(0, 4).forEach(key => {
     const table = ACTIVE_TABLES[key];
     const structure = getTableStructure(table);
@@ -238,7 +306,7 @@ function renderTables() {
     let subtext = "Идёт раунд";
     if (table.status === "paused") subtext = "Пауза";
     else if (time.isOvertime) subtext = "Финальный раунд • Блайнды зафиксированы";
-    else if (currentLevel.isBreak) subtext = "Размен фишек $25 / $50";
+    else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
     else if (isFinalLevel) subtext = "Финальный раунд турнира";
     
@@ -251,6 +319,7 @@ function renderTables() {
             <span class="dealer-name">${table.dealerName || "Ведущий"}</span>
           </div>
           <div class="pill-group">
+            ${table.format === "MTT" ? `<div class="players-pill">👥 ${table.playersCount || 9}</div>` : ""}
             <span class="format-badge">${formatLabel}</span>
             <div class="round-pill">
               ${currentLevel.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLevel.level}`}
