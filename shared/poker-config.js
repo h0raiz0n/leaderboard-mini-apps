@@ -109,9 +109,6 @@ const POKER_CONFIG = {
   // Базовый URL шины Firebase Realtime Database
   FIREBASE_DB_URL: "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app",
 
-  // Токен бота для дилеров @atmosphere_poker_dealer_bot
-  DEALER_BOT_TOKEN: "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8",
-
   // Google Forms для внесения результатов
   FORMS: {
     SNG: {

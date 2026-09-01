@@ -17,3 +17,12 @@ desktop.ini
 # IDE & local caches (scratch)
 .system_generated/
 *.tmp
+
+# Secrets & Environment Variables (Never commit to git!)
+.env
+.env.*
+!.env.example
+.credentials/
+*.credentials.json
+*.token
+*secret*
