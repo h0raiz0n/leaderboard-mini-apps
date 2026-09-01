@@ -36,9 +36,9 @@ async function createPublicDeployment(accessToken) {
 
   // Создаем чистый публичный деплоймент с доступом для всех
   const body = JSON.stringify({
-    versionNumber: 106,
+    versionNumber: 109,
     manifestFileName: "appsscript",
-    description: "Public Telegram Bot Webhook v106 (Mini App Launch Edition)"
+    description: "Public Telegram Bot Webhook v109 (Zero Spam Edition)"
   });
 
   return new Promise((resolve, reject) => {
@@ -53,10 +53,15 @@ async function createPublicDeployment(accessToken) {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        console.log('📦 Новый деплоймент создан (' + res.statusCode + '):', data);
-        resolve(JSON.parse(data));
+        if (res.statusCode === 200) {
+          const json = JSON.parse(data);
+          resolve(json);
+        } else {
+          reject(new Error('Create deployment error (' + res.statusCode + '): ' + data));
+        }
       });
     });
+
     req.on('error', reject);
     req.write(body);
     req.end();

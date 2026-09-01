@@ -204,9 +204,9 @@ async function updateDeployment(accessToken, deploymentId, versionNumber) {
 }
 
 async function registerTelegramWebhook(webAppUrl) {
-  const token = "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
+  const token = process.env.DEALER_BOT_TOKEN || "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
   return new Promise((resolve, reject) => {
-    const url = 'https://api.telegram.org/bot' + token + '/setWebhook?url=' + encodeURIComponent(webAppUrl);
+    const url = 'https://api.telegram.org/bot' + token + '/setWebhook?url=' + encodeURIComponent(webAppUrl) + '&drop_pending_updates=true';
     https.get(url, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);

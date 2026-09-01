@@ -35,8 +35,15 @@ function handleDealerBotWebhook(e) {
     } catch (cacheErr) {}
   }
 
-  // Обработка сообщений в чате
+  // Обработка сообщений в чате (только свежие команды /start)
   if (update.message) {
+    var msgDate = update.message.date;
+    var nowSec = Math.floor(Date.now() / 1000);
+    // Игнорируем сообщения старше 2 минут (старый бэклог очереди)
+    if (msgDate && (nowSec - msgDate > 120)) {
+      return ContentService.createTextOutput(JSON.stringify({ status: "skipped_old_update" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     handleDealerMessage(update.message);
   } else if (update.callback_query) {
     if (update.callback_query.id) {
@@ -49,9 +56,15 @@ function handleDealerBotWebhook(e) {
 }
 
 /**
- * Обработка сообщений (/start, /help, текст)
+ * Обработка сообщений (строго команда /start)
  */
 function handleDealerMessage(msg) {
+  var textMsg = String(msg.text || "").trim();
+  // Бот молчит на любые сообщения, кроме явной команды /start
+  if (!textMsg.startsWith("/start")) {
+    return;
+  }
+
   var chatId = msg.chat.id;
   var from = msg.from || {};
   var username = String(from.username || "").toLowerCase().replace(/^@/, "");
@@ -98,14 +111,31 @@ function handleDealerMessage(msg) {
   sendDealerTelegram(chatId, text, keyboard);
 }
 
+function getActiveDealerBotToken() {
+  if (typeof getScriptProperty === "function") {
+    var t = getScriptProperty("DEALER_BOT_TOKEN", "");
+    if (t) return t;
+  }
+  if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+    try {
+      var pt = PropertiesService.getScriptProperties().getProperty("DEALER_BOT_TOKEN");
+      if (pt) return pt;
+    } catch (e) {}
+  }
+  if (typeof process !== "undefined" && process.env && process.env.DEALER_BOT_TOKEN) {
+    return process.env.DEALER_BOT_TOKEN;
+  }
+  if (typeof CONFIG !== "undefined" && CONFIG.DEALER_BOT_TOKEN) {
+    return CONFIG.DEALER_BOT_TOKEN;
+  }
+  return "";
+}
+
 /**
  * Вспомогательные функции отправки Telegram сообщений
  */
 function sendDealerTelegram(chatId, text, inlineKeyboard) {
-  var token = (typeof getScriptProperty === "function") 
-    ? getScriptProperty("DEALER_BOT_TOKEN", (typeof CONFIG !== "undefined" ? CONFIG.DEALER_BOT_TOKEN : ""))
-    : ((typeof CONFIG !== "undefined") ? CONFIG.DEALER_BOT_TOKEN : "");
-
+  var token = getActiveDealerBotToken();
   if (!token) return;
 
   var payload = {
@@ -124,7 +154,7 @@ function sendDealerTelegram(chatId, text, inlineKeyboard) {
 }
 
 function answerCallbackQuery(queryId) {
-  var token = getScriptProperty("DEALER_BOT_TOKEN", CONFIG.DEALER_BOT_TOKEN || "");
+  var token = getActiveDealerBotToken();
   if (!token || !queryId) return;
   sendDealerTelegramRequest(token, "answerCallbackQuery", { callback_query_id: queryId });
 }
