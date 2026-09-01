@@ -63,14 +63,27 @@ function toggleFullscreen() {
 
 // Источник данных (Firebase + LocalStorage fallback)
 function initDataSource() {
-  if (typeof firebase !== "undefined" && firebase.apps.length > 0) {
-    const db = firebase.database();
-    db.ref("atmosphere/tables").on("value", (snapshot) => {
-      ACTIVE_TABLES = snapshot.val() || {};
-      renderTables();
-    });
-  } else {
-    window.addEventListener("storage", (e) => {
+  if (typeof firebase !== "undefined") {
+    try {
+      if (firebase.apps.length === 0) {
+        firebase.initializeApp({
+          databaseURL: "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app"
+        });
+      }
+      const db = firebase.database();
+      db.ref("atmosphere/tables").on("value", (snapshot) => {
+        ACTIVE_TABLES = snapshot.val() || {};
+        renderTables();
+      });
+      console.log("⚡ Успешно подключено к Firebase Realtime DB (europe-west1)");
+      return;
+    } catch (err) {
+      console.warn("Ошибка подключения к Firebase, переключение на локальный fallback:", err);
+    }
+  }
+
+  // Fallback на LocalStorage для локальной разработки / оффлайна
+  window.addEventListener("storage", (e) => {
       if (e.key === "atmosphere_tables") {
         ACTIVE_TABLES = JSON.parse(e.newValue || "{}");
         renderTables();

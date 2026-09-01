@@ -147,7 +147,16 @@ var CONFIG = {
         { level: 8, sb: 500, bb: 1000, ante: 1000, durationSec: 300, label: "500 / 1000 (BBA 1000)" }
       ]
     }
-  }
+  },
+
+  // ID полей для автоматического предзаполнения Google Form (дата и ведущий)
+  FORM_ENTRY_IDS: {
+    DATE: "entry.1615126251",
+    DEALER: "entry.1887911518"
+  },
+
+  // Базовый URL шины Firebase Realtime Database
+  FIREBASE_DB_URL: "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
 // ==========================================

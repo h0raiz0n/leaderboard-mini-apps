@@ -105,3 +105,75 @@ function showConfiguredSecrets() {
   Logger.log("ADMIN_KEY: " + maskedAdminKey);
 }
 
+/**
+ * Быстрая установка боевых секретов для дилерского бота и Firebase
+ */
+function setupDealerBotAndFirebase() {
+  var props = PropertiesService.getScriptProperties();
+  
+  // Устанавливаем токен бота @atmosphere_poker_dealer_bot
+  props.setProperty("DEALER_BOT_TOKEN", "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8");
+  
+  // Устанавливаем URL базы Firebase
+  props.setProperty("FIREBASE_DB_URL", "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app");
+  
+  Logger.log("✅ Секреты DEALER_BOT_TOKEN и FIREBASE_DB_URL успешно сохранены!");
+  try {
+    SpreadsheetApp.getUi().alert("Успешно!\n\nТокен дилерского бота и URL Firebase сохранены в свойства скрипта.");
+  } catch (e) {}
+}
+
+/**
+ * Регистрация Webhook в Telegram для @atmosphere_poker_dealer_bot
+ * @param {string} [customUrl] URL деплоя Web App (например https://script.google.com/macros/s/.../exec)
+ */
+function setTelegramWebhookForDealerBot(customUrl) {
+  var token = getScriptProperty("DEALER_BOT_TOKEN", "");
+  if (!token) {
+    var err1 = "⚠️ Ошибка: DEALER_BOT_TOKEN не задан в скриптовых свойствах!";
+    Logger.log(err1);
+    try { SpreadsheetApp.getUi().alert(err1); } catch (e) {}
+    return;
+  }
+
+  var webAppUrl = customUrl || getScriptProperty("WEB_APP_EXEC_URL", "");
+  if (!webAppUrl) {
+    var err2 = "⚠️ Укажите URL деплоя вашего Web App (/exec) при вызове функции или сохраните в свойство WEB_APP_EXEC_URL!";
+    Logger.log(err2);
+    try { SpreadsheetApp.getUi().alert(err2); } catch (e) {}
+    return;
+  }
+
+  var url = "https://api.telegram.org/bot" + token + "/setWebhook?url=" + encodeURIComponent(webAppUrl);
+  try {
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var respText = response.getContentText();
+    Logger.log("Telegram setWebhook response: " + respText);
+    try {
+      SpreadsheetApp.getUi().alert("Результат регистрации Webhook:\n\n" + respText);
+    } catch (e) {}
+  } catch (err) {
+    Logger.log("Ошибка setWebhook: " + err.message);
+  }
+}
+
+/**
+ * Проверка текущего статуса Webhook у Telegram
+ */
+function getDealerBotWebhookInfo() {
+  var token = getScriptProperty("DEALER_BOT_TOKEN", "");
+  if (!token) return;
+
+  var url = "https://api.telegram.org/bot" + token + "/getWebhookInfo";
+  try {
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var respText = response.getContentText();
+    Logger.log("getWebhookInfo: " + respText);
+    try {
+      SpreadsheetApp.getUi().alert("Статус Webhook в Telegram:\n\n" + respText);
+    } catch (e) {}
+  } catch (err) {
+    Logger.log("Ошибка getWebhookInfo: " + err.message);
+  }
+}
+

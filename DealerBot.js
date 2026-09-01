@@ -326,8 +326,9 @@ function buildPrefilledFormUrl(formatName, dealerName) {
   var baseViewUrl = "https://docs.google.com/forms/d/e/" + formConfig.id + "/viewform";
   
   // ID полей для автозаполнения (настраиваются в CONFIG)
-  var entryDate = "entry.date";
-  var entryDealer = "entry.dealer";
+  var entryIds = CONFIG.FORM_ENTRY_IDS || { DATE: "entry.1615126251", DEALER: "entry.1887911518" };
+  var entryDate = entryIds.DATE || "entry.1615126251";
+  var entryDealer = entryIds.DEALER || "entry.1887911518";
   
   return baseViewUrl + "?usp=pp_url&" + encodeURIComponent(entryDate) + "=" + encodeURIComponent(today) +
     "&" + encodeURIComponent(entryDealer) + "=" + encodeURIComponent(dealerName);
