@@ -41,7 +41,7 @@ function handleDealerMessage(msg) {
   var text = (msg.text || "").trim();
   var dealerName = msg.from.first_name || msg.from.username || "Ведущий";
 
-  if (text === "/start" || text === "/new" || text === "Новая игра") {
+  if (text.indexOf("/start") === 0 || text === "/new" || text === "Новая игра") {
     sendFormatSelectionMenu(chatId, dealerName);
   } else {
     var helpText = "♠️ <b>Управление турнирами «Атмосфера»</b>\n\n" +
@@ -348,10 +348,10 @@ function sendDealerTelegram(chatId, text, inlineKeyboard) {
     disable_web_page_preview: true
   };
   if (inlineKeyboard && inlineKeyboard.length) {
-    payload.reply_markup = JSON.stringify({ inline_keyboard: inlineKeyboard });
+    payload.reply_markup = { inline_keyboard: inlineKeyboard };
   }
 
-  sendTelegramApiRequest(token, "sendMessage", payload);
+  sendDealerTelegramRequest(token, "sendMessage", payload);
 }
 
 function editDealerTelegram(chatId, messageId, text, inlineKeyboard) {
@@ -366,19 +366,19 @@ function editDealerTelegram(chatId, messageId, text, inlineKeyboard) {
     disable_web_page_preview: true
   };
   if (inlineKeyboard && inlineKeyboard.length) {
-    payload.reply_markup = JSON.stringify({ inline_keyboard: inlineKeyboard });
+    payload.reply_markup = { inline_keyboard: inlineKeyboard };
   }
 
-  sendTelegramApiRequest(token, "editMessageText", payload);
+  sendDealerTelegramRequest(token, "editMessageText", payload);
 }
 
 function answerCallbackQuery(queryId) {
   var token = getScriptProperty("DEALER_BOT_TOKEN", getScriptProperty("TELEGRAM_BOT_TOKEN", ""));
   if (!token || !queryId) return;
-  sendTelegramApiRequest(token, "answerCallbackQuery", { callback_query_id: queryId });
+  sendDealerTelegramRequest(token, "answerCallbackQuery", { callback_query_id: queryId });
 }
 
-function sendTelegramApiRequest(token, method, payload) {
+function sendDealerTelegramRequest(token, method, payload) {
   try {
     var url = "https://api.telegram.org/bot" + token + "/" + method;
     var options = {
@@ -387,7 +387,8 @@ function sendTelegramApiRequest(token, method, payload) {
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     };
-    UrlFetchApp.fetch(url, options);
+    var res = UrlFetchApp.fetch(url, options);
+    Logger.log("Telegram API (" + method + ") status: " + res.getResponseCode());
   } catch (err) {
     Logger.log("Telegram API Error (" + method + "): " + err.message);
   }

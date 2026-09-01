@@ -164,6 +164,45 @@ async function createNewVersionAndDeploy(accessToken, webAppUrl) {
   return versionObj;
 }
 
+async function updateDeployment(accessToken, deploymentId, versionNumber) {
+  const claspConfig = JSON.parse(fs.readFileSync('c:/vibe/.clasp.json', 'utf8'));
+  const scriptId = claspConfig.scriptId;
+
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      deploymentConfig: {
+        versionNumber: versionNumber,
+        manifestFileName: "appsscript",
+        description: "Release v" + versionNumber
+      }
+    });
+
+    const req = https.request('https://script.googleapis.com/v1/projects/' + scriptId + '/deployments/' + deploymentId, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log('🔄 Деплоймент ' + deploymentId + ' успешно переключен на версию №' + versionNumber);
+          resolve(JSON.parse(data));
+        } else {
+          console.warn('Предупреждение при обновлении деплоймента: ' + data);
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 async function registerTelegramWebhook(webAppUrl) {
   const token = "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
   return new Promise((resolve, reject) => {
@@ -213,19 +252,17 @@ async function main() {
   try {
     const token = await getAccessToken();
     await pushToAppsScript(token);
-    await createNewVersionAndDeploy(token);
+    const versionObj = await createNewVersionAndDeploy(token);
     
     const deployments = await getDeployments(token);
     let webAppUrl = '';
-    deployments.forEach(d => {
-      if (d.entryPoints) {
-        d.entryPoints.forEach(ep => {
-          if (ep.webApp && ep.webApp.url) {
-            webAppUrl = ep.webApp.url;
-          }
-        });
+    for (const d of deployments) {
+      if (d.entryPoints && d.entryPoints.some(ep => ep.webApp)) {
+        await updateDeployment(token, d.deploymentId, versionObj.versionNumber);
+        const webEp = d.entryPoints.find(ep => ep.webApp);
+        if (webEp) webAppUrl = webEp.webApp.url;
       }
-    });
+    }
 
     if (webAppUrl) {
       console.log('\n🌐 Активный Web App URL: ' + webAppUrl);
