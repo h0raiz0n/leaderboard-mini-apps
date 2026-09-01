@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Атмосфера — Пульт Ведущего</title>
+  
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  
+  <link rel="stylesheet" href="styles.css">
+  <script src="../shared/poker-config.js"></script>
+  <script src="dealer.js" defer></script>
+</head>
+<body>
+  <!-- Шапка ведущего -->
+  <header class="dealer-header">
+    <span class="dealer-brand">Атмосфера</span>
+    <span class="dealer-tag" id="dealer-badge">Ведущий</span>
+  </header>
+
+  <!-- Карточка стола ведущего -->
+  <main class="control-card">
+    <div class="table-identity-bar">
+      <div>
+        <div style="font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.06em;">Стол ведущего</div>
+        <div class="identity-dealer-name" id="identity-name">Ведущий</div>
+      </div>
+      <div class="identity-round" id="identity-round">Раунд 1</div>
+    </div>
+
+    <!-- Блайнды -->
+    <div class="blinds-panel">
+      <div class="blinds-cell">
+        <span class="blinds-label">Текущие блайнды</span>
+        <span class="blinds-val" id="blinds-current">25 / 50</span>
+      </div>
+      <div class="blinds-cell">
+        <span class="blinds-label">Следующие</span>
+        <span class="blinds-val next" id="blinds-next">50 / 100</span>
+      </div>
+    </div>
+
+    <!-- Таймер -->
+    <div class="timer-container">
+      <div class="timer-readout" id="timer-digits">07:00</div>
+      <div class="timer-state-label" id="timer-status">Стол ожидает старта</div>
+    </div>
+
+    <!-- Кнопки управления -->
+    <div class="btn-stack">
+      <button class="btn btn-start" id="btn-start">Старт игры</button>
+      <button class="btn btn-pause" id="btn-pause" style="display: none;">Пауза</button>
+      <button class="btn btn-step" onclick="nextLevel()">Следующий уровень</button>
+      <button class="btn btn-finish" onclick="finishGame()">Завершить игру</button>
+    </div>
+  </main>
+
+  <!-- Модалка завершения игры -->
+  <div class="modal-backdrop" id="finish-modal">
+    <div class="modal-sheet">
+      <div class="modal-heading">Игра завершена</div>
+      <div class="modal-caption">
+        На ТВ запущен 10-минутный перерыв до следующего стола.<br>
+        Нажмите кнопку для внесения призовых мест (1–3) в Google Form.
+      </div>
+      <button class="btn btn-form-action" id="open-form-btn">Внести результаты в форму</button>
+      <button class="btn" style="background: transparent; color: var(--muted); padding: 8px;" onclick="closeFinishModal()">Закрыть</button>
+    </div>
+  </div>
+</body>
+</html>
