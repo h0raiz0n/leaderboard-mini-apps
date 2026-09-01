@@ -21,8 +21,35 @@ if (typeof document !== "undefined" && document.addEventListener) {
   });
 }
 
-// Инициализация имени ведущего из Telegram WebApp
+function sanitizeDealerKey(name) {
+  const ru = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+  const en = ["a","b","v","g","d","e","e","zh","z","i","y","k","l","m","n","o","p","r","s","t","u","f","h","ts","ch","sh","sch","","y","","e","yu","ya"];
+  const s = String(name || "dealer").toLowerCase().trim();
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    const idx = ru.indexOf(s[i]);
+    if (idx !== -1) {
+      out += en[idx];
+    } else if (/[a-z0-9_]/i.test(s[i])) {
+      out += s[i];
+    } else {
+      out += "_";
+    }
+  }
+  return "dealer_" + (out.replace(/_+/g, "_").replace(/^_|_$/g, "") || "host");
+}
+
+// Инициализация имени ведущего из Telegram WebApp и реестра
 function initDealerIdentity() {
+  const registry = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.DEALERS_REGISTRY)
+    ? POKER_CONFIG.DEALERS_REGISTRY
+    : { LIST: ["Влад", "Арина", "Игорь", "Сергей", "Евгений", "Другое"], MAP: {} };
+
+  const savedName = localStorage.getItem("atmosphere_dealer_name");
+  if (savedName && registry.LIST.includes(savedName)) {
+    DEALER_NAME = savedName;
+  }
+
   if (window.Telegram && window.Telegram.WebApp) {
     const tg = window.Telegram.WebApp;
     try {
@@ -32,17 +59,67 @@ function initDealerIdentity() {
     
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
       const u = tg.initDataUnsafe.user;
-      DEALER_NAME = u.first_name || u.username || "Ведущий";
+      const uid = String(u.id || "");
+      const uname = String(u.username || "").toLowerCase();
+      const ufirst = String(u.first_name || "").toLowerCase();
+
+      // Поиск по реестру Telegram ID / Username
+      if (registry.MAP[uid]) {
+        DEALER_NAME = registry.MAP[uid];
+      } else if (registry.MAP[uname]) {
+        DEALER_NAME = registry.MAP[uname];
+      } else if (registry.MAP[ufirst]) {
+        DEALER_NAME = registry.MAP[ufirst];
+      } else if (!savedName && u.first_name) {
+        // Проверяем прямое совпадение с именами списка
+        const directMatch = registry.LIST.find(l => l.toLowerCase() === ufirst);
+        if (directMatch) DEALER_NAME = directMatch;
+      }
     }
   }
   
-  // Ключ стола в Firebase (латиница + кириллица)
-  DEALER_ID = "dealer_" + String(DEALER_NAME).toLowerCase().replace(/[^a-zа-я0-9]/gi, "_");
+  if (!DEALER_NAME || DEALER_NAME === "Ведущий") {
+    DEALER_NAME = registry.LIST[0] || "Влад";
+  }
+  
+  DEALER_ID = sanitizeDealerKey(DEALER_NAME);
   
   const badgeEl = document.getElementById("dealer-badge");
   const nameEl = document.getElementById("identity-name");
   if (badgeEl) badgeEl.textContent = DEALER_NAME;
   if (nameEl) nameEl.textContent = DEALER_NAME;
+
+  renderDealerPills(registry);
+}
+
+function renderDealerPills(registry) {
+  const container = document.getElementById("dealer-pills");
+  if (!container) return;
+
+  const list = registry.LIST || ["Влад", "Арина", "Игорь", "Сергей", "Евгений", "Другое"];
+  container.innerHTML = list.map(name => {
+    const isActive = name === DEALER_NAME ? "active" : "";
+    return `<button type="button" class="pill ${isActive}" data-dealer="${name}">${name}</button>`;
+  }).join("");
+
+  container.querySelectorAll(".pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      container.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      
+      DEALER_NAME = pill.dataset.dealer;
+      DEALER_ID = sanitizeDealerKey(DEALER_NAME);
+      localStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
+      
+      const badgeEl = document.getElementById("dealer-badge");
+      const nameEl = document.getElementById("identity-name");
+      if (badgeEl) badgeEl.textContent = DEALER_NAME;
+      if (nameEl) nameEl.textContent = DEALER_NAME;
+      
+      triggerHaptic("light");
+      renderDealerView();
+    });
+  });
 }
 
 function triggerHaptic(type = "light") {

@@ -14,7 +14,7 @@
 * **Тест:** `tests/test_dealer_bot.js`
 * **Деплой:** Git commit $\rightarrow$ Push to GitHub $\rightarrow$ Deploy Apps Script.
 
-### [ ] Шаг 1.2. Реестр дилеров (`DEALERS_REGISTRY`) и селектор в Mini App
+### [x] Шаг 1.2. Реестр дилеров (`DEALERS_REGISTRY`) и селектор в Mini App
 * **Что делаем:**
   * В `Config.js` и `shared/poker-config.js` добавляем `DEALERS_REGISTRY` (маппинг Telegram ID / Username $\rightarrow$ Реальное имя в Google Form / `DB_Results`).
   * В `dealer/index.html` и `dealer/dealer.js` добавляем автоопределение ведущего по Telegram ID и удобный селектор выбора/смены имени в шапке пульта.

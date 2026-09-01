@@ -5,8 +5,18 @@
 
 const POKER_CONFIG = {
   CLUB_NAME: "Атмосфера",
-  
-  // Стандартная структура SnG / Mystery Bounty (Стек 5 000 фишек — 100 BB)
+
+  // Реестр официальных дилеров клуба (маппинг с Google Form)
+  DEALERS_REGISTRY: {
+    LIST: ["Влад", "Арина", "Игорь", "Сергей", "Евгений", "Другое"],
+    MAP: {
+      "vlad": "Влад",
+      "arina": "Арина",
+      "igor": "Игорь",
+      "sergey": "Сергей",
+      "evgeny": "Евгений"
+    }
+  },
   SNG_STRUCTURE: {
     formatName: "SnG",
     startingStack: 5000,
