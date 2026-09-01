@@ -49,6 +49,24 @@ function handleDealerBotWebhook(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function sanitizeDealerKey(name) {
+  var ru = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+  var en = ["a","b","v","g","d","e","e","zh","z","i","y","k","l","m","n","o","p","r","s","t","u","f","h","ts","ch","sh","sch","","y","","e","yu","ya"];
+  var s = String(name || "dealer").toLowerCase().trim();
+  var out = "";
+  for (var i = 0; i < s.length; i++) {
+    var idx = ru.indexOf(s[i]);
+    if (idx !== -1) {
+      out += en[idx];
+    } else if (/[a-z0-9_]/i.test(s[i])) {
+      out += s[i];
+    } else {
+      out += "_";
+    }
+  }
+  return "dealer_" + (out.replace(/_+/g, "_").replace(/^_|_$/g, "") || "host");
+}
+
 /**
  * Обработка сообщений в чате
  */
@@ -71,12 +89,7 @@ function handleDealerMessage(msg) {
 
     sendFormatSelectionMenu(chatId, dealerName);
   } else {
-    var helpText = "♠️ <b>Управление турнирами «Атмосфера»</b>\n\n" +
-      "Для запуска новой игры отправьте /start или нажмите кнопку ниже:";
-    var keyboard = [
-      [{ text: "🃏 Запустить игру", callback_data: "menu:formats" }]
-    ];
-    sendDealerTelegram(chatId, helpText, keyboard);
+    sendFormatSelectionMenu(chatId, dealerName);
   }
 }
 
@@ -84,17 +97,23 @@ function handleDealerMessage(msg) {
  * Меню выбора формата игры (SnG / Mystery / MTT)
  */
 function sendFormatSelectionMenu(chatId, dealerName, messageId) {
-  var text = "♠️ <b>ВЫБОР ФОРМАТА ИГРЫ</b>\n" +
+  var webAppUrl = "https://h0raiz0n.github.io/leaderboard-mini-apps/dealer/";
+
+  var text = "♠️ <b>ПУЛЬТ ВЕДУЩЕГО «АТМОСФЕРА»</b>\n" +
     "Ведущий: <b>" + escapeHtml(dealerName) + "</b>\n\n" +
-    "Выберите формат запускаемого стола:";
+    "⚡ <b>Рекомендуется:</b> запустите мгновенный пульт через кнопку ниже (отклик 20мс):\n" +
+    "Или выберите формат для управления через чат:";
 
   var keyboard = [
     [
-      { text: "🃏 SnG", callback_data: "fmt:Data" },
-      { text: "🎯 Mystery Bounty", callback_data: "fmt:Mystery" }
+      { text: "🎛 Открыть пульт Mini App (0ms)", web_app: { url: webAppUrl } }
     ],
     [
-      { text: "🏆 MTT (Турнир дня)", callback_data: "fmt:MTT" }
+      { text: "🃏 SnG в чате", callback_data: "fmt:Data" },
+      { text: "🎯 Mystery в чате", callback_data: "fmt:Mystery" }
+    ],
+    [
+      { text: "🏆 MTT в чате", callback_data: "fmt:MTT" }
     ]
   ];
 
@@ -109,9 +128,11 @@ function sendFormatSelectionMenu(chatId, dealerName, messageId) {
  * Меню выбора структуры блайндов
  */
 function sendStructureSelectionMenu(chatId, messageId, formatKey, dealerName) {
-  var text = "⏱ <b>ВЫБОР СТРУКТУРЫ БЛАЙНДОВ</b>\n" +
-    "Формат: <b>" + escapeHtml(formatKey) + "</b>\n\n" +
-    "Выберите темп турнира:";
+  var formatDisplay = (formatKey === "Data" || formatKey === "SnG") ? "SnG" : (formatKey === "Mystery" ? "Mystery Bounty" : formatKey);
+  var text = "♠️ <b>ВЫБОР СТРУКТУРЫ БЛАЙНДОВ</b>\n" +
+    "Формат: <b>" + escapeHtml(formatDisplay) + "</b>\n" +
+    "Ведущий: <b>" + escapeHtml(dealerName) + "</b>\n\n" +
+    "Выберите сетку таймера:";
 
   var keyboard = [];
   var structures = CONFIG.BLIND_STRUCTURES || {};
@@ -138,7 +159,7 @@ function handleDealerCallback(query) {
   var messageId = query.message.message_id;
   var data = query.data || "";
   var dealerName = query.from.first_name || query.from.username || "Ведущий";
-  var dealerId = "dealer_" + String(dealerName).toLowerCase().replace(/[^a-zа-я0-9]/gi, "_");
+  var dealerId = sanitizeDealerKey(dealerName);
 
   // Мгновенный ответ на callback, чтобы Telegram сразу снял индикатор загрузки с кнопки
   answerCallbackQuery(query.id);
