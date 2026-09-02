@@ -1,30 +1,33 @@
 /* ==========================================
    SMART TV 75" (4K UHD) BROADCAST HUD
-   Антикафе «Атмосфера» — Visual World: Chip Stack / Deep Navy
+   Покерный клуб «Атмосфера» — Impeccable Cinema Broadcast
    ========================================== */
 
 :root {
-  --bg-0: #08111e;
-  --bg-1: #0b1830;
-  --card: #122842;
-  --card-elevated: #162f4e;
-  --line: #1b3a5c;
-  --line-strong: #28507c;
+  --bg-0: #060d17;
+  --bg-1: #0a1628;
+  --card: #0f2238;
+  --card-elevated: #152d4a;
+  --line: #1e3d63;
+  --line-strong: #2c588a;
   
-  --ink: #e9f1f9;
-  --ink-secondary: #c2d4e8;
-  --muted: #9db6d0;
-  --muted-dark: #6b87a6;
+  --ink: #ffffff;
+  --ink-secondary: #d8e5f3;
+  --muted: #94a3b8;
+  --muted-dark: #64748b;
   
-  --gold: #e8b84b;
-  --gold-dim: #c6952e;
-  --green: #3fce8c;
+  --gold: #fbbf24;
+  --gold-glow: rgba(251, 191, 36, 0.35);
+  --green: #10b981;
+  --green-glow: rgba(16, 185, 129, 0.35);
   --amber: #f59e0b;
-  --red: #e0594f;
-  --blue: #4b82d8;
+  --red: #ef4444;
+  --red-glow: rgba(239, 68, 68, 0.35);
+  --blue: #3b82f6;
   
   --radius-card: 20px;
   --radius-panel: 14px;
+  --radius-pill: 9999px;
 }
 
 * {
@@ -35,9 +38,9 @@
 }
 
 body {
-  background: radial-gradient(circle at 50% 10%, var(--bg-1) 0%, var(--bg-0) 100%);
+  background: radial-gradient(circle at 50% 15%, var(--bg-1) 0%, var(--bg-0) 100%);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -45,15 +48,15 @@ body {
   flex-direction: column;
 }
 
-/* Верхняя статусная панель */
+/* Верхняя статусная панель (компактная, нулевой мусор) */
 .tv-header {
-  height: 64px;
-  background: rgba(11, 24, 48, 0.95);
+  height: 52px;
+  background: rgba(10, 22, 40, 0.96);
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
+  padding: 0 32px;
   z-index: 10;
 }
 
@@ -64,9 +67,9 @@ body {
 }
 
 .club-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   color: var(--ink);
   text-transform: uppercase;
 }
@@ -75,14 +78,14 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(63, 206, 140, 0.1);
-  border: 1px solid rgba(63, 206, 140, 0.3);
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--green);
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-size: 13px;
-  font-weight: 700;
-  color: var(--green);
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  color: #34d399;
+  letter-spacing: 0.06em;
 }
 
 .live-indicator-dot {
@@ -90,23 +93,31 @@ body {
   height: 8px;
   border-radius: 50%;
   background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+  animation: pulse-live 2s infinite ease-in-out;
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
 
 .header-clock {
   font-size: 20px;
-  font-weight: 700;
-  color: var(--muted);
+  font-weight: 800;
+  color: var(--ink-secondary);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 /* Главная сетка отображения */
 .tv-viewport {
   flex: 1;
-  padding: 28px;
+  padding: 16px;
   display: grid;
-  gap: 28px;
-  height: calc(100vh - 64px);
+  gap: 16px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
 }
 
 /* Адаптивная раскладка под количество столов */
@@ -135,13 +146,14 @@ body {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  padding: 32px 40px;
+  padding: 24px 32px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 16px 36px rgba(4, 10, 20, 0.6);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   position: relative;
-  transition: border-color 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  height: 100%;
 }
 
 /* Заголовок стола */
@@ -150,7 +162,7 @@ body {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 
 .dealer-identity {
@@ -181,12 +193,12 @@ body {
 }
 
 .format-badge {
-  background: rgba(232, 184, 75, 0.12);
-  border: 1px solid rgba(232, 184, 75, 0.35);
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.4);
   color: var(--gold);
-  padding: 8px 16px;
+  padding: 6px 14px;
   border-radius: var(--radius-pill);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -195,10 +207,10 @@ body {
 .round-pill {
   background: var(--card-elevated);
   border: 1px solid var(--line-strong);
-  color: var(--ink-secondary);
-  padding: 8px 20px;
+  color: var(--ink);
+  padding: 6px 18px;
   border-radius: var(--radius-pill);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -210,7 +222,7 @@ body {
   color: #93c5fd;
   padding: 6px 14px;
   border-radius: var(--radius-pill);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -222,22 +234,22 @@ body {
   align-items: center;
   gap: 36px;
   background: var(--bg-0);
-  border: 1px solid rgba(232, 184, 75, 0.35);
+  border: 1px solid rgba(251, 191, 36, 0.35);
   border-radius: var(--radius-panel);
-  padding: 16px 36px;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 12px 32px;
+  margin-bottom: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .mtt-stat-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .mtt-stat-lbl {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
@@ -245,7 +257,7 @@ body {
 }
 
 .mtt-stat-num {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 900;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -256,92 +268,91 @@ body {
 }
 
 .mtt-stat-sub {
-  font-size: 20px;
+  font-size: 18px;
   color: var(--muted);
   font-weight: 600;
 }
 
 .mtt-bar-divider {
   width: 1px;
-  height: 36px;
+  height: 32px;
   background: var(--line-strong);
 }
 
-/* Бегущие строки / тикеры пересадки и финала */
 .mtt-rebalance-ticker {
   background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.08) 100%);
   border: 1px solid var(--amber);
   color: #fef3c7;
-  padding: 14px 24px;
-  border-radius: 12px;
-  font-size: 20px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 18px;
   font-weight: 700;
   text-align: center;
-  margin-bottom: 20px;
-  animation: pulse-alert 2s infinite ease-in-out;
+  margin-bottom: 12px;
+  animation: pulse-rebalance 2s infinite ease-in-out;
+}
+
+@keyframes pulse-rebalance {
+  0%, 100% { border-color: var(--amber); }
+  50% { border-color: rgba(245, 158, 11, 0.4); }
 }
 
 .mtt-final-ticker {
-  background: linear-gradient(90deg, rgba(232, 184, 75, 0.3) 0%, rgba(232, 184, 75, 0.1) 100%);
-  border: 1px solid var(--gold);
-  color: #fffbeb;
-  padding: 16px 28px;
-  border-radius: 12px;
-  font-size: 22px;
-  font-weight: 900;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.25) 0%, rgba(239, 68, 68, 0.1) 100%);
+  border: 1px solid var(--red);
+  color: #fee2e2;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 800;
   text-align: center;
-  margin-bottom: 20px;
-  animation: pulse-alert 1.5s infinite ease-in-out;
+  margin-bottom: 12px;
 }
 
 /* Центральный таймер */
 .timer-block {
-  text-align: center;
-  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
 }
 
 .timer-digits {
-  font-size: 130px;
+  font-size: 120px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  line-height: 1;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
   color: var(--ink);
-}
-
-.tv-viewport[data-tables="1"] .timer-digits {
-  font-size: 200px;
-}
-
-.tv-viewport[data-tables="4"] .timer-digits {
-  font-size: 96px;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
 .timer-subtext {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 /* Блок блайндов */
 .blinds-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
   background: var(--bg-0);
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
-  padding: 20px 24px;
+  padding: 16px 24px;
   align-items: center;
 }
 
 .blinds-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .blinds-caption {
@@ -360,18 +371,19 @@ body {
 }
 
 .blinds-number.current {
-  font-size: 40px;
+  font-size: 44px;
   font-weight: 900;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+  text-shadow: 0 0 16px var(--gold-glow);
 }
 
 .ante-badge {
-  background: rgba(232, 184, 75, 0.15);
-  border: 1px solid rgba(232, 184, 75, 0.5);
-  color: #ffd276;
-  padding: 4px 12px;
+  background: rgba(251, 191, 36, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  color: #fef08a;
+  padding: 4px 10px;
   border-radius: 6px;
   font-size: 16px;
   font-weight: 900;
@@ -381,50 +393,213 @@ body {
 }
 
 .blinds-number.upcoming {
-  color: #64748b;
-  font-size: 22px;
-  font-weight: 700;
-  opacity: 0.75;
+  color: #cbd5e1;
+  font-size: 24px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
+/* =========================================================
+   СПЕЦИАЛЬНЫЕ МАСШТАБЫ ДЛЯ 1, 2, 3 И 4 СТОЛОВ (IMPECCABLE)
+   ========================================================= */
+
+/* --- 1 СТОЛ (HERO ARENA BILLBOARD) --- */
+.tv-viewport[data-tables="1"] .table-card {
+  padding: 32px 48px;
+}
+
+.tv-viewport[data-tables="1"] .dealer-label {
+  font-size: 16px;
+}
+
+.tv-viewport[data-tables="1"] .dealer-name {
+  font-size: 38px;
+}
+
+.tv-viewport[data-tables="1"] .format-badge {
+  font-size: 18px;
+  padding: 8px 18px;
+}
+
+.tv-viewport[data-tables="1"] .round-pill {
+  font-size: 22px;
+  padding: 10px 26px;
+}
+
+.tv-viewport[data-tables="1"] .timer-digits {
+  font-size: clamp(160px, 24vh, 230px);
+}
+
+.tv-viewport[data-tables="1"] .timer-subtext {
+  font-size: 24px;
+}
+
+.tv-viewport[data-tables="1"] .blinds-grid {
+  padding: 24px 36px;
+  gap: 32px;
+}
+
+.tv-viewport[data-tables="1"] .blinds-caption {
+  font-size: 18px;
+}
+
 .tv-viewport[data-tables="1"] .blinds-number.current {
-  font-size: 56px;
+  font-size: clamp(72px, 9vw, 110px);
 }
 
 .tv-viewport[data-tables="1"] .ante-badge {
-  font-size: 22px;
-  padding: 6px 16px;
+  font-size: 30px;
+  padding: 8px 18px;
 }
 
 .tv-viewport[data-tables="1"] .blinds-number.upcoming {
+  font-size: 48px;
+}
+
+/* --- 2 СТОЛА (SPLIT SCREEN DUAL PILLARS) --- */
+.tv-viewport[data-tables="2"] .table-card {
+  padding: 24px 32px;
+}
+
+.tv-viewport[data-tables="2"] .dealer-name {
+  font-size: 32px;
+}
+
+.tv-viewport[data-tables="2"] .round-pill {
+  font-size: 18px;
+  padding: 8px 20px;
+}
+
+.tv-viewport[data-tables="2"] .timer-digits {
+  font-size: clamp(110px, 17vh, 155px);
+}
+
+.tv-viewport[data-tables="2"] .timer-subtext {
+  font-size: 20px;
+}
+
+.tv-viewport[data-tables="2"] .blinds-grid {
+  padding: 20px 28px;
+  gap: 20px;
+}
+
+.tv-viewport[data-tables="2"] .blinds-caption {
+  font-size: 15px;
+}
+
+.tv-viewport[data-tables="2"] .blinds-number.current {
+  font-size: 68px;
+}
+
+.tv-viewport[data-tables="2"] .ante-badge {
+  font-size: 22px;
+  padding: 6px 14px;
+}
+
+.tv-viewport[data-tables="2"] .blinds-number.upcoming {
+  font-size: 36px;
+}
+
+/* --- 3 СТОЛА (TRIPLE ARENA) --- */
+.tv-viewport[data-tables="3"] .table-card {
+  padding: 18px 22px;
+}
+
+.tv-viewport[data-tables="3"] .dealer-name {
   font-size: 26px;
+}
+
+.tv-viewport[data-tables="3"] .round-pill {
+  font-size: 15px;
+  padding: 6px 14px;
+}
+
+.tv-viewport[data-tables="3"] .timer-digits {
+  font-size: clamp(80px, 13vh, 115px);
+}
+
+.tv-viewport[data-tables="3"] .timer-subtext {
+  font-size: 15px;
+}
+
+.tv-viewport[data-tables="3"] .blinds-grid {
+  grid-template-columns: 1fr;
+  padding: 14px 18px;
+  gap: 10px;
+}
+
+.tv-viewport[data-tables="3"] .blinds-caption {
+  font-size: 12px;
+}
+
+.tv-viewport[data-tables="3"] .blinds-number.current {
+  font-size: 52px;
+}
+
+.tv-viewport[data-tables="3"] .ante-badge {
+  font-size: 18px;
+  padding: 4px 10px;
+}
+
+.tv-viewport[data-tables="3"] .blinds-number.upcoming {
+  font-size: 30px;
+}
+
+/* --- 4 СТОЛА (QUAD 2X2 ARENA) --- */
+.tv-viewport[data-tables="4"] .table-card {
+  padding: 16px 24px;
+}
+
+.tv-viewport[data-tables="4"] .dealer-name {
+  font-size: 24px;
+}
+
+.tv-viewport[data-tables="4"] .round-pill {
+  font-size: 14px;
+  padding: 4px 12px;
+}
+
+.tv-viewport[data-tables="4"] .timer-digits {
+  font-size: clamp(68px, 11vh, 92px);
+}
+
+.tv-viewport[data-tables="4"] .timer-subtext {
+  font-size: 14px;
+}
+
+.tv-viewport[data-tables="4"] .blinds-grid {
+  padding: 12px 18px;
+  gap: 14px;
+}
+
+.tv-viewport[data-tables="4"] .blinds-caption {
+  font-size: 12px;
 }
 
 .tv-viewport[data-tables="4"] .blinds-number.current {
-  font-size: 26px;
+  font-size: 46px;
 }
 
 .tv-viewport[data-tables="4"] .ante-badge {
-  font-size: 13px;
-  padding: 3px 8px;
+  font-size: 16px;
+  padding: 4px 8px;
 }
 
 .tv-viewport[data-tables="4"] .blinds-number.upcoming {
-  font-size: 17px;
+  font-size: 26px;
 }
 
 /* Состояния стола */
 /* Предупреждение о смене уровня (<= 30 сек) */
 .table-card.state-alert {
   border-color: var(--amber);
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.06) 0%, var(--card) 100%);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--card) 100%);
   animation: pulse-alert 2s infinite ease-in-out;
 }
 
 @keyframes pulse-alert {
-  0%, 100% { border-color: var(--amber); }
-  50% { border-color: rgba(245, 158, 11, 0.4); }
+  0%, 100% { border-color: var(--amber); box-shadow: 0 0 20px rgba(245, 158, 11, 0.25); }
+  50% { border-color: rgba(245, 158, 11, 0.4); box-shadow: none; }
 }
 
 .table-card.state-alert .timer-digits {
@@ -437,13 +612,13 @@ body {
 
 /* Состояние овертайма (уровень истек) */
 .table-card.state-overtime {
-  border-color: #ef4444;
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, var(--card) 100%);
+  border-color: var(--red);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.09) 0%, var(--card) 100%);
   animation: pulse-overtime 1.5s infinite ease-in-out;
 }
 
 @keyframes pulse-overtime {
-  0%, 100% { border-color: #ef4444; box-shadow: 0 0 25px rgba(239, 68, 68, 0.25); }
+  0%, 100% { border-color: var(--red); box-shadow: 0 0 25px var(--red-glow); }
   50% { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 10px rgba(239, 68, 68, 0.1); }
 }
 
@@ -452,18 +627,18 @@ body {
 }
 
 .table-card.state-overtime .timer-subtext {
-  color: #ef4444;
+  color: var(--red);
   font-weight: 900;
 }
 
 /* Состояние финального уровня */
 .table-card.state-final-round {
-  border-color: rgba(232, 184, 75, 0.6);
-  box-shadow: 0 0 35px rgba(232, 184, 75, 0.2);
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow: 0 0 35px var(--gold-glow);
 }
 
 .table-card.state-final-round .timer-digits {
-  color: #ffd276;
+  color: #fef08a;
 }
 
 .table-card.state-final-round .timer-subtext {
@@ -487,7 +662,7 @@ body {
 
 /* Пауза */
 .table-card.state-paused {
-  opacity: 0.8;
+  opacity: 0.85;
   border-color: var(--muted-dark);
 }
 
@@ -495,7 +670,7 @@ body {
   color: var(--amber);
 }
 
-/* Завершение игры / 10-минутный перерыв */
+/* Завершение игры / перерыв */
 .break-screen-card {
   display: flex;
   flex-direction: column;
