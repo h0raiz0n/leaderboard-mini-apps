@@ -355,10 +355,17 @@ function initDataSource() {
 let PENDING_SYNC_TIMEOUT = null;
 
 function saveState() {
+  const myTable = getMyTable();
   if (typeof localStorage !== "undefined") {
     try {
-      localStorage.setItem("atmosphere_tables", JSON.stringify(TABLES_STATE));
+      let localTables = {};
+      try {
+        localTables = JSON.parse(localStorage.getItem("atmosphere_tables") || "{}");
+      } catch (e) {}
+      localTables[DEALER_ID] = myTable;
+      localStorage.setItem("atmosphere_tables", JSON.stringify(localTables));
       localStorage.setItem("atmosphere_pending_sync", "true");
+      localStorage.setItem("atmosphere_pending_sync_" + DEALER_ID, "true");
     } catch (e) {}
   }
 
@@ -366,13 +373,20 @@ function saveState() {
 }
 
 function flushPendingSync() {
-  const isPending = (typeof localStorage !== "undefined" && localStorage.getItem("atmosphere_pending_sync") === "true");
+  const isPending = (typeof localStorage !== "undefined" && 
+    (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || localStorage.getItem("atmosphere_pending_sync") === "true"));
   if (!isPending) return Promise.resolve(true);
 
+  const myTable = getMyTable();
+
+  // 1. WebSocket SDK: пишем СТРОГО в свой узел atmosphere/tables/${DEALER_ID}
   if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
-    return firebase.database().ref("atmosphere/tables").set(TABLES_STATE)
+    return firebase.database().ref("atmosphere/tables/" + encodeURIComponent(DEALER_ID)).set(myTable)
       .then(() => {
-        if (typeof localStorage !== "undefined") localStorage.removeItem("atmosphere_pending_sync");
+        if (typeof localStorage !== "undefined") {
+          localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
+          localStorage.removeItem("atmosphere_pending_sync");
+        }
         return true;
       })
       .catch((err) => {
@@ -381,20 +395,23 @@ function flushPendingSync() {
       });
   }
 
-  // REST fallback
+  // 2. REST fallback: пишем СТРОГО в свой узел PUT /atmosphere/tables/${DEALER_ID}.json
   const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
     ? POKER_CONFIG.FIREBASE_DB_URL
     : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
 
   if (typeof fetch === "function") {
-    return fetch(`${dbUrl}/atmosphere/tables.json`, {
+    return fetch(`${dbUrl}/atmosphere/tables/${encodeURIComponent(DEALER_ID)}.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(TABLES_STATE)
+      body: JSON.stringify(myTable)
     })
     .then(res => {
       if (res.ok) {
-        if (typeof localStorage !== "undefined") localStorage.removeItem("atmosphere_pending_sync");
+        if (typeof localStorage !== "undefined") {
+          localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
+          localStorage.removeItem("atmosphere_pending_sync");
+        }
         return true;
       } else {
         schedulePendingSyncRetry();
