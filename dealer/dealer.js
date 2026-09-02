@@ -691,7 +691,9 @@ function checkMttRebalance() {
 }
 
 function rerollRebalanceBox() {
-  CURRENT_REBALANCE_BOX = Math.floor(Math.random() * 10) + 1;
+  const table = getMyTable();
+  const activeSeats = Math.max(1, Math.min(10, table.playersCount || 9));
+  CURRENT_REBALANCE_BOX = Math.floor(Math.random() * activeSeats) + 1;
   const boxEl = document.getElementById("rebalance-box-num");
   if (boxEl) boxEl.textContent = `№ ${CURRENT_REBALANCE_BOX}`;
 }
@@ -900,6 +902,11 @@ if (typeof module !== "undefined" && module.exports) {
     showPinModal,
     showAccessDenied,
     saveState,
-    flushPendingSync
+    flushPendingSync,
+    adjustPlayers,
+    eliminatePlayer,
+    checkMttRebalance,
+    rerollRebalanceBox,
+    confirmRebalance
   };
 }

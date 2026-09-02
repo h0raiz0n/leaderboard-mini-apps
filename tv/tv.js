@@ -65,7 +65,10 @@ function toggleFullscreen() {
   }
 }
 
-// Источник данных (Firebase + LocalStorage fallback)
+let LAST_FIREBASE_SYNC_TS = 0;
+let REST_POLL_INTERVAL = null;
+
+// Источник данных (Firebase WebSocket + REST Polling fallback + LocalStorage)
 function initDataSource() {
   if (typeof firebase !== "undefined") {
     try {
@@ -77,14 +80,17 @@ function initDataSource() {
       const db = firebase.database();
       db.ref("atmosphere/tables").on("value", (snapshot) => {
         ACTIVE_TABLES = snapshot.val() || {};
+        LAST_FIREBASE_SYNC_TS = Date.now();
         renderTables();
       });
-      console.log("⚡ ТВ подключен к Firebase Realtime DB (europe-west1)");
-      return;
+      console.log("⚡ ТВ подключен к Firebase Realtime DB (WebSocket)");
     } catch (err) {
-      console.warn("Ошибка подключения к Firebase, переключение на локальный fallback:", err);
+      console.warn("Ошибка подключения к Firebase WebSocket:", err);
     }
   }
+
+  // Запуск фонового REST-опроса на случай проблем с WebSocket на Smart TV
+  startRestPollingFallback();
 
   // Fallback на LocalStorage для локальной разработки / оффлайна
   if (typeof window !== "undefined") {
@@ -99,6 +105,36 @@ function initDataSource() {
     if (saved) {
       ACTIVE_TABLES = JSON.parse(saved);
     }
+  }
+}
+
+async function fetchTablesRest() {
+  try {
+    const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+      ? POKER_CONFIG.FIREBASE_DB_URL
+      : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+    const res = await fetch(`${dbUrl}/atmosphere/tables.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data) {
+        ACTIVE_TABLES = data;
+        LAST_FIREBASE_SYNC_TS = Date.now();
+        renderTables();
+      }
+    }
+  } catch (e) {}
+}
+
+function startRestPollingFallback() {
+  if (REST_POLL_INTERVAL) return;
+  REST_POLL_INTERVAL = setInterval(() => {
+    // Если от WebSocket не было данных дольше 3 секунд — опрашиваем через REST
+    if (Date.now() - LAST_FIREBASE_SYNC_TS > 3000) {
+      fetchTablesRest();
+    }
+  }, 1500);
+  if (REST_POLL_INTERVAL && typeof REST_POLL_INTERVAL.unref === "function") {
+    REST_POLL_INTERVAL.unref();
   }
 }
 
@@ -125,32 +161,51 @@ function getTableStructure(table) {
 // Расчёт времени стола (с поддержкой алерта 30с и овертайма финала)
 function calculateTableTime(table, isFinalLevel = false) {
   const now = Date.now();
+  const duration = table.durationSec || 420;
   let elapsed = table.elapsedBeforePause || 0;
-  
-  if (table.status === "running" && table.startedAt) {
-    elapsed += Math.floor((now - table.startedAt) / 1000);
+  let isOvertime = false;
+  let remaining = 0;
+
+  if (table.status === "running") {
+    if (table.levelEndsAt) {
+      if (now <= table.levelEndsAt) {
+        remaining = Math.max(0, Math.ceil((table.levelEndsAt - now) / 1000));
+        elapsed = duration - remaining;
+      } else {
+        // Овертайм (уровень истек, но следующий раунд еще не нажат)
+        const overtimeSec = Math.floor((now - table.levelEndsAt) / 1000);
+        remaining = 0;
+        elapsed = duration + overtimeSec;
+        isOvertime = true;
+      }
+    } else if (table.startedAt) {
+      elapsed += Math.floor((now - table.startedAt) / 1000);
+      if (elapsed >= duration) {
+        isOvertime = true;
+        remaining = 0;
+      } else {
+        remaining = Math.max(0, duration - elapsed);
+      }
+    }
+  } else if (table.status === "paused") {
+    remaining = Math.max(0, duration - elapsed);
   }
   
-  const duration = table.durationSec || 420;
-  const isOvertime = isFinalLevel && (elapsed >= duration) && (table.status === "running");
-  
-  let remaining = 0;
   let minutes = 0;
   let seconds = 0;
   let formatted = "00:00";
   let isAlert = false;
   
   if (isOvertime) {
-    const overtimeSec = elapsed - duration;
+    const overtimeSec = Math.max(0, elapsed - duration);
     minutes = Math.floor(overtimeSec / 60);
     seconds = overtimeSec % 60;
     formatted = `+${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   } else {
-    remaining = Math.max(0, duration - elapsed);
     minutes = Math.floor(remaining / 60);
     seconds = remaining % 60;
     formatted = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-    // Предупреждающий алерт за 30 секунд (вместо 45)
+    // Предупреждающий алерт за 30 секунд
     isAlert = table.status === "running" && remaining <= 30 && remaining > 0;
   }
   
@@ -382,6 +437,7 @@ if (typeof module !== "undefined" && module.exports) {
     calculateTableTime,
     getTableStructure,
     getFormatLabel,
-    renderTables
+    renderTables,
+    fetchTablesRest
   };
 }

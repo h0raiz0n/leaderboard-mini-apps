@@ -435,7 +435,28 @@ body {
   color: var(--amber);
 }
 
-/* Состояние финального уровня (Overtime) */
+/* Состояние овертайма (уровень истек) */
+.table-card.state-overtime {
+  border-color: #ef4444;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, var(--card) 100%);
+  animation: pulse-overtime 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-overtime {
+  0%, 100% { border-color: #ef4444; box-shadow: 0 0 25px rgba(239, 68, 68, 0.25); }
+  50% { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 10px rgba(239, 68, 68, 0.1); }
+}
+
+.table-card.state-overtime .timer-digits {
+  color: #f87171;
+}
+
+.table-card.state-overtime .timer-subtext {
+  color: #ef4444;
+  font-weight: 900;
+}
+
+/* Состояние финального уровня */
 .table-card.state-final-round {
   border-color: rgba(232, 184, 75, 0.6);
   box-shadow: 0 0 35px rgba(232, 184, 75, 0.2);
