@@ -143,13 +143,13 @@ async function fetchDynamicDealersRegistryAndRetry(uname, uid) {
         if (uname && liveRegistry.MAP[uname]) {
           DEALER_NAME = liveRegistry.MAP[uname];
           applyDealerIdentity();
-          initTableRealtime();
+          initDataSource();
           renderDealerView();
           return;
         } else if (uid && liveRegistry.MAP[uid]) {
           DEALER_NAME = liveRegistry.MAP[uid];
           applyDealerIdentity();
-          initTableRealtime();
+          initDataSource();
           renderDealerView();
           return;
         }
@@ -283,14 +283,18 @@ function initDataSource() {
   }
 
   // Fallback для оффлайн разработки
-  window.addEventListener("storage", (e) => {
-    if (e.key === "atmosphere_tables") {
-      TABLES_STATE = JSON.parse(e.newValue || "{}");
-      renderDealerView();
-    }
-  });
-  const saved = localStorage.getItem("atmosphere_tables");
-  if (saved) TABLES_STATE = JSON.parse(saved);
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "atmosphere_tables") {
+        TABLES_STATE = JSON.parse(e.newValue || "{}");
+        renderDealerView();
+      }
+    });
+  }
+  if (typeof localStorage !== "undefined") {
+    const saved = localStorage.getItem("atmosphere_tables");
+    if (saved) TABLES_STATE = JSON.parse(saved);
+  }
 }
 
 function saveState() {
