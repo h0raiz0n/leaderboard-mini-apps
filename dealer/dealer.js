@@ -207,7 +207,9 @@ function showPinModal(customMessage) {
     const input = document.getElementById("dealer-pin-input");
     if (input) {
       input.value = "";
-      setTimeout(() => input.focus(), 200);
+      setTimeout(() => {
+        if (input && typeof input.focus === "function") input.focus();
+      }, 200);
       input.onkeydown = (e) => {
         if (e.key === "Enter") submitDealerPin();
       };
@@ -350,11 +352,84 @@ function initDataSource() {
   }
 }
 
+let PENDING_SYNC_TIMEOUT = null;
+
 function saveState() {
-  if (typeof firebase !== "undefined" && firebase.apps.length > 0) {
-    firebase.database().ref("atmosphere/tables").set(TABLES_STATE);
-  } else {
-    localStorage.setItem("atmosphere_tables", JSON.stringify(TABLES_STATE));
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem("atmosphere_tables", JSON.stringify(TABLES_STATE));
+      localStorage.setItem("atmosphere_pending_sync", "true");
+    } catch (e) {}
+  }
+
+  flushPendingSync();
+}
+
+function flushPendingSync() {
+  const isPending = (typeof localStorage !== "undefined" && localStorage.getItem("atmosphere_pending_sync") === "true");
+  if (!isPending) return Promise.resolve(true);
+
+  if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+    return firebase.database().ref("atmosphere/tables").set(TABLES_STATE)
+      .then(() => {
+        if (typeof localStorage !== "undefined") localStorage.removeItem("atmosphere_pending_sync");
+        return true;
+      })
+      .catch((err) => {
+        schedulePendingSyncRetry();
+        return false;
+      });
+  }
+
+  // REST fallback
+  const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+    ? POKER_CONFIG.FIREBASE_DB_URL
+    : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+
+  if (typeof fetch === "function") {
+    return fetch(`${dbUrl}/atmosphere/tables.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(TABLES_STATE)
+    })
+    .then(res => {
+      if (res.ok) {
+        if (typeof localStorage !== "undefined") localStorage.removeItem("atmosphere_pending_sync");
+        return true;
+      } else {
+        schedulePendingSyncRetry();
+        return false;
+      }
+    })
+    .catch(() => {
+      schedulePendingSyncRetry();
+      return false;
+    });
+  }
+
+  return Promise.resolve(false);
+}
+
+function schedulePendingSyncRetry() {
+  if (PENDING_SYNC_TIMEOUT) return;
+  PENDING_SYNC_TIMEOUT = setTimeout(() => {
+    PENDING_SYNC_TIMEOUT = null;
+    flushPendingSync();
+  }, 3000);
+  if (PENDING_SYNC_TIMEOUT && typeof PENDING_SYNC_TIMEOUT.unref === "function") {
+    PENDING_SYNC_TIMEOUT.unref();
+  }
+}
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("online", () => flushPendingSync());
+  const syncInterval = setInterval(() => {
+    if (typeof localStorage !== "undefined" && localStorage.getItem("atmosphere_pending_sync") === "true") {
+      flushPendingSync();
+    }
+  }, 5000);
+  if (syncInterval && typeof syncInterval.unref === "function") {
+    syncInterval.unref();
   }
 }
 
@@ -414,6 +489,7 @@ function startTable() {
   table.levelIndex = 0;
   table.startedAt = Date.now();
   table.durationSec = structure.levels[0].durationSec;
+  table.levelEndsAt = Date.now() + (table.durationSec * 1000);
   table.elapsedBeforePause = 0;
   table.isPostGameBreak = false;
   table.createdAt = Date.now();
@@ -431,6 +507,7 @@ function togglePause() {
     table.status = "paused";
     table.elapsedBeforePause = (table.elapsedBeforePause || 0) + Math.floor((now - table.startedAt) / 1000);
     table.startedAt = null;
+    table.levelEndsAt = null;
     table.pauseEndsAt = null;
     table.pauseTotalSec = null;
   } else if (table.status === "paused") {
@@ -438,6 +515,8 @@ function togglePause() {
     table.pauseEndsAt = null;
     table.pauseTotalSec = null;
     table.startedAt = Date.now();
+    const remainingSec = Math.max(0, table.durationSec - (table.elapsedBeforePause || 0));
+    table.levelEndsAt = Date.now() + (remainingSec * 1000);
   }
   saveState();
   renderDealerView();
@@ -451,6 +530,7 @@ function startTimedPause(seconds = 120) {
     const now = Date.now();
     table.elapsedBeforePause = (table.elapsedBeforePause || 0) + Math.floor((now - table.startedAt) / 1000);
     table.startedAt = null;
+    table.levelEndsAt = null;
   }
   table.status = "paused";
   table.pauseEndsAt = Date.now() + seconds * 1000;
@@ -470,6 +550,7 @@ function nextLevel() {
     table.durationSec = structure.levels[table.levelIndex].durationSec;
     table.elapsedBeforePause = 0;
     table.startedAt = Date.now();
+    table.levelEndsAt = Date.now() + (table.durationSec * 1000);
     saveState();
     renderDealerView();
   }
@@ -682,13 +763,18 @@ function renderDealerView() {
   if (blindsValEl) blindsValEl.textContent = currentLvl.label;
   if (nextBlindsValEl) nextBlindsValEl.textContent = nextLvl ? nextLvl.label : "ФИНАЛ";
 
-  // Расчет времени
+  // Расчет времени по абсолютным меткам (без дрифта при сворачивании)
   let remaining = currentLvl.durationSec;
   let totalElapsed = table.elapsedBeforePause || 0;
-  if (table.status === "running" && table.startedAt) {
-    const elapsedNow = Math.floor((Date.now() - table.startedAt) / 1000);
-    totalElapsed += elapsedNow;
-    remaining = Math.max(0, table.durationSec - totalElapsed);
+  if (table.status === "running") {
+    if (table.levelEndsAt) {
+      remaining = Math.max(0, Math.ceil((table.levelEndsAt - Date.now()) / 1000));
+      totalElapsed = Math.max(0, table.durationSec - remaining);
+    } else if (table.startedAt) {
+      const elapsedNow = Math.floor((Date.now() - table.startedAt) / 1000);
+      totalElapsed += elapsedNow;
+      remaining = Math.max(0, table.durationSec - totalElapsed);
+    }
   } else if (table.status === "paused") {
     remaining = Math.max(0, table.durationSec - (table.elapsedBeforePause || 0));
   }
@@ -812,6 +898,8 @@ if (typeof module !== "undefined" && module.exports) {
     getActiveStructure,
     submitDealerPin,
     showPinModal,
-    showAccessDenied
+    showAccessDenied,
+    saveState,
+    flushPendingSync
   };
 }
