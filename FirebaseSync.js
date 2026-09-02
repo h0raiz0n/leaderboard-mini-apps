@@ -7,7 +7,7 @@
  * Получение базового URL Firebase из скриптовых свойств
  */
 function getFirebaseBaseUrl() {
-  var url = getScriptProperty("FIREBASE_DB_URL", "");
+  var url = (typeof getScriptProperty === "function") ? getScriptProperty("FIREBASE_DB_URL", "") : "";
   if (!url && typeof CONFIG !== "undefined" && CONFIG.FIREBASE_DB_URL) {
     url = CONFIG.FIREBASE_DB_URL;
   }
@@ -20,7 +20,7 @@ function getFirebaseBaseUrl() {
  * Получение секретного ключа базы данных Firebase (если включены приватные правила)
  */
 function getFirebaseSecret() {
-  return getScriptProperty("FIREBASE_AUTH_SECRET", "");
+  return (typeof getScriptProperty === "function") ? getScriptProperty("FIREBASE_AUTH_SECRET", "") : "";
 }
 
 /**
@@ -131,11 +131,45 @@ function removeTableFromFirebase(tableId) {
   }
 }
 
+/**
+ * Мгновенный пуш события обновления лидерборда в Firebase Realtime Database
+ */
+function pushLeaderboardUpdate(gameId, format, dateStr) {
+  var baseUrl = getFirebaseBaseUrl();
+  if (!baseUrl) return false;
+
+  var secret = getFirebaseSecret();
+  var authParam = secret ? "?auth=" + encodeURIComponent(secret) : "";
+  var endpoint = baseUrl + "/atmosphere/leaderboard_sync.json" + authParam;
+
+  var payload = JSON.stringify({
+    lastGameId: gameId || "",
+    format: format || "",
+    date: dateStr || "",
+    updatedAt: new Date().toISOString(),
+    timestamp: Date.now()
+  });
+
+  try {
+    UrlFetchApp.fetch(endpoint, {
+      method: "put",
+      contentType: "application/json",
+      payload: payload,
+      muteHttpExceptions: true
+    });
+    return true;
+  } catch (err) {
+    Logger.log("Firebase leaderboard push error: " + err.message);
+    return false;
+  }
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     getFirebaseBaseUrl,
     syncTableToFirebase,
     getTableFromFirebase,
-    removeTableFromFirebase
+    removeTableFromFirebase,
+    pushLeaderboardUpdate
   };
 }

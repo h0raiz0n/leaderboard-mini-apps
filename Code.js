@@ -208,6 +208,9 @@ function processFormSubmit(e) {
       dbSheet.getRange(dbSheet.getLastRow() + 1, 1, rowsToInsert.length, 8).setValues(rowsToInsert);
       calculateLeaderboard();
       invalidateAnalyticsCache();
+      try {
+        pushLeaderboardUpdate(gameId, format, dateStr);
+      } catch (errSync) {}
       log.dbWritten = rowsToInsert.length;
     }
 

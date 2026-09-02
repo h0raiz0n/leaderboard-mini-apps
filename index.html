@@ -864,11 +864,17 @@
 </div>
 
 <script>
-  var DEFAULT_API = "https://script.google.com/macros/s/AKfycbwXrgT_FBDueyA4ap3gryOQQfxBqiv2GJL_H4Ejt3bQhOdZThoMW_j61T-C7Oq4ZTTseg/exec";
+  var DEFAULT_API = "https://script.google.com/macros/s/AKfycbzk4Vf7L71rIUtOKfNbFDtzJ5fQI_8VPFVErB12jhJPoMaAxmGiRxqLVDzoKTT6ocTBDQ/exec";
   var API = (function() {
     try {
-      if (window.location && window.location.hostname === "script.google.com" && window.location.pathname.indexOf("/exec") > -1) {
-        return window.location.href.split("?")[0].split("#")[0];
+      if (window.location) {
+        if (window.location.hostname === "script.google.com" && window.location.pathname.indexOf("/exec") > -1) {
+          return window.location.href.split("?")[0].split("#")[0];
+        }
+        // На Vercel и локальном dev-сервере используем ультрабыстрый Edge Proxy
+        if (window.location.hostname.includes("vercel.app") || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+          return "/api/leaderboard";
+        }
       }
     } catch (e) {}
     return DEFAULT_API;

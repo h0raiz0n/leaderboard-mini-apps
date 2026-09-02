@@ -127,14 +127,14 @@ graph TD
 
 ---
 
-#### [ ] TASK-7.2. Vercel Edge Proxy для лидерборда и мгновенный пуш из таблицы
+#### [x] TASK-7.2. Vercel Edge Proxy для лидерборда и мгновенный пуш из таблицы
 * **Что делаем:**
   * В `api/leaderboard.js` реализовать легковесный Serverless Proxy к Google Apps Script с заголовками `s-maxage=60, stale-while-revalidate=300` для ультрабыстрого отклика (<50ms) без CORS-ошибок.
   * В `index.html` переключить `DEFAULT_API` на `/api/leaderboard`.
-  * В `Code.js` (`processFormSubmit`) добавить триггерный пуш события обновления в Firebase RTDB `/atmosphere/leaderboard_updated_at`.
+  * В `Code.js` (`processFormSubmit`) добавить триггерный пуш события обновления в Firebase RTDB `/atmosphere/leaderboard_sync.json`.
 * **Файлы:** `api/leaderboard.js`, `index.html`, `Code.js`, `FirebaseSync.js`
 
-#### [ ] VERIFY-7.2. Тест Edge Proxy и событийного обновления лидерборда
+#### [x] VERIFY-7.2. Тест Edge Proxy и событийного обновления лидерборда
 * **Проверка:** Автотест `tests/test_edge_leaderboard_proxy.js` (проверка кэширования, ответа Proxy и формата данных).
 
 ---
