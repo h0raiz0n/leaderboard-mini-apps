@@ -33,10 +33,9 @@ sng.levels.forEach(lvl => {
 });
 const totalMinutes = totalSeconds / 60;
 console.log(`   Общая длительность турнира: ${totalMinutes} мин (${sng.levels.length} уровней).`);
-assert(totalMinutes >= 70 && totalMinutes <= 80, "Длительность турнира должна быть в окне 70-80 минут");
-assert.strictEqual(sng.levels[5].isBreak, true, "Уровень 6 должен быть перерывом 5 мин");
-assert.strictEqual(sng.levels[6].ante, 400, "Уровень 7 должен включать Big Blind Ante 400");
-console.log("   ✅ Сетка блайндов (75 минут) и включение BBA валидны.");
+assert(totalMinutes >= 65 && totalMinutes <= 80, "Длительность турнира должна быть в окне 65-80 минут");
+assert.strictEqual(sng.levels[5].ante, 400, "Уровень 6 должен включать Big Blind Ante 400");
+console.log("   ✅ Сетка блайндов (68 минут) и включение BBA валидны.");
 
 // 3. Тест таймстемп-движка и алерта смены уровней
 console.log("\n3. Проверка таймстемп-калькулятора таймера:");

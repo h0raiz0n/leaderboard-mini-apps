@@ -68,7 +68,7 @@ const anteTable = {
   dealerName: "Влад",
   format: "SnG",
   status: "running",
-  levelIndex: 6, // Уровень 7 (200 / 400 + BBA 400)
+  levelIndex: 5, // Уровень 6 (200 / 400 + BBA 400)
   startedAt: Date.now(),
   durationSec: 420
 };

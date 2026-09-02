@@ -58,18 +58,19 @@ const fourTables = {
     durationSec: 420,
     elapsedBeforePause: 120
   },
-  dealer_igor: {
-    id: "dealer_igor",
-    dealerName: "Игорь",
+  dealer_dima: {
+    id: "dealer_dima",
+    dealerName: "Дима",
     format: "MTT",
-    status: "running",
-    levelIndex: 5, // Break
-    startedAt: Date.now(),
-    durationSec: 300
+    status: "paused",
+    pauseEndsAt: Date.now() + 120000,
+    pauseTotalSec: 120,
+    levelIndex: 4,
+    durationSec: 420
   },
-  dealer_sergey: {
-    id: "dealer_sergey",
-    dealerName: "Сергей",
+  dealer_masha: {
+    id: "dealer_masha",
+    dealerName: "Маша",
     format: "SnG",
     isPostGameBreak: true,
     nextGameAt: Date.now() + 500000
@@ -78,6 +79,7 @@ const fourTables = {
 
 let capturedHtml = "";
 let capturedDataset = {};
+
 global.document = {
   getElementById: (id) => {
     if (id === "tv-viewport") {
@@ -98,8 +100,8 @@ tvEngine.renderTables();
 assert.strictEqual(capturedDataset.tables, "4", "Сетка должна автоматически переключиться в режим 4 столов (2x2)");
 assert(capturedHtml.includes("Влад"), "Стол Влада должен присутствовать");
 assert(capturedHtml.includes("Арина"), "Стол Арины должен присутствовать");
-assert(capturedHtml.includes("Игорь"), "Стол Игоря должен присутствовать");
-assert(capturedHtml.includes("Сергей"), "Стол Сергея (перерыв) должен присутствовать");
+assert(capturedHtml.includes("Дима"), "Стол Димы должен присутствовать");
+assert(capturedHtml.includes("Маша"), "Стол Маши (перерыв) должен присутствовать");
 assert(capturedHtml.includes("state-paused"), "Стол на паузе должен иметь CSS класс state-paused");
 assert(capturedHtml.includes("state-break"), "Стол на перерыве должен иметь CSS класс state-break");
 assert(capturedHtml.includes("break-screen-card"), "Завершенный стол должен отображать карточку 10-мин перерыва");
