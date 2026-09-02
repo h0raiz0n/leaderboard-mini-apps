@@ -101,6 +101,16 @@
         <button class="btn btn-step" id="btn-step">⏩ След. раунд</button>
       </div>
 
+      <!-- Быстрые таймированные паузы (Color-Up / Перерыв) -->
+      <div class="pause-options-bar" id="pause-options-bar" style="display: none;">
+        <div class="pause-bar-title">⏱ Быстрый перерыв (Color-Up):</div>
+        <div class="pause-btn-row">
+          <button type="button" class="btn btn-timed-pause" onclick="startTimedPause(120)">⏱ 2 мин</button>
+          <button type="button" class="btn btn-timed-pause" onclick="startTimedPause(300)">⏱ 5 мин</button>
+          <button type="button" class="btn btn-timed-pause" onclick="startTimedPause(600)">⏱ 10 мин</button>
+        </div>
+      </div>
+
       <!-- Кнопка сброса (исчезает через 3 мин) -->
       <button class="btn btn-reset" id="btn-reset" style="display: none;">❌ Сбросить запуск (ошибка)</button>
       

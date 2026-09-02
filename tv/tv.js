@@ -296,15 +296,27 @@ function renderTables() {
       return;
     }
     
-    // Классы состояний
+    // Классы состояний и таймированная пауза (Color-Up / Перерыв)
+    const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > Date.now());
+    let displayFormattedTime = time.formatted;
     let cardClass = "table-card";
-    if (time.isAlert) cardClass += " state-alert";
-    if (currentLevel.isBreak) cardClass += " state-break";
-    if (table.status === "paused") cardClass += " state-paused";
-    if (time.isOvertime) cardClass += " state-final-round";
+    
+    if (isTimedPause) {
+      const pRem = Math.max(0, Math.floor((table.pauseEndsAt - Date.now()) / 1000));
+      const pMin = Math.floor(pRem / 60);
+      const pSec = pRem % 60;
+      displayFormattedTime = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
+      cardClass += " state-break";
+    } else {
+      if (time.isAlert) cardClass += " state-alert";
+      if (currentLevel.isBreak) cardClass += " state-break";
+      if (table.status === "paused") cardClass += " state-paused";
+      if (time.isOvertime) cardClass += " state-final-round";
+    }
     
     let subtext = "Идёт раунд";
-    if (table.status === "paused") subtext = "Пауза";
+    if (isTimedPause) subtext = (table.pauseTotalSec === 120 ? "☕ Перерыв • Размен фишек (Color-Up)" : `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`);
+    else if (table.status === "paused") subtext = "Пауза";
     else if (time.isOvertime) subtext = "Финальный раунд • Блайнды зафиксированы";
     else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
@@ -322,14 +334,14 @@ function renderTables() {
             ${table.format === "MTT" ? `<div class="players-pill">👥 ${table.playersCount || 9}</div>` : ""}
             <span class="format-badge">${formatLabel}</span>
             <div class="round-pill">
-              ${currentLevel.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLevel.level}`}
+              ${isTimedPause ? "ПЕРЕРЫВ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLevel.level}`)}
             </div>
           </div>
         </div>
         
         <!-- Центральный таймер -->
         <div class="timer-block">
-          <div class="timer-digits">${time.formatted}</div>
+          <div class="timer-digits">${displayFormattedTime}</div>
           <div class="timer-subtext">${subtext}</div>
         </div>
         

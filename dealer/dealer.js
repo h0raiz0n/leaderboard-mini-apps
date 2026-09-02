@@ -324,10 +324,30 @@ function togglePause() {
     table.status = "paused";
     table.elapsedBeforePause = (table.elapsedBeforePause || 0) + Math.floor((now - table.startedAt) / 1000);
     table.startedAt = null;
+    table.pauseEndsAt = null;
+    table.pauseTotalSec = null;
   } else if (table.status === "paused") {
     table.status = "running";
+    table.pauseEndsAt = null;
+    table.pauseTotalSec = null;
     table.startedAt = Date.now();
   }
+  saveState();
+  renderDealerView();
+}
+
+// 2.1. Запуск быстрой таймированной паузы (Color-Up / Перерыв)
+function startTimedPause(seconds = 120) {
+  triggerHaptic("heavy");
+  const table = getMyTable();
+  if (table.status === "running") {
+    const now = Date.now();
+    table.elapsedBeforePause = (table.elapsedBeforePause || 0) + Math.floor((now - table.startedAt) / 1000);
+    table.startedAt = null;
+  }
+  table.status = "paused";
+  table.pauseEndsAt = Date.now() + seconds * 1000;
+  table.pauseTotalSec = seconds;
   saveState();
   renderDealerView();
 }
@@ -571,6 +591,8 @@ function renderDealerView() {
   if (blindsValEl) blindsValEl.textContent = currentLvl.label;
   if (nextBlindsValEl) nextBlindsValEl.textContent = nextLvl ? nextLvl.label : "ФИНАЛ";
 
+  const pauseBar = document.getElementById("pause-options-bar");
+
   // Расчет времени
   let remaining = currentLvl.durationSec;
   let totalElapsed = table.elapsedBeforePause || 0;
@@ -582,15 +604,31 @@ function renderDealerView() {
     remaining = Math.max(0, table.durationSec - (table.elapsedBeforePause || 0));
   }
 
-  const min = Math.floor(remaining / 60);
-  const sec = remaining % 60;
-  if (digitsEl) digitsEl.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  // Проверка таймированной паузы (Color-Up / Перерыв)
+  const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > Date.now());
+  if (isTimedPause) {
+    const pRem = Math.max(0, Math.floor((table.pauseEndsAt - Date.now()) / 1000));
+    const pMin = Math.floor(pRem / 60);
+    const pSec = pRem % 60;
+    if (digitsEl) {
+      digitsEl.textContent = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
+      digitsEl.style.color = "#fbbf24";
+    }
+  } else {
+    const min = Math.floor(remaining / 60);
+    const sec = remaining % 60;
+    if (digitsEl) {
+      digitsEl.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+      digitsEl.style.color = "";
+    }
+  }
 
   if (table.status === "running") {
     if (setupPanel) setupPanel.style.display = "none";
     if (statusEl) statusEl.textContent = "🟢 Идёт игра";
     if (startBtn) startBtn.style.display = "none";
     if (runningRow) runningRow.style.display = "grid";
+    if (pauseBar) pauseBar.style.display = "flex";
     if (pauseBtn) pauseBtn.textContent = "⏸ Пауза";
     if (finishBtn) finishBtn.style.display = "flex";
 
@@ -600,9 +638,12 @@ function renderDealerView() {
     }
   } else if (table.status === "paused") {
     if (setupPanel) setupPanel.style.display = "none";
-    if (statusEl) statusEl.textContent = "⏸ На паузе";
+    if (statusEl) {
+      statusEl.textContent = isTimedPause ? `☕ Перерыв (${table.pauseTotalSec === 120 ? "Color-Up" : `${Math.round(table.pauseTotalSec/60)} мин`})` : "⏸ На паузе";
+    }
     if (startBtn) startBtn.style.display = "none";
     if (runningRow) runningRow.style.display = "grid";
+    if (pauseBar) pauseBar.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "▶️ Продолжить";
     if (finishBtn) finishBtn.style.display = "flex";
 
@@ -615,6 +656,7 @@ function renderDealerView() {
     if (statusEl) statusEl.textContent = "Стол ожидает старта";
     if (startBtn) startBtn.style.display = "flex";
     if (runningRow) runningRow.style.display = "none";
+    if (pauseBar) pauseBar.style.display = "none";
     if (resetBtn) resetBtn.style.display = "none";
     if (finishBtn) finishBtn.style.display = "none";
   }
