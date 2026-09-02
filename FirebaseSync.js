@@ -8,6 +8,9 @@
  */
 function getFirebaseBaseUrl() {
   var url = getScriptProperty("FIREBASE_DB_URL", "");
+  if (!url && typeof CONFIG !== "undefined" && CONFIG.FIREBASE_DB_URL) {
+    url = CONFIG.FIREBASE_DB_URL;
+  }
   if (!url) return "";
   // Убираем закрывающий слеш если есть
   return url.replace(/\/+$/, "");

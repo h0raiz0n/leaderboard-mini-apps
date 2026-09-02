@@ -418,18 +418,29 @@ function doPost(e) {
  */
 function diagnoseDealerBotAndTv() {
   var props = PropertiesService.getScriptProperties();
-  var dealerToken = props.getProperty("DEALER_BOT_TOKEN") || props.getProperty("TELEGRAM_BOT_TOKEN") || "";
-  var firebaseUrl = props.getProperty("FIREBASE_DB_URL") || "";
+  var dealerToken = props.getProperty("DEALER_BOT_TOKEN") || props.getProperty("TELEGRAM_BOT_TOKEN") || (typeof CONFIG !== "undefined" && CONFIG.DEALER_BOT_TOKEN ? CONFIG.DEALER_BOT_TOKEN : "");
+  var firebaseUrl = props.getProperty("FIREBASE_DB_URL");
+  
+  if (!firebaseUrl && typeof CONFIG !== "undefined" && CONFIG.FIREBASE_DB_URL) {
+    firebaseUrl = CONFIG.FIREBASE_DB_URL;
+    try {
+      props.setProperty("FIREBASE_DB_URL", firebaseUrl);
+    } catch (e) {}
+  }
 
   var lines = [];
   lines.push("=== ДИАГНОСТИКА БОТА И ТВ ===");
   lines.push("1. Токен бота: " + (dealerToken ? "✅ Задан (" + dealerToken.substring(0, 8) + "…)" : "❌ НЕ задан (DEALER_BOT_TOKEN)"));
   lines.push("2. База Firebase: " + (firebaseUrl ? "✅ Задана (" + firebaseUrl + ")" : "❌ НЕ задана (FIREBASE_DB_URL)"));
   
-  var structures = Object.keys(CONFIG.BLIND_STRUCTURES || {});
+  var structures = Object.keys((typeof CONFIG !== "undefined" && CONFIG.BLIND_STRUCTURES) ? CONFIG.BLIND_STRUCTURES : {});
   lines.push("3. Пресеты блайндов: " + (structures.length > 0 ? "✅ " + structures.join(", ") : "❌ Не найдены"));
   
-  lines.push("\nДля настройки секретов запустите Setup.js -> setupSecrets()");
+  if (dealerToken && firebaseUrl) {
+    lines.push("\n🎉 Все системы дилерского пульта и ТВ-дашборда настроены и готовы к работе!");
+  } else {
+    lines.push("\nДля настройки секретов запустите Setup.js -> setupSecrets()");
+  }
 
   try {
     SpreadsheetApp.getUi().alert(lines.join("\n"));

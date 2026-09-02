@@ -63,6 +63,61 @@ function handleDealerBotWebhook(e) {
 }
 
 /**
+ * Получение динамического реестра ведущих с приоритетом живого листа «Ведущие»
+ */
+function getDynamicDealersRegistry(forceRefresh) {
+  if (!forceRefresh) {
+    try {
+      var cached = CacheService.getScriptCache().get("DEALERS_REGISTRY");
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        if (parsed && parsed.MAP && Object.keys(parsed.MAP).length > 0) return parsed;
+      }
+    } catch (e) {}
+  }
+
+  // Читаем живой лист "Ведущие" из Google Таблицы
+  try {
+    var ss = (typeof SpreadsheetApp !== "undefined" && SpreadsheetApp.getActiveSpreadsheet) 
+      ? SpreadsheetApp.getActiveSpreadsheet() 
+      : null;
+    if (ss) {
+      var sheetName = (typeof CONFIG !== "undefined" && CONFIG.SHEETS && CONFIG.SHEETS.DEALERS) ? CONFIG.SHEETS.DEALERS : "Ведущие";
+      var sheet = ss.getSheetByName(sheetName);
+      if (sheet) {
+        var data = sheet.getDataRange().getValues();
+        var list = [];
+        var map = {};
+        for (var i = 1; i < data.length; i++) {
+          var name = String(data[i][0] || "").trim();
+          var uname = String(data[i][1] || "").toLowerCase().replace(/^@/, "").trim();
+          var uid = String(data[i][2] || "").trim();
+          var status = String(data[i][3] || "").trim().toLowerCase();
+
+          if (!name || status === "заблокирован" || status === "неактивен") continue;
+
+          if (list.indexOf(name) === -1) list.push(name);
+          if (uname) map[uname] = name;
+          if (uid) map[uid] = name;
+        }
+        if (list.length > 0) {
+          var reg = { LIST: list, MAP: map };
+          try {
+            CacheService.getScriptCache().put("DEALERS_REGISTRY", JSON.stringify(reg), 300);
+          } catch (ce) {}
+          return reg;
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("getDynamicDealersRegistry error: " + err.message);
+  }
+
+  // Fallback на статическую конфигурацию
+  return (typeof CONFIG !== "undefined" && CONFIG.DEALERS_REGISTRY) ? CONFIG.DEALERS_REGISTRY : { LIST: [], MAP: {} };
+}
+
+/**
  * Обработка сообщений (строго команда /start)
  */
 function handleDealerMessage(msg) {
@@ -74,23 +129,33 @@ function handleDealerMessage(msg) {
 
   var chatId = msg.chat.id;
   var from = msg.from || {};
-  var username = String(from.username || "").toLowerCase().replace(/^@/, "");
-  var userId = String(from.id || "");
+  var username = String(from.username || "").toLowerCase().replace(/^@/, "").trim();
+  var userId = String(from.id || "").trim();
   
-  var registry = (typeof CONFIG !== "undefined" && CONFIG.DEALERS_REGISTRY) 
-    ? CONFIG.DEALERS_REGISTRY 
-    : { LIST: [], MAP: {} };
+  var registry = getDynamicDealersRegistry(false);
 
   // Проверка белого списка ведущих
   var isAuthorized = false;
   var realDealerName = "";
 
-  if (registry.MAP[username]) {
+  if (username && registry.MAP[username]) {
     isAuthorized = true;
     realDealerName = registry.MAP[username];
-  } else if (registry.MAP[userId]) {
+  } else if (userId && registry.MAP[userId]) {
     isAuthorized = true;
     realDealerName = registry.MAP[userId];
+  }
+
+  // Если не авторизован с первого раза — принудительно перечитываем таблицу без кэша
+  if (!isAuthorized) {
+    registry = getDynamicDealersRegistry(true);
+    if (username && registry.MAP[username]) {
+      isAuthorized = true;
+      realDealerName = registry.MAP[username];
+    } else if (userId && registry.MAP[userId]) {
+      isAuthorized = true;
+      realDealerName = registry.MAP[userId];
+    }
   }
 
   if (!isAuthorized) {
@@ -142,6 +207,11 @@ function getActiveDealerBotToken() {
  * Вспомогательные функции отправки Telegram сообщений
  */
 function sendDealerTelegram(chatId, text, inlineKeyboard) {
+  if (typeof global !== "undefined" && typeof global.customSendDealerTelegram === "function") {
+    global.customSendDealerTelegram(chatId, text, inlineKeyboard);
+    return;
+  }
+
   var token = getActiveDealerBotToken();
   if (!token) return;
 
