@@ -7,7 +7,7 @@ const https = require("https");
 
 const DEALER_BOT_TOKEN = process.env.DEALER_BOT_TOKEN || "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
-const MINI_APP_URL = "https://atmosphere-poker.vercel.app/dealer/";
+const MINI_APP_URL = "https://atmosphere-poker.vercel.app/dealer";
 
 // Дефолтный реестр на случай недоступности Firebase
 const FALLBACK_REGISTRY = {

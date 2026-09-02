@@ -9,7 +9,7 @@ function getDealerMiniAppUrl() {
       if (pu) return pu;
     } catch (e) {}
   }
-  return "https://atmosphere-poker.vercel.app/dealer/";
+  return "https://atmosphere-poker.vercel.app/dealer";
 }
 
 /**
