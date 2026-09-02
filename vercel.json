@@ -2,7 +2,7 @@
   "version": 2,
   "name": "atmosphere-poker",
   "cleanUrls": true,
-  "trailingSlash": true,
+  "trailingSlash": false,
   "rewrites": [
     { "source": "/tv", "destination": "/tv/index.html" },
     { "source": "/tv/", "destination": "/tv/index.html" },
