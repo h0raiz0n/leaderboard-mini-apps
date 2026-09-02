@@ -45,6 +45,8 @@ function initDealerIdentity() {
     ? POKER_CONFIG.DEALERS_REGISTRY
     : { LIST: ["Арина", "Арташес", "Влад", "Всеволод", "Дима", "Маша", "Нинель", "Паша", "Рома", "Саша", "Тимур", "Эмилия"], MAP: {} };
 
+  let isTelegramAuth = false;
+
   if (window.Telegram && window.Telegram.WebApp) {
     const tg = window.Telegram.WebApp;
     try {
@@ -60,8 +62,10 @@ function initDealerIdentity() {
       // Поиск по реестру Telegram ID / Username
       if (registry.MAP[uname]) {
         DEALER_NAME = registry.MAP[uname];
+        isTelegramAuth = true;
       } else if (registry.MAP[uid]) {
         DEALER_NAME = registry.MAP[uid];
+        isTelegramAuth = true;
       } else {
         showAccessDenied(uname || uid);
         return;
@@ -69,11 +73,31 @@ function initDealerIdentity() {
     }
   }
 
-  const savedName = localStorage.getItem("atmosphere_dealer_name");
-  if (savedName && registry.LIST.includes(savedName)) {
-    DEALER_NAME = savedName;
+  // Если открыто вне Telegram: проверяем сессию PIN-авторизации
+  if (!isTelegramAuth) {
+    const isPinAuthed = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("atmosphere_pin_auth") === "true");
+    const savedName = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("atmosphere_dealer_name")) 
+      || (typeof localStorage !== "undefined" && localStorage.getItem("atmosphere_dealer_name"));
+
+    // Поддержка query параметра ?dealer=... для авторизованных
+    if (typeof window !== "undefined" && window.location && window.location.search) {
+      const params = new URLSearchParams(window.location.search);
+      const qDealer = params.get("dealer");
+      if (qDealer && registry.LIST.includes(qDealer)) {
+        DEALER_NAME = qDealer;
+      }
+    }
+
+    if (!isPinAuthed) {
+      showPinModal();
+      return;
+    }
+
+    if (!DEALER_NAME && savedName && registry.LIST.includes(savedName)) {
+      DEALER_NAME = savedName;
+    }
   }
-  
+
   if (!DEALER_NAME || DEALER_NAME === "Ведущий") {
     DEALER_NAME = registry.LIST[2] || "Влад"; // Дефолт Влад
   }
@@ -84,6 +108,49 @@ function initDealerIdentity() {
   const nameEl = document.getElementById("identity-name");
   if (badgeEl) badgeEl.textContent = DEALER_NAME;
   if (nameEl) nameEl.textContent = DEALER_NAME;
+}
+
+function showPinModal() {
+  const modal = document.getElementById("pin-auth-modal");
+  if (modal) {
+    modal.style.display = "flex";
+    const input = document.getElementById("dealer-pin-input");
+    if (input) {
+      input.value = "";
+      setTimeout(() => input.focus(), 200);
+      input.onkeydown = (e) => {
+        if (e.key === "Enter") submitDealerPin();
+      };
+    }
+  }
+}
+
+function submitDealerPin() {
+  const input = document.getElementById("dealer-pin-input");
+  const errorMsg = document.getElementById("pin-error-msg");
+  const enteredPin = input ? input.value.trim() : "";
+  const expectedPin = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.MASTER_DEALER_PIN) 
+    ? POKER_CONFIG.MASTER_DEALER_PIN 
+    : "7777";
+
+  if (enteredPin === expectedPin) {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem("atmosphere_pin_auth", "true");
+    }
+    const modal = document.getElementById("pin-auth-modal");
+    if (modal) modal.style.display = "none";
+    if (errorMsg) errorMsg.style.display = "none";
+    initDealerIdentity();
+    renderDealerView();
+    triggerHaptic("success");
+  } else {
+    if (errorMsg) errorMsg.style.display = "block";
+    triggerHaptic("heavy");
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+  }
 }
 
 function showAccessDenied(identifier) {

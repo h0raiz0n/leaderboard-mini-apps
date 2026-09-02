@@ -459,6 +459,49 @@ body {
   border: 1px solid var(--line-strong);
 }
 
+/* PIN Авторизация */
+.pin-sheet {
+  text-align: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.pin-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.pin-input-wrap {
+  margin: 16px 0 8px;
+  width: 100%;
+}
+
+.pin-input {
+  width: 160px;
+  text-align: center;
+  font-size: 32px;
+  letter-spacing: 12px;
+  font-weight: 900;
+  padding: 10px 14px;
+  background: var(--bg-0);
+  border: 2px solid var(--line-strong);
+  border-radius: 12px;
+  color: #fbbf24;
+  outline: none;
+}
+
+.pin-input:focus {
+  border-color: var(--gold);
+}
+
+.pin-error-msg {
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
 /* Модальное окно */
 .modal-backdrop {
   position: fixed;

@@ -109,6 +109,9 @@ const POKER_CONFIG = {
     DEALER: "entry.1887911518"
   },
 
+  // Master PIN для авторизации ведущих в браузере (вне Telegram)
+  MASTER_DEALER_PIN: "7777",
+
   // Базовый URL шины Firebase Realtime Database
   FIREBASE_DB_URL: "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app",
 
