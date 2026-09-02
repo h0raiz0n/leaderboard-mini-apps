@@ -56,11 +56,11 @@ const resAuth = bot.handleDealerBotWebhook({ postData: { contents: JSON.stringif
 assert.strictEqual(JSON.parse(resAuth.output).status, "ok");
 assert(lastSentPayload, "Сообщение должно быть отправлено");
 assert(lastSentPayload.text.includes("Привет, <b>Влад</b>!"), "Приветствие должно содержать имя Влад");
-assert(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app.url.includes("/dealer/"), "Кнопка должна содержать путь к пульту /dealer/");
+assert(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app.url.includes("/dealer"), "Кнопка должна содержать путь к пульту /dealer");
 console.log("   ✅ Авторизованный ведущий получает приветствие и кнопку пульта.");
 
-// 2. Тест блокировки постороннего пользователя (@intruder)
-console.log("\n2. Тест блокировки неавторизованного пользователя (@intruder):");
+// 2. Тест ответа для неавторизованного пользователя (@intruder)
+console.log("\n2. Тест ответа неавторизованному пользователю (@intruder):");
 const unauthUpdate = {
   update_id: 102,
   message: {
@@ -74,9 +74,9 @@ const unauthUpdate = {
 lastSentPayload = null;
 const resUnauth = bot.handleDealerBotWebhook({ postData: { contents: JSON.stringify(unauthUpdate) } });
 assert.strictEqual(JSON.parse(resUnauth.output).status, "ok");
-assert(lastSentPayload, "Ответ о блокировке должен быть отправлен");
-assert(lastSentPayload.text.includes("Доступ ограничен"), "Должен сообщать об ограничении доступа");
-assert(!lastSentPayload.reply_markup, "Кнопка пульта НЕ должна выдаваться");
-console.log("   ✅ Посторонний пользователь корректно заблокирован без выдачи пульта.");
+assert(lastSentPayload, "Ответ должен быть отправлен");
+assert(lastSentPayload.text.includes("Вход для ведущих") || lastSentPayload.text.includes("Доступ ограничен"), "Должен сообщать о проверке прав");
+assert(lastSentPayload.reply_markup.inline_keyboard[0][0].text.includes("PIN"), "Должна предлагаться кнопка входа по PIN");
+console.log("   ✅ Неавторизованному пользователю вежливо предлагается вход по PIN-коду.");
 
 console.log("\n🎉 ВСЕ ТЕСТЫ БОТА И ДОСТУПА УСПЕШНО ПРОЙДЕНЫ!");

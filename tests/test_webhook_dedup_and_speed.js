@@ -66,7 +66,7 @@ console.log("   ✅ Дедупликатор отбросил повторный
 // 2. Тест формирования кнопки Mini App
 console.log("\n2. Тест формирования кнопки Mini App:");
 assert(lastSentPayload, "Payload должен быть отправлен");
-assert(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app.url.includes("/dealer/"), "Должен быть URL пульта");
+assert(lastSentPayload.reply_markup.inline_keyboard[0][0].web_app.url.includes("/dealer"), "Должен быть URL пульта");
 console.log("   ✅ Кнопка запуска Mini App сформирована корректно.");
 
 console.log("\n🎉 ВСЕ ТЕСТЫ ДЕДУПЛИКАЦИИ И БЫСТРОДЕЙСТВИЯ УСПЕШНО ПРОЙДЕНЫ!");

@@ -215,6 +215,22 @@ var CONFIG = {
     DEALER: "entry.1887911518"
   },
 
+  // Google Forms для внесения результатов по форматам
+  FORMS: {
+    SNG: {
+      id: "1FAIpQLSfCfnN2LS4mAmbQfPtBLZGxPoiYfSqNoaX5xLrmyBr3S5FiEg",
+      viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfCfnN2LS4mAmbQfPtBLZGxPoiYfSqNoaX5xLrmyBr3S5FiEg/viewform"
+    },
+    MTT: {
+      id: "1FAIpQLSeIDDkj2iCPtMZm-0K5YdZFlopAR7aPfRer2n1o-FQD-Dr7FQ",
+      viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSeIDDkj2iCPtMZm-0K5YdZFlopAR7aPfRer2n1o-FQD-Dr7FQ/viewform"
+    },
+    MYSTERY: {
+      id: "1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA",
+      viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA/viewform"
+    }
+  },
+
   // Базовый URL шины Firebase Realtime Database
   FIREBASE_DB_URL: "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app",
 

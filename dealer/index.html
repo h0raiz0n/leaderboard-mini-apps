@@ -152,19 +152,25 @@
     </div>
   </div>
 
-  <!-- Модалка авторизации по PIN-коду (при открытии вне Telegram) -->
+  <!-- Модалка авторизации по PIN-коду (при открытии вне Telegram или гостевой вход) -->
   <div class="modal-backdrop" id="pin-auth-modal" style="display: none;">
     <div class="modal-sheet pin-sheet">
       <div class="pin-icon">🔒</div>
       <div class="modal-heading">Авторизация ведущего</div>
-      <div class="modal-caption">
-        Для управления столом введите Master PIN или откройте пульт через <b>@atmosphere_poker_dealer_bot</b>.
+      <div class="modal-caption" id="pin-modal-caption">
+        Введите Master PIN (7777) для доступа к управлению столом:
       </div>
       <div class="pin-input-wrap">
         <input type="password" id="dealer-pin-input" maxlength="6" placeholder="••••" inputmode="numeric" class="pin-input">
       </div>
+      <div class="pin-dealer-select-wrap" style="width: 100%; margin-top: 8px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Имя ведущего за столом:</label>
+        <select id="dealer-name-select" class="pin-select">
+          <!-- Заполняется динамически из реестра -->
+        </select>
+      </div>
       <div class="pin-error-msg" id="pin-error-msg" style="display: none;">Неверный PIN-код</div>
-      <div class="btn-stack" style="margin-top: 16px;">
+      <div class="btn-stack" style="margin-top: 16px; width: 100%;">
         <button type="button" class="btn btn-form-action" onclick="submitDealerPin()">Войти в пульт</button>
       </div>
     </div>

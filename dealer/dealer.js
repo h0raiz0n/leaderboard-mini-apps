@@ -58,6 +58,8 @@ function initDealerIdentity() {
     }
   } catch (e) {}
 
+  populateDealerSelectDropdown(registry.LIST);
+
   let isTelegramAuth = false;
 
   if (window.Telegram && window.Telegram.WebApp) {
@@ -87,7 +89,7 @@ function initDealerIdentity() {
     }
   }
 
-  // Если открыто вне Telegram: проверяем сессию PIN-авторизации
+  // Если открыто вне Telegram или неавторизован в Telegram: проверяем сессию PIN-авторизации
   if (!isTelegramAuth) {
     const isPinAuthed = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("atmosphere_pin_auth") === "true");
     const savedName = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("atmosphere_dealer_name")) 
@@ -119,6 +121,32 @@ function initDealerIdentity() {
   applyDealerIdentity();
 }
 
+function populateDealerSelectDropdown(dealerList) {
+  if (typeof document === "undefined" || typeof document.createElement !== "function") return;
+  const selectEl = document.getElementById("dealer-name-select");
+  if (!selectEl) return;
+
+  const currentVal = selectEl.value;
+  selectEl.innerHTML = "";
+
+  const list = (dealerList && dealerList.length) ? dealerList : ["Влад", "Дима", "Маша", "Саша", "Тест"];
+  list.forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    if (name === DEALER_NAME || name === currentVal) {
+      opt.selected = true;
+    }
+    selectEl.appendChild(opt);
+  });
+
+  // Дополнительная опция для разового ведущего
+  const guestOpt = document.createElement("option");
+  guestOpt.value = "Гостевой ведущий";
+  guestOpt.textContent = "👤 Гостевой ведущий";
+  selectEl.appendChild(guestOpt);
+}
+
 function applyDealerIdentity() {
   DEALER_ID = sanitizeDealerKey(DEALER_NAME);
   const badgeEl = document.getElementById("dealer-badge");
@@ -140,6 +168,8 @@ async function fetchDynamicDealersRegistryAndRetry(uname, uid) {
           localStorage.setItem("atmosphere_dealers_registry", JSON.stringify(liveRegistry));
         } catch (e) {}
 
+        populateDealerSelectDropdown(liveRegistry.LIST);
+
         if (uname && liveRegistry.MAP[uname]) {
           DEALER_NAME = liveRegistry.MAP[uname];
           applyDealerIdentity();
@@ -159,11 +189,16 @@ async function fetchDynamicDealersRegistryAndRetry(uname, uid) {
     console.error("fetchDynamicDealersRegistryAndRetry error:", err);
   }
 
-  showAccessDenied(uname || uid);
+  // Если пользователя нет в базе — мягко открываем ввод Master PIN
+  showPinModal("Ваш Telegram-аккаунт не найден в белом списке. Введите Master PIN (7777), чтобы войти как приглашённый ведущий:");
 }
 
-function showPinModal() {
+function showPinModal(customMessage) {
   const modal = document.getElementById("pin-auth-modal");
+  const caption = document.getElementById("pin-modal-caption");
+  if (caption && customMessage) {
+    caption.textContent = customMessage;
+  }
   if (modal) {
     modal.style.display = "flex";
     const input = document.getElementById("dealer-pin-input");
@@ -180,19 +215,30 @@ function showPinModal() {
 function submitDealerPin() {
   const input = document.getElementById("dealer-pin-input");
   const errorMsg = document.getElementById("pin-error-msg");
+  const selectEl = document.getElementById("dealer-name-select");
   const enteredPin = input ? input.value.trim() : "";
   const expectedPin = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.MASTER_DEALER_PIN) 
     ? POKER_CONFIG.MASTER_DEALER_PIN 
     : "7777";
 
   if (enteredPin === expectedPin) {
+    const selectedName = selectEl ? selectEl.value : "Ведущий";
+    DEALER_NAME = selectedName || "Ведущий";
+
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.setItem("atmosphere_pin_auth", "true");
+      sessionStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
     }
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
+    }
+
     const modal = document.getElementById("pin-auth-modal");
     if (modal) modal.style.display = "none";
     if (errorMsg) errorMsg.style.display = "none";
-    initDealerIdentity();
+    
+    applyDealerIdentity();
+    initDataSource();
     renderDealerView();
     triggerHaptic("success");
   } else {
@@ -214,7 +260,11 @@ function showAccessDenied(identifier) {
       <p style="font-size: 15px; color: #94a3b8; line-height: 1.6; max-width: 320px;">
         Ваш Telegram-аккаунт (<b>@${identifier || "неизвестный"}</b>) не найден в списке ведущих антикафе «Атмосфера».
       </p>
-      <div style="margin-top: 24px; font-size: 13px; color: #64748b;">Обратитесь к администратору.</div>
+      <div style="margin-top: 24px;">
+        <button type="button" class="btn btn-form-action" style="padding: 12px 24px; border-radius: 12px; font-size: 14px;" onclick="location.reload()">
+          🔑 Ввести PIN-код ведущего
+        </button>
+      </div>
     </div>
   `;
 }
@@ -485,10 +535,20 @@ function startNewGameFromPostGame() {
   renderDealerView();
 }
 
-// Генерация предзаполненной Google Form
+// Генерация предзаполненной Google Form на основе формата турнира
 function generatePreFilledFormUrl() {
+  const table = getMyTable();
+  const format = (table.format || SELECTED_FORMAT || "SnG").toUpperCase();
   const today = new Date().toISOString().split("T")[0];
-  const baseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfCfnN2LS4mAmbQfPtBLZGxPoiYfSqNoaX5xLrmyBr3S5FiEg/viewform";
+
+  let baseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfCfnN2LS4mAmbQfPtBLZGxPoiYfSqNoaX5xLrmyBr3S5FiEg/viewform";
+  if (format === "MTT") {
+    baseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeIDDkj2iCPtMZm-0K5YdZFlopAR7aPfRer2n1o-FQD-Dr7FQ/viewform";
+  } else if (format === "MYSTERY" || format === "MYSTERY BOUNTY") {
+    baseUrl = "https://docs.google.com/forms/d/e/1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA/viewform";
+  } else if (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FORMS && POKER_CONFIG.FORMS[format]) {
+    baseUrl = POKER_CONFIG.FORMS[format].viewUrl;
+  }
   
   return baseUrl + "?usp=pp_url&entry.1615126251=" + encodeURIComponent(today) +
     "&entry.1887911518=" + encodeURIComponent(DEALER_NAME);
@@ -746,6 +806,9 @@ if (typeof module !== "undefined" && module.exports) {
     stopPostGameBreak,
     startNewGameFromPostGame,
     generatePreFilledFormUrl,
-    getActiveStructure
+    getActiveStructure,
+    submitDealerPin,
+    showPinModal,
+    showAccessDenied
   };
 }

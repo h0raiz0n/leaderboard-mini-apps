@@ -122,13 +122,21 @@ module.exports = async function handler(req, res) {
   }
 
   if (!isAuthorized) {
-    const deniedText = "⛔️ <b>Доступ ограничен</b>\n\n" +
-      "Этот бот предназначен исключительно для авторизованных ведущих антикафе «Атмосфера».\n\n" +
-      "Ваш Telegram: @" + escapeHtml(username || "не_задан") + " (ID: <code>" + escapeHtml(userId) + "</code>).\n" +
-      "Передайте его администратору для добавления в белый список.";
+    const deniedText = "🔒 <b>Вход для ведущих «Атмосфера»</b>\n\n" +
+      "Ваш Telegram: @" + escapeHtml(username || "не_задан") + " (ID: <code>" + escapeHtml(userId) + "</code>).\n\n" +
+      "Если вы приглашённый или разовый ведущий, нажмите кнопку ниже и введите <b>Master PIN</b> (<code>7777</code>) для входа:";
     
-    await sendTelegramMessage(chatId, deniedText, null);
-    return res.status(200).json({ ok: true, authorized: false });
+    const pinKeyboard = [
+      [
+        {
+          text: "🔑 Открыть пульт (вход по PIN)",
+          web_app: { url: MINI_APP_URL }
+        }
+      ]
+    ];
+
+    await sendTelegramMessage(chatId, deniedText, pinKeyboard);
+    return res.status(200).json({ ok: true, authorized: false, pin_offered: true });
   }
 
   const welcomeText = "♠️ <b>ПУЛЬТ ВЕДУЩЕГО «АТМОСФЕРА»</b>\n\n" +

@@ -586,6 +586,23 @@ body {
   margin-top: 4px;
 }
 
+.pin-select {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-0);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+}
+
+.pin-select:focus {
+  border-color: var(--gold);
+}
+
 /* Модальное окно */
 .modal-backdrop {
   position: fixed;
