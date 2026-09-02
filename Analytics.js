@@ -873,6 +873,10 @@ function doGet(e) {
         var dkey = "DGET_dealers_" + (month || "cur");
         payload = { success: true, type: "dealers", data: cachedJson(dkey, CACHE_TTL.dealers, function() { return computeDealersHeatmap(month); }), generatedAt: new Date() };
         break;
+      case "sync_dealers":
+        var reg = (typeof syncDealersToFirebase === "function") ? syncDealersToFirebase() : null;
+        payload = { success: true, type: "sync_dealers", registry: reg, generatedAt: new Date() };
+        break;
       case "diag":
         if (!admin) { payload = { success: false, error: "unauthorized" }; break; }
         var diagData = (typeof telegramDiag === "function") ? telegramDiag() : { error: "no diag" };

@@ -95,7 +95,7 @@ function handleDealerMessage(msg) {
 
   if (!isAuthorized) {
     var deniedText = "⛔️ <b>Доступ ограничен</b>\n\n" +
-      "Этот бот предназначен исключительно для авторизованных ведущих покерного клуба «Атмосфера».\n\n" +
+      "Этот бот предназначен исключительно для авторизованных ведущих антикафе «Атмосфера».\n\n" +
       "Ваш Telegram: @" + escapeHtml(username || "не_задан") + " (ID: <code>" + escapeHtml(userId) + "</code>).\n" +
       "Передайте его администратору для добавления в белый список.";
     sendDealerTelegram(chatId, deniedText, null);

@@ -345,50 +345,88 @@ body {
   color: #ffffff;
 }
 
-/* Панель быстрых таймированных пауз */
-.pause-options-bar {
-  background: var(--bg-0);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
+/* Одиночная кнопка 2-минутной паузы (Color-Up) */
+.btn-timed-pause-single {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.pause-bar-title {
-  font-size: 11px;
-  font-weight: 700;
+.btn-timed-pause-single:active {
+  background: #fbbf24;
+  color: #08111e;
+  transform: scale(0.98);
+}
+
+/* Панель управления после завершения игры */
+.post-game-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.post-game-header {
+  font-size: 16px;
+  font-weight: 800;
   color: #fbbf24;
+  text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-.pause-btn-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+.post-game-break-box {
+  background: var(--bg-0);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 14px;
 }
 
-.btn-timed-pause {
+.break-prompt-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.break-pill-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.btn-break-pill {
   background: var(--card-elevated);
   border: 1px solid var(--line-strong);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
-  padding: 8px 4px;
+  padding: 10px 4px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
-  white-space: nowrap;
 }
 
-.btn-timed-pause:active {
-  background: rgba(245, 158, 11, 0.2);
+.btn-break-pill:active {
+  background: rgba(245, 158, 11, 0.25);
   border-color: #fbbf24;
   color: #fbbf24;
-  transform: scale(0.97);
+}
+
+.active-break-timer {
+  font-size: 36px;
+  font-weight: 900;
+  color: #fbbf24;
+  text-align: center;
+  margin: 8px 0;
+  font-variant-numeric: tabular-nums;
 }
 
 /* МТТ панель игроков */

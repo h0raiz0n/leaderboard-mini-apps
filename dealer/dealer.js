@@ -160,9 +160,9 @@ function showAccessDenied(identifier) {
       <div style="font-size: 54px; margin-bottom: 16px;">⛔️</div>
       <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Доступ ограничен</h2>
       <p style="font-size: 15px; color: #94a3b8; line-height: 1.6; max-width: 320px;">
-        Ваш Telegram-аккаунт (<b>@${identifier || "неизвестный"}</b>) не найден в списке ведущих покерного клуба «Атмосфера».
+        Ваш Telegram-аккаунт (<b>@${identifier || "неизвестный"}</b>) не найден в списке ведущих антикафе «Атмосфера».
       </p>
-      <div style="margin-top: 24px; font-size: 13px; color: #64748b;">Обратитесь к администратору клуба.</div>
+      <div style="margin-top: 24px; font-size: 13px; color: #64748b;">Обратитесь к администратору.</div>
     </div>
   `;
 }
@@ -267,31 +267,29 @@ function getMyTable() {
 }
 
 function getActiveStructure(structKey) {
-  const cfg = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.BLIND_STRUCTURES)
-    ? POKER_CONFIG.BLIND_STRUCTURES
-    : {
-        SNG_STANDARD: {
-          name: "5 000 стек / 7 мин (Стандарт)",
-          stack: 5000,
-          levels: (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.SNG_STRUCTURE) ? POKER_CONFIG.SNG_STRUCTURE.levels : []
-        },
-        SNG_TURBO: {
-          name: "5 000 стек / 5 мин (Турбо)",
-          stack: 5000,
-          levels: [
-            { level: 1, sb: 25, bb: 50, ante: 0, durationSec: 300, label: "25 / 50" },
-            { level: 2, sb: 50, bb: 100, ante: 0, durationSec: 300, label: "50 / 100" },
-            { level: 3, sb: 75, bb: 150, ante: 0, durationSec: 300, label: "75 / 150" },
-            { level: 4, sb: 100, bb: 200, ante: 0, durationSec: 300, label: "100 / 200" },
-            { level: 5, sb: 150, bb: 300, ante: 300, durationSec: 300, label: "150 / 300 (BBA 300)" },
-            { level: 6, sb: 200, bb: 400, ante: 400, durationSec: 300, label: "200 / 400 (BBA 400)" },
-            { level: 7, sb: 300, bb: 600, ante: 600, durationSec: 300, label: "300 / 600 (BBA 600)" },
-            { level: 8, sb: 500, bb: 1000, ante: 1000, durationSec: 300, label: "500 / 1000 (BBA 1000)" }
-          ]
-        }
-      };
+  let config = null;
+  if (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG && POKER_CONFIG.BLIND_STRUCTURES) {
+    config = POKER_CONFIG;
+  } else if (typeof window !== "undefined" && window.POKER_CONFIG && window.POKER_CONFIG.BLIND_STRUCTURES) {
+    config = window.POKER_CONFIG;
+  } else if (typeof require === "function") {
+    try { config = require("../shared/poker-config.js"); } catch (e) {}
+  }
 
-  return cfg[structKey] || cfg.SNG_STANDARD;
+  if (config && config.BLIND_STRUCTURES) {
+    return config.BLIND_STRUCTURES[structKey] || config.BLIND_STRUCTURES.SNG_STANDARD;
+  }
+  if (config && config.SNG_STRUCTURE) {
+    return config.SNG_STRUCTURE;
+  }
+  return {
+    name: "5 000 стек / 7 мин (BBA)",
+    stack: 5000,
+    levels: [
+      { level: 1, sb: 25, bb: 50, ante: 0, durationSec: 420, label: "25 / 50" },
+      { level: 2, sb: 50, bb: 100, ante: 0, durationSec: 420, label: "50 / 100" }
+    ]
+  };
 }
 
 // 1. Старт игры
@@ -380,7 +378,7 @@ function resetTable() {
   renderDealerView();
 }
 
-// 5. Завершение игры
+// 5. Завершение игры -> переход в режим Post-Game
 function finishGame() {
   triggerHaptic("success");
   const table = getMyTable();
@@ -392,50 +390,41 @@ function finishGame() {
   table.startedAt = null;
   table.elapsedBeforePause = 0;
   saveState();
-
-  openFinishModal();
   renderDealerView();
 }
 
-function startCustomBreak(minutes = 10) {
+function openGoogleForm() {
+  triggerHaptic("medium");
+  const url = generatePreFilledFormUrl();
+  window.open(url, "_blank");
+}
+
+function startPostGameBreak(minutes = 10) {
   triggerHaptic("medium");
   const table = getMyTable();
-  table.isBreakActive = true;
-  table.breakDurationMin = minutes;
-  table.breakEndsAt = Date.now() + minutes * 60 * 1000;
-  table.status = "idle";
+  table.isPostGameBreak = true;
+  table.postGameBreakMinutes = minutes;
+  table.nextGameAt = Date.now() + minutes * 60 * 1000;
   saveState();
-  updateBreakModalUi(table);
   renderDealerView();
 }
 
-function stopBreak() {
+function stopPostGameBreak() {
   triggerHaptic("heavy");
   const table = getMyTable();
-  table.isBreakActive = false;
-  table.breakEndsAt = null;
-  table.status = "idle";
+  table.isPostGameBreak = false;
+  table.nextGameAt = null;
   saveState();
-  updateBreakModalUi(table);
   renderDealerView();
 }
 
-function updateBreakModalUi(table) {
-  const breakPanel = document.getElementById("active-break-panel");
-  const breakOptions = document.getElementById("break-options-row");
-  const digitsEl = document.getElementById("active-break-digits");
-
-  if (table && table.isBreakActive && table.breakEndsAt && table.breakEndsAt > Date.now()) {
-    if (breakPanel) breakPanel.style.display = "block";
-    if (breakOptions) breakOptions.style.opacity = "0.4";
-    const rem = Math.max(0, Math.floor((table.breakEndsAt - Date.now()) / 1000));
-    const m = Math.floor(rem / 60);
-    const s = rem % 60;
-    if (digitsEl) digitsEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  } else {
-    if (breakPanel) breakPanel.style.display = "none";
-    if (breakOptions) breakOptions.style.opacity = "1";
-  }
+function startNewGameFromPostGame() {
+  triggerHaptic("heavy");
+  const table = getMyTable();
+  table.status = "idle";
+  table.isPostGameBreak = false;
+  table.nextGameAt = null;
+  startTable();
 }
 
 // Генерация предзаполненной Google Form
@@ -447,36 +436,7 @@ function generatePreFilledFormUrl() {
     "&entry.1887911518=" + encodeURIComponent(DEALER_NAME);
 }
 
-function openFinishModal() {
-  const modal = document.getElementById("finish-modal");
-  const formBtn = document.getElementById("open-form-btn");
-  
-  const url = generatePreFilledFormUrl();
-  if (formBtn) {
-    formBtn.onclick = () => {
-      window.open(url, "_blank");
-    };
-  }
-  
-  updateBreakModalUi(getMyTable());
-  if (modal) modal.style.display = "flex";
-}
-
-function closeFinishModal() {
-  const table = getMyTable();
-  table.status = "idle";
-  table.isBreakActive = false;
-  table.breakEndsAt = null;
-  saveState();
-  const modal = document.getElementById("finish-modal");
-  if (modal) modal.style.display = "none";
-  renderDealerView();
-}
-
-let CURRENT_REBALANCE_BOX = 1;
-let TARGET_REBALANCE_TABLE_KEY = null;
-
-// Настройка игроков за столом (МТТ)
+// МТТ управление игроками
 function adjustPlayers(delta) {
   triggerHaptic("light");
   const table = getMyTable();
@@ -560,8 +520,8 @@ function confirmRebalance() {
 function renderDealerView() {
   const table = getMyTable();
   const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
-  const levels = struct.levels;
-  const currentLvl = levels[table.levelIndex || 0] || levels[0];
+  const levels = (struct && struct.levels) ? struct.levels : [];
+  const currentLvl = levels[table.levelIndex || 0] || levels[0] || { durationSec: 420, label: "25 / 50", level: 1 };
   const nextLvl = levels[(table.levelIndex || 0) + 1] || null;
 
   const roundEl = document.getElementById("identity-round");
@@ -570,11 +530,18 @@ function renderDealerView() {
   const digitsEl = document.getElementById("timer-digits");
   const statusEl = document.getElementById("timer-status");
   const setupPanel = document.getElementById("setup-panel");
+  const gameBtnStack = document.getElementById("game-btn-stack");
+  const postGamePanel = document.getElementById("post-game-panel");
   const startBtn = document.getElementById("btn-start");
   const runningRow = document.getElementById("running-btn-row");
   const pauseBtn = document.getElementById("btn-pause");
+  const colorUpBtn = document.getElementById("btn-colorup");
   const resetBtn = document.getElementById("btn-reset");
   const finishBtn = document.getElementById("btn-finish");
+
+  const postBreakButtons = document.getElementById("post-break-buttons");
+  const postBreakActive = document.getElementById("post-break-active");
+  const postBreakDigits = document.getElementById("post-break-digits");
 
   // МТТ панель
   const mttBox = document.getElementById("mtt-control-box");
@@ -587,11 +554,12 @@ function renderDealerView() {
     mttVal.textContent = table.playersCount || 9;
   }
 
-  if (roundEl) roundEl.textContent = currentLvl.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLvl.level}`;
+  if (roundEl) {
+    if (table.status === "finished") roundEl.textContent = "ФИНИШ";
+    else roundEl.textContent = currentLvl.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLvl.level}`;
+  }
   if (blindsValEl) blindsValEl.textContent = currentLvl.label;
   if (nextBlindsValEl) nextBlindsValEl.textContent = nextLvl ? nextLvl.label : "ФИНАЛ";
-
-  const pauseBar = document.getElementById("pause-options-bar");
 
   // Расчет времени
   let remaining = currentLvl.durationSec;
@@ -604,7 +572,7 @@ function renderDealerView() {
     remaining = Math.max(0, table.durationSec - (table.elapsedBeforePause || 0));
   }
 
-  // Проверка таймированной паузы (Color-Up / Перерыв)
+  // Проверка таймированной паузы в игре (Color-Up)
   const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > Date.now());
   if (isTimedPause) {
     const pRem = Math.max(0, Math.floor((table.pauseEndsAt - Date.now()) / 1000));
@@ -614,7 +582,7 @@ function renderDealerView() {
       digitsEl.textContent = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
       digitsEl.style.color = "#fbbf24";
     }
-  } else {
+  } else if (table.status !== "finished") {
     const min = Math.floor(remaining / 60);
     const sec = remaining % 60;
     if (digitsEl) {
@@ -625,10 +593,12 @@ function renderDealerView() {
 
   if (table.status === "running") {
     if (setupPanel) setupPanel.style.display = "none";
+    if (gameBtnStack) gameBtnStack.style.display = "flex";
+    if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) statusEl.textContent = "🟢 Идёт игра";
     if (startBtn) startBtn.style.display = "none";
     if (runningRow) runningRow.style.display = "grid";
-    if (pauseBar) pauseBar.style.display = "flex";
+    if (colorUpBtn) colorUpBtn.style.display = "flex";
     if (pauseBtn) pauseBtn.textContent = "⏸ Пауза";
     if (finishBtn) finishBtn.style.display = "flex";
 
@@ -638,28 +608,76 @@ function renderDealerView() {
     }
   } else if (table.status === "paused") {
     if (setupPanel) setupPanel.style.display = "none";
+    if (gameBtnStack) gameBtnStack.style.display = "flex";
+    if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) {
-      statusEl.textContent = isTimedPause ? `☕ Перерыв (${table.pauseTotalSec === 120 ? "Color-Up" : `${Math.round(table.pauseTotalSec/60)} мин`})` : "⏸ На паузе";
+      statusEl.textContent = isTimedPause ? "☕ Перерыв • Color-Up" : "⏸ На паузе";
     }
     if (startBtn) startBtn.style.display = "none";
     if (runningRow) runningRow.style.display = "grid";
-    if (pauseBar) pauseBar.style.display = "none";
+    if (colorUpBtn) colorUpBtn.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "▶️ Продолжить";
     if (finishBtn) finishBtn.style.display = "flex";
 
     if (resetBtn) {
       resetBtn.style.display = (table.levelIndex === 0 && totalElapsed <= 180) ? "flex" : "none";
     }
+  } else if (table.status === "finished") {
+    if (setupPanel) setupPanel.style.display = "none";
+    if (gameBtnStack) gameBtnStack.style.display = "none";
+    if (postGamePanel) postGamePanel.style.display = "flex";
+
+    // Обработка перерыва после игры
+    if (table.isPostGameBreak && table.nextGameAt && table.nextGameAt > Date.now()) {
+      const remBreak = Math.max(0, Math.floor((table.nextGameAt - Date.now()) / 1000));
+      const bMin = Math.floor(remBreak / 60);
+      const bSec = remBreak % 60;
+      const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+      if (postBreakButtons) postBreakButtons.style.display = "none";
+      if (postBreakActive) postBreakActive.style.display = "block";
+      if (postBreakDigits) postBreakDigits.textContent = bFormatted;
+      if (digitsEl) {
+        digitsEl.textContent = bFormatted;
+        digitsEl.style.color = "#fbbf24";
+      }
+      if (statusEl) statusEl.textContent = "☕ Перерыв перед следующей игрой";
+    } else {
+      if (postBreakButtons) postBreakButtons.style.display = "grid";
+      if (postBreakActive) postBreakActive.style.display = "none";
+      if (digitsEl) {
+        digitsEl.textContent = "00:00";
+        digitsEl.style.color = "";
+      }
+      if (statusEl) statusEl.textContent = "🏁 Игра завершена";
+    }
   } else {
     // idle
     if (setupPanel) setupPanel.style.display = "flex";
+    if (gameBtnStack) gameBtnStack.style.display = "flex";
+    if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) statusEl.textContent = "Стол ожидает старта";
     if (startBtn) startBtn.style.display = "flex";
     if (runningRow) runningRow.style.display = "none";
-    if (pauseBar) pauseBar.style.display = "none";
+    if (colorUpBtn) colorUpBtn.style.display = "none";
     if (resetBtn) resetBtn.style.display = "none";
     if (finishBtn) finishBtn.style.display = "none";
   }
+}
+
+// Автоматическое восстановление состояния при разблокировке телефона или возврате во вкладку
+if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      loadState();
+      renderDealerView();
+    }
+  });
+}
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("focus", () => {
+    loadState();
+    renderDealerView();
+  });
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -668,9 +686,13 @@ if (typeof module !== "undefined" && module.exports) {
     getMyTable,
     startTable,
     togglePause,
+    startTimedPause,
     nextLevel,
     resetTable,
     finishGame,
+    startPostGameBreak,
+    stopPostGameBreak,
+    startNewGameFromPostGame,
     generatePreFilledFormUrl,
     getActiveStructure
   };

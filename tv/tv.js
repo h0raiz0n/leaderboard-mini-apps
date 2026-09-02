@@ -193,7 +193,7 @@ function renderTables() {
     viewport.innerHTML = `
       <div class="lounge-container">
         <div class="lounge-brand">АТМОСФЕРА</div>
-        <div class="lounge-status">Покерный клуб • Ожидание запуска столов</div>
+        <div class="lounge-status">Антикафе «Атмосфера» • Ожидание запуска столов</div>
       </div>
     `;
     return;
@@ -314,13 +314,13 @@ function renderTables() {
       if (time.isOvertime) cardClass += " state-final-round";
     }
     
-    let subtext = "Идёт раунд";
+    let subtext = "Идёт уровень";
     if (isTimedPause) subtext = (table.pauseTotalSec === 120 ? "☕ Перерыв • Размен фишек (Color-Up)" : `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`);
     else if (table.status === "paused") subtext = "Пауза";
-    else if (time.isOvertime) subtext = "Финальный раунд • Блайнды зафиксированы";
+    else if (time.isOvertime) subtext = "Финальный уровень • Блайнды зафиксированы";
     else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
-    else if (isFinalLevel) subtext = "Финальный раунд турнира";
+    else if (isFinalLevel) subtext = "Финальный уровень турнира";
     
     html += `
       <div class="${cardClass}" id="card-${table.id}">
@@ -334,7 +334,7 @@ function renderTables() {
             ${table.format === "MTT" ? `<div class="players-pill">👥 ${table.playersCount || 9}</div>` : ""}
             <span class="format-badge">${formatLabel}</span>
             <div class="round-pill">
-              ${isTimedPause ? "ПЕРЕРЫВ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `РАУНД ${currentLevel.level}`)}
+              ${isTimedPause ? "ПЕРЕРЫВ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)}
             </div>
           </div>
         </div>

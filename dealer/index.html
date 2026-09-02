@@ -41,7 +41,7 @@
       <div class="pill-grid vertical" id="struct-pills">
         <button type="button" class="pill active" data-struct="SNG_STANDARD">
           <span class="pill-title">5 000 стек / 7 мин (BBA)</span>
-          <span class="pill-sub">Анте со 6 уровня</span>
+          <span class="pill-sub">Анте с 6 уровня</span>
         </button>
         <button type="button" class="pill" data-struct="SNG_DEEP_1500">
           <span class="pill-title">1 500 стек / 10 мин (Классика)</span>
@@ -58,11 +58,11 @@
         <div class="identity-sub">Стол ведущего</div>
         <div class="identity-dealer-name" id="identity-name">Ведущий</div>
       </div>
-      <div class="identity-round" id="identity-round">Раунд 1</div>
+      <div class="identity-round" id="identity-round">Уровень 1</div>
     </div>
 
     <!-- Блайнды -->
-    <div class="blinds-panel">
+    <div class="blinds-panel" id="blinds-panel">
       <div class="blinds-cell">
         <span class="blinds-label">Текущие блайнды</span>
         <span class="blinds-val" id="blinds-current">25 / 50</span>
@@ -92,29 +92,44 @@
       <button type="button" class="btn btn-elimination" id="btn-elimination" onclick="eliminatePlayer()">💀 Аут игрока (-1)</button>
     </div>
 
-    <!-- Кнопки управления -->
-    <div class="btn-stack">
+    <!-- Кнопки управления в игре -->
+    <div class="btn-stack" id="game-btn-stack">
       <button class="btn btn-start" id="btn-start">Запустить игру</button>
       
       <div class="btn-row" id="running-btn-row" style="display: none;">
         <button class="btn btn-pause" id="btn-pause">⏸ Пауза</button>
-        <button class="btn btn-step" id="btn-step">⏩ След. раунд</button>
+        <button class="btn btn-step" id="btn-step">⏩ След. уровень</button>
       </div>
 
-      <!-- Быстрые таймированные паузы (Color-Up / Перерыв) -->
-      <div class="pause-options-bar" id="pause-options-bar" style="display: none;">
-        <div class="pause-bar-title">⏱ Быстрый перерыв (Color-Up):</div>
-        <div class="pause-btn-row">
-          <button type="button" class="btn btn-timed-pause" onclick="startTimedPause(120)">⏱ 2 мин</button>
-          <button type="button" class="btn btn-timed-pause" onclick="startTimedPause(300)">⏱ 5 мин</button>
-          <button type="button" class="btn btn-timed-pause" onclick="startTimedPause(600)">⏱ 10 мин</button>
-        </div>
-      </div>
+      <!-- Кнопка 2-минутной паузы (Color-Up) -->
+      <button type="button" class="btn btn-timed-pause-single" id="btn-colorup" onclick="startTimedPause(120)" style="display: none;">⏱ Пауза 2 мин (Color-Up)</button>
 
       <!-- Кнопка сброса (исчезает через 3 мин) -->
       <button class="btn btn-reset" id="btn-reset" style="display: none;">❌ Сбросить запуск (ошибка)</button>
       
       <button class="btn btn-finish" id="btn-finish" style="display: none;">🏁 Завершить игру</button>
+    </div>
+
+    <!-- Панель управления после завершения игры -->
+    <div class="post-game-panel" id="post-game-panel" style="display: none;">
+      <div class="post-game-header">🏁 Игра завершена</div>
+      
+      <button type="button" class="btn btn-form-action" id="post-game-form-btn" onclick="openGoogleForm()">📝 Внести результаты в Google Form</button>
+      
+      <div class="post-game-break-box">
+        <div class="break-prompt-title">☕ Перерыв перед следующей игрой:</div>
+        <div class="break-pill-row" id="post-break-buttons">
+          <button type="button" class="btn-break-pill" onclick="startPostGameBreak(5)">5 мин</button>
+          <button type="button" class="btn-break-pill" onclick="startPostGameBreak(10)">10 мин</button>
+          <button type="button" class="btn-break-pill" onclick="startPostGameBreak(15)">15 мин</button>
+        </div>
+        <div id="post-break-active" style="display: none;">
+          <div class="active-break-timer" id="post-break-digits">10:00</div>
+          <button type="button" class="btn btn-secondary" onclick="stopPostGameBreak()" style="margin-top: 8px; width: 100%;">⏹ Сбросить перерыв</button>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-start" id="btn-next-game" onclick="startNewGameFromPostGame()" style="margin-top: 12px;">🚀 Начать новую игру</button>
     </div>
   </main>
 
@@ -150,35 +165,6 @@
       <div class="pin-error-msg" id="pin-error-msg" style="display: none;">Неверный PIN-код</div>
       <div class="btn-stack" style="margin-top: 16px;">
         <button type="button" class="btn btn-form-action" onclick="submitDealerPin()">Войти в пульт</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Модалка завершения игры и управления перерывом -->
-  <div class="modal-backdrop" id="finish-modal">
-    <div class="modal-sheet">
-      <div class="modal-heading">🏁 Игра завершена</div>
-      <div class="modal-caption">
-        Внесите призовые места в Google Form:
-      </div>
-      <button class="btn btn-form-action" id="open-form-btn">📝 Внести результаты в форму</button>
-
-      <div class="modal-divider"></div>
-
-      <div class="break-prompt-title">☕ Перерыв на ТВ (по желанию):</div>
-      <div class="break-pill-row" id="break-options-row">
-        <button type="button" class="btn-break-pill" onclick="startCustomBreak(5)">5 мин</button>
-        <button type="button" class="btn-break-pill" onclick="startCustomBreak(10)">10 мин</button>
-        <button type="button" class="btn-break-pill" onclick="startCustomBreak(15)">15 мин</button>
-      </div>
-
-      <div id="active-break-panel" style="display: none;">
-        <div class="active-break-timer" id="active-break-digits">10:00</div>
-        <button type="button" class="btn btn-stop-break" onclick="stopBreak()">⏹ Завершить перерыв</button>
-      </div>
-
-      <div style="margin-top: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="closeFinishModal()">🃏 Новая игра</button>
       </div>
     </div>
   </div>
