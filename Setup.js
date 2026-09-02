@@ -195,3 +195,81 @@ function cleanAllOrphanTriggers() {
   return removed;
 }
 
+/**
+ * Синхронизация реестра ведущих из Google Таблицы в Firebase Realtime Database
+ */
+function syncDealersToFirebase() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = (typeof CONFIG !== "undefined" && CONFIG.SHEETS && CONFIG.SHEETS.DEALERS) ? CONFIG.SHEETS.DEALERS : "Ведущие";
+  var sheet = ss.getSheetByName(sheetName);
+
+  var defaultDealers = [
+    ["Арина", "arina_makk", "", "Активен"],
+    ["Арташес", "arbuzmane", "", "Активен"],
+    ["Влад", "h0raiz0n", "", "Активен"],
+    ["Всеволод", "dsh838", "", "Активен"],
+    ["Дима", "sntrpe", "", "Активен"],
+    ["Маша", "starynskaya", "", "Активен"],
+    ["Нинель", "ninel_mr", "", "Активен"],
+    ["Паша", "trick_str", "", "Активен"],
+    ["Рома", "klimovichroman", "", "Активен"],
+    ["Саша", "alexsan2186", "", "Активен"],
+    ["Тимур", "hezadono", "", "Активен"],
+    ["Эмилия", "assyyyra", "", "Активен"]
+  ];
+
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.getRange(1, 1, 1, 4).setValues([["Имя ведущего", "Telegram Username (@...)", "Telegram User ID", "Статус"]]);
+    sheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#1b3a5c").setFontColor("#e9f1f9");
+    sheet.getRange(2, 1, defaultDealers.length, 4).setValues(defaultDealers);
+    sheet.autoResizeColumns(1, 4);
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var list = [];
+  var map = {};
+
+  for (var i = 1; i < data.length; i++) {
+    var name = String(data[i][0] || "").trim();
+    var uname = String(data[i][1] || "").toLowerCase().replace(/^@/, "").trim();
+    var uid = String(data[i][2] || "").trim();
+    var status = String(data[i][3] || "").trim().toLowerCase();
+
+    if (!name || status === "заблокирован" || status === "неактивен") continue;
+
+    if (list.indexOf(name) === -1) list.push(name);
+    if (uname) map[uname] = name;
+    if (uid) map[uid] = name;
+  }
+
+  var registry = { LIST: list, MAP: map };
+
+  // Сохраняем в кэш скрипта
+  try {
+    CacheService.getScriptCache().put("DEALERS_REGISTRY", JSON.stringify(registry), 21600);
+  } catch (e) {}
+
+  // Сохраняем в Firebase Realtime Database
+  var baseUrl = (typeof getFirebaseBaseUrl === "function") ? getFirebaseBaseUrl() : "";
+  if (baseUrl) {
+    var secret = (typeof getFirebaseSecret === "function") ? getFirebaseSecret() : "";
+    var authParam = secret ? "?auth=" + encodeURIComponent(secret) : "";
+    var endpoint = baseUrl + "/atmosphere/dealers_registry.json" + authParam;
+
+    try {
+      UrlFetchApp.fetch(endpoint, {
+        method: "put",
+        contentType: "application/json",
+        payload: JSON.stringify(registry),
+        muteHttpExceptions: true
+      });
+      Logger.log("✅ Реестр ведущих синхронизирован с Firebase: " + list.length + " ведущих");
+    } catch (err) {
+      Logger.log("Ошибка отправки в Firebase: " + err.message);
+    }
+  }
+
+  return registry;
+}
+

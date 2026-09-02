@@ -133,14 +133,14 @@ graph TD
 
 ---
 
-#### [ ] TASK-6.2. Динамический реестр ведущих через Google Таблицу и чистка Firebase
+#### [x] TASK-6.2. Динамический реестр ведущих через Google Таблицу и чистка Firebase
 * **Что делаем:**
   * В Google Apps Script (`Code.js`, `Config.js`, `FirebaseSync.js`) реализовать создание/чтение листа `Ведущие` и автосинхронизацию в Firebase `/atmosphere/dealers_registry.json`.
   * Создать скрипт `scripts/purge_firebase_mock_tables.js` для удаления фантомных столов (`dealer_igor`, `dealer_sergey`, `dealer_drugoe`, `dealer_evgeniy`, `dealer_ведущий`).
   * В `dealer/dealer.js` и `DealerBot.js` подключить динамическую загрузку реестра из Firebase / Apps Script.
 * **Файлы:** `Config.js`, `FirebaseSync.js`, `Code.js`, `scripts/purge_firebase_mock_tables.js`, `shared/poker-config.js`
 
-#### [ ] VERIFY-6.2. Тест динамического реестра и чистоты Firebase
+#### [x] VERIFY-6.2. Тест динамического реестра и чистоты Firebase
 * **Проверка:** Автотест `tests/test_dynamic_dealers_sync.js` (проверка чтения реестра из таблицы и чистоты Firebase RTDB). Git commit & push.
 
 ---
