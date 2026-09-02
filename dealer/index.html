@@ -25,7 +25,7 @@
 
   <!-- Экран выбора настроек перед стартом (если стол idle) -->
   <section class="setup-panel" id="setup-panel">
-    <div class="section-title">Параметры турнира</div>
+    <div class="section-title">Параметры нового турнира</div>
 
     <div class="selector-group">
       <label class="selector-label">Формат игры</label>
@@ -49,10 +49,13 @@
         </button>
       </div>
     </div>
+
+    <!-- Кнопка запуска турнира с выбранными параметрами -->
+    <button type="button" class="btn btn-start" id="btn-start" style="margin-top: 14px;">🚀 Запустить игру</button>
   </section>
 
-  <!-- Основная карточка стола ведущего -->
-  <main class="control-card" id="control-card">
+  <!-- Основная карточка активного стола (отображается только при активной игре или перерыве) -->
+  <main class="control-card" id="control-card" style="display: none;">
     <div class="table-identity-bar">
       <div>
         <div class="identity-sub">Стол ведущего</div>
@@ -76,7 +79,7 @@
     <!-- Таймер -->
     <div class="timer-container" id="timer-box">
       <div class="timer-readout" id="timer-digits">07:00</div>
-      <div class="timer-state-label" id="timer-status">Стол ожидает старта</div>
+      <div class="timer-state-label" id="timer-status">🟢 Идёт игра</div>
     </div>
 
     <!-- МТТ панель игроков (отображается при формате MTT) -->
@@ -94,20 +97,18 @@
 
     <!-- Кнопки управления в игре -->
     <div class="btn-stack" id="game-btn-stack">
-      <button class="btn btn-start" id="btn-start">Запустить игру</button>
-      
-      <div class="btn-row" id="running-btn-row" style="display: none;">
+      <div class="btn-row" id="running-btn-row">
         <button class="btn btn-pause" id="btn-pause">⏸ Пауза</button>
         <button class="btn btn-step" id="btn-step">⏩ След. уровень</button>
       </div>
 
       <!-- Кнопка 2-минутной паузы (Color-Up) -->
-      <button type="button" class="btn btn-timed-pause-single" id="btn-colorup" onclick="startTimedPause(120)" style="display: none;">⏱ Пауза 2 мин (Color-Up)</button>
+      <button type="button" class="btn btn-timed-pause-single" id="btn-colorup" onclick="startTimedPause(120)">⏱ Пауза 2 мин (Color-Up)</button>
 
       <!-- Кнопка сброса (исчезает через 3 мин) -->
       <button class="btn btn-reset" id="btn-reset" style="display: none;">❌ Сбросить запуск (ошибка)</button>
       
-      <button class="btn btn-finish" id="btn-finish" style="display: none;">🏁 Завершить игру</button>
+      <button class="btn btn-finish" id="btn-finish">🏁 Завершить игру</button>
     </div>
 
     <!-- Панель управления после завершения игры -->
@@ -129,7 +130,7 @@
         </div>
       </div>
 
-      <button type="button" class="btn btn-start" id="btn-next-game" onclick="startNewGameFromPostGame()" style="margin-top: 12px;">🚀 Начать новую игру</button>
+      <button type="button" class="btn btn-start" id="btn-next-game" onclick="startNewGameFromPostGame()" style="margin-top: 12px;">🃏 Новая игра (выбрать параметры)</button>
     </div>
   </main>
 

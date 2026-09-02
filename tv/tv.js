@@ -180,6 +180,10 @@ function renderTables() {
   const tableKeys = Object.keys(ACTIVE_TABLES).filter(k => {
     const t = ACTIVE_TABLES[k];
     if (!t) return false;
+    // Фильтр заброшенных игр (старт более 3.5 часов назад без активности)
+    const isStaleGame = t.startedAt && (Date.now() - t.startedAt > 3.5 * 3600 * 1000);
+    if (isStaleGame) return false;
+
     if (t.status === "running" || t.status === "paused") return true;
     if (t.isBreakActive && t.breakEndsAt && (t.breakEndsAt > Date.now())) return true;
     if (t.isPostGameBreak && t.nextGameAt && (t.nextGameAt > Date.now())) return true;

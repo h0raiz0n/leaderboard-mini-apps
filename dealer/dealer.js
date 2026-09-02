@@ -419,12 +419,14 @@ function stopPostGameBreak() {
 }
 
 function startNewGameFromPostGame() {
-  triggerHaptic("heavy");
+  triggerHaptic("medium");
   const table = getMyTable();
   table.status = "idle";
   table.isPostGameBreak = false;
   table.nextGameAt = null;
-  startTable();
+  table.startedAt = null;
+  saveState();
+  renderDealerView();
 }
 
 // Генерация предзаполненной Google Form
@@ -530,9 +532,9 @@ function renderDealerView() {
   const digitsEl = document.getElementById("timer-digits");
   const statusEl = document.getElementById("timer-status");
   const setupPanel = document.getElementById("setup-panel");
+  const controlCard = document.getElementById("control-card");
   const gameBtnStack = document.getElementById("game-btn-stack");
   const postGamePanel = document.getElementById("post-game-panel");
-  const startBtn = document.getElementById("btn-start");
   const runningRow = document.getElementById("running-btn-row");
   const pauseBtn = document.getElementById("btn-pause");
   const colorUpBtn = document.getElementById("btn-colorup");
@@ -593,10 +595,10 @@ function renderDealerView() {
 
   if (table.status === "running") {
     if (setupPanel) setupPanel.style.display = "none";
+    if (controlCard) controlCard.style.display = "block";
     if (gameBtnStack) gameBtnStack.style.display = "flex";
     if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) statusEl.textContent = "🟢 Идёт игра";
-    if (startBtn) startBtn.style.display = "none";
     if (runningRow) runningRow.style.display = "grid";
     if (colorUpBtn) colorUpBtn.style.display = "flex";
     if (pauseBtn) pauseBtn.textContent = "⏸ Пауза";
@@ -608,12 +610,12 @@ function renderDealerView() {
     }
   } else if (table.status === "paused") {
     if (setupPanel) setupPanel.style.display = "none";
+    if (controlCard) controlCard.style.display = "block";
     if (gameBtnStack) gameBtnStack.style.display = "flex";
     if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) {
       statusEl.textContent = isTimedPause ? "☕ Перерыв • Color-Up" : "⏸ На паузе";
     }
-    if (startBtn) startBtn.style.display = "none";
     if (runningRow) runningRow.style.display = "grid";
     if (colorUpBtn) colorUpBtn.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "▶️ Продолжить";
@@ -624,6 +626,7 @@ function renderDealerView() {
     }
   } else if (table.status === "finished") {
     if (setupPanel) setupPanel.style.display = "none";
+    if (controlCard) controlCard.style.display = "block";
     if (gameBtnStack) gameBtnStack.style.display = "none";
     if (postGamePanel) postGamePanel.style.display = "flex";
 
@@ -651,16 +654,9 @@ function renderDealerView() {
       if (statusEl) statusEl.textContent = "🏁 Игра завершена";
     }
   } else {
-    // idle
+    // idle -> показываем экран выбора параметров
     if (setupPanel) setupPanel.style.display = "flex";
-    if (gameBtnStack) gameBtnStack.style.display = "flex";
-    if (postGamePanel) postGamePanel.style.display = "none";
-    if (statusEl) statusEl.textContent = "Стол ожидает старта";
-    if (startBtn) startBtn.style.display = "flex";
-    if (runningRow) runningRow.style.display = "none";
-    if (colorUpBtn) colorUpBtn.style.display = "none";
-    if (resetBtn) resetBtn.style.display = "none";
-    if (finishBtn) finishBtn.style.display = "none";
+    if (controlCard) controlCard.style.display = "none";
   }
 }
 

@@ -89,11 +89,16 @@ assert.strictEqual(table.isPostGameBreak, false, "isPostGameBreak должен �
 assert.strictEqual(table.nextGameAt, null, "nextGameAt должен быть null");
 console.log("   ✅ Сброс послеигрового перерыва работает корректно.");
 
-// Запуск новой игры из режима Post-Game
+// Переход к выбору параметров новой игры из режима Post-Game
 dealerEngine.startNewGameFromPostGame();
-assert.strictEqual(table.status, "running", "Новая игра должна стартовать в статусе running");
+assert.strictEqual(table.status, "idle", "После startNewGameFromPostGame статус стола должен быть idle для выбора параметров");
+console.log("   ✅ Переход в режим выбора параметров для новой игры работает корректно.");
+
+// Старт новой игры
+dealerEngine.startTable();
+assert.strictEqual(table.status, "running", "После startTable статус стола должен быть running");
 assert.strictEqual(table.levelIndex, 0, "Новая игра должна начинаться с уровня 0");
 assert(table.startedAt > 0, "startedAt должен быть валидным таймстемпом");
-console.log("   ✅ Старт новой игры из post-game режима работает безупречно.");
+console.log("   ✅ Старт новой турнирной сетки работает безупречно.");
 
 console.log("\n🎉 ВСЕ ТЕСТЫ ПОСЛЕИГРОВОГО ФЛОУ И ТЕРМИНОЛОГИИ УСПЕШНО ПРОЙДЕНЫ!");
