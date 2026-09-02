@@ -231,6 +231,54 @@ function getFormatLabel(formatKey) {
   return formatKey || "SnG";
 }
 
+// Звуковой гонг смены уровней блайндов (Web Audio API, без внешних файлов)
+function playTournamentChime() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const now = ctx.currentTime;
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(880, now);
+    osc1.frequency.exponentialRampToValueAtTime(1320, now + 0.18);
+
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(440, now);
+    osc2.frequency.exponentialRampToValueAtTime(660, now + 0.18);
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.85);
+    osc2.stop(now + 0.85);
+  } catch (e) {}
+}
+
+function syncTableAutoProgression(tableKey, table) {
+  if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+    try {
+      firebase.database().ref("atmosphere/tables/" + encodeURIComponent(tableKey)).update({
+        levelIndex: table.levelIndex,
+        durationSec: table.durationSec,
+        remainingMs: table.remainingMs,
+        levelEndsAt: table.levelEndsAt
+      });
+    } catch (e) {}
+  }
+}
+
 // Отрисовка сетки столов
 function renderTables() {
   if (typeof document === "undefined") return;
@@ -335,6 +383,19 @@ function renderTables() {
   tableKeys.slice(0, 4).forEach(key => {
     const table = ACTIVE_TABLES[key];
     const structure = getTableStructure(table);
+
+    // Автоматический переход уровня блайндов по истечению времени (стандарт Tournament Director)
+    if (table.status === "running" && table.levelEndsAt && Date.now() >= table.levelEndsAt) {
+      if (table.levelIndex < structure.length - 1) {
+        table.levelIndex += 1;
+        const nextLvl = structure[table.levelIndex];
+        table.durationSec = nextLvl.durationSec;
+        table.remainingMs = nextLvl.durationSec * 1000;
+        table.levelEndsAt = Date.now() + table.remainingMs;
+        playTournamentChime();
+        syncTableAutoProgression(key, table);
+      }
+    }
     const isFinalLevel = (table.levelIndex >= structure.length - 1);
     const time = calculateTableTime(table, isFinalLevel);
     const currentLevel = structure[table.levelIndex] || structure[0];
@@ -443,6 +504,7 @@ if (typeof module !== "undefined" && module.exports) {
     getTableStructure,
     getFormatLabel,
     renderTables,
-    fetchTablesRest
+    fetchTablesRest,
+    playTournamentChime
   };
 }

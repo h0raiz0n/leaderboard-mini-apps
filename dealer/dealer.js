@@ -759,8 +759,30 @@ function confirmRebalance() {
   renderDealerView();
 }
 
+// Автоматическое переключение уровней блайндов по истечении таймера (стандарт TDv3)
+function checkAutoLevelProgression() {
+  const table = getMyTable();
+  if (table.status !== "running" || !table.levelEndsAt) return;
+  const now = Date.now();
+  if (now >= table.levelEndsAt) {
+    const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
+    const levels = (struct && struct.levels) ? struct.levels : [];
+    if (table.levelIndex < levels.length - 1) {
+      table.levelIndex += 1;
+      const nextLvl = levels[table.levelIndex];
+      table.durationSec = nextLvl.durationSec;
+      table.remainingMs = nextLvl.durationSec * 1000;
+      table.levelEndsAt = now + table.remainingMs;
+      table.elapsedBeforePause = 0;
+      saveState();
+      triggerHaptic("success");
+    }
+  }
+}
+
 // Отрисовка состояния пульта
 function renderDealerView() {
+  checkAutoLevelProgression();
   const table = getMyTable();
   const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
   const levels = (struct && struct.levels) ? struct.levels : [];
@@ -951,6 +973,7 @@ if (typeof module !== "undefined" && module.exports) {
     eliminatePlayer,
     checkMttRebalance,
     rerollRebalanceBox,
-    confirmRebalance
+    confirmRebalance,
+    checkAutoLevelProgression
   };
 }
