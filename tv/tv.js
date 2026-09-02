@@ -188,7 +188,12 @@ function calculateTableTime(table, isFinalLevel = false) {
       }
     }
   } else if (table.status === "paused") {
-    remaining = Math.max(0, duration - elapsed);
+    if (table.remainingMs !== undefined && table.remainingMs !== null) {
+      remaining = Math.max(0, Math.ceil(table.remainingMs / 1000));
+      elapsed = Math.max(0, duration - remaining);
+    } else {
+      remaining = Math.max(0, duration - elapsed);
+    }
   }
   
   let minutes = 0;

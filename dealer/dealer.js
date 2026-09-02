@@ -506,7 +506,8 @@ function startTable() {
   table.levelIndex = 0;
   table.startedAt = Date.now();
   table.durationSec = structure.levels[0].durationSec;
-  table.levelEndsAt = Date.now() + (table.durationSec * 1000);
+  table.remainingMs = table.durationSec * 1000;
+  table.levelEndsAt = Date.now() + table.remainingMs;
   table.elapsedBeforePause = 0;
   table.isPostGameBreak = false;
   table.createdAt = Date.now();
@@ -515,14 +516,24 @@ function startTable() {
   renderDealerView();
 }
 
-// 2. Пауза / Возобновление
+// 2. Пауза / Возобновление с миллисекундной точностью (без скачков вперед)
 function togglePause() {
   triggerHaptic("medium");
   const table = getMyTable();
+  const now = Date.now();
+
   if (table.status === "running") {
-    const now = Date.now();
     table.status = "paused";
-    table.elapsedBeforePause = (table.elapsedBeforePause || 0) + Math.floor((now - table.startedAt) / 1000);
+    let remainingMs = 0;
+    if (table.levelEndsAt) {
+      remainingMs = Math.max(0, table.levelEndsAt - now);
+    } else if (table.startedAt) {
+      remainingMs = Math.max(0, (table.durationSec * 1000) - (now - table.startedAt));
+    } else {
+      remainingMs = (table.durationSec || 420) * 1000;
+    }
+    table.remainingMs = remainingMs;
+    table.elapsedBeforePause = Math.max(0, (table.durationSec || 420) - Math.ceil(remainingMs / 1000));
     table.startedAt = null;
     table.levelEndsAt = null;
     table.pauseEndsAt = null;
@@ -531,9 +542,12 @@ function togglePause() {
     table.status = "running";
     table.pauseEndsAt = null;
     table.pauseTotalSec = null;
-    table.startedAt = Date.now();
-    const remainingSec = Math.max(0, table.durationSec - (table.elapsedBeforePause || 0));
-    table.levelEndsAt = Date.now() + (remainingSec * 1000);
+    table.startedAt = now;
+    const remainingMs = (table.remainingMs !== undefined && table.remainingMs !== null)
+      ? table.remainingMs
+      : Math.max(0, ((table.durationSec || 420) - (table.elapsedBeforePause || 0)) * 1000);
+    table.remainingMs = remainingMs;
+    table.levelEndsAt = now + remainingMs;
   }
   saveState();
   renderDealerView();
@@ -543,14 +557,21 @@ function togglePause() {
 function startTimedPause(seconds = 120) {
   triggerHaptic("heavy");
   const table = getMyTable();
+  const now = Date.now();
   if (table.status === "running") {
-    const now = Date.now();
-    table.elapsedBeforePause = (table.elapsedBeforePause || 0) + Math.floor((now - table.startedAt) / 1000);
+    let remainingMs = 0;
+    if (table.levelEndsAt) {
+      remainingMs = Math.max(0, table.levelEndsAt - now);
+    } else {
+      remainingMs = Math.max(0, ((table.durationSec || 420) - (table.elapsedBeforePause || 0)) * 1000);
+    }
+    table.remainingMs = remainingMs;
+    table.elapsedBeforePause = Math.max(0, (table.durationSec || 420) - Math.ceil(remainingMs / 1000));
     table.startedAt = null;
     table.levelEndsAt = null;
   }
   table.status = "paused";
-  table.pauseEndsAt = Date.now() + seconds * 1000;
+  table.pauseEndsAt = now + seconds * 1000;
   table.pauseTotalSec = seconds;
   saveState();
   renderDealerView();
@@ -565,6 +586,7 @@ function nextLevel() {
   if (table.levelIndex < structure.levels.length - 1) {
     table.levelIndex += 1;
     table.durationSec = structure.levels[table.levelIndex].durationSec;
+    table.remainingMs = table.durationSec * 1000;
     table.elapsedBeforePause = 0;
     table.startedAt = Date.now();
     table.levelEndsAt = Date.now() + (table.durationSec * 1000);
@@ -782,7 +804,7 @@ function renderDealerView() {
   if (blindsValEl) blindsValEl.textContent = currentLvl.label;
   if (nextBlindsValEl) nextBlindsValEl.textContent = nextLvl ? nextLvl.label : "ФИНАЛ";
 
-  // Расчет времени по абсолютным меткам (без дрифта при сворачивании)
+  // Расчет времени по абсолютным меткам (без дрифта при сворачивании и без скачков при паузе)
   let remaining = currentLvl.durationSec;
   let totalElapsed = table.elapsedBeforePause || 0;
   if (table.status === "running") {
@@ -795,7 +817,12 @@ function renderDealerView() {
       remaining = Math.max(0, table.durationSec - totalElapsed);
     }
   } else if (table.status === "paused") {
-    remaining = Math.max(0, table.durationSec - (table.elapsedBeforePause || 0));
+    if (table.remainingMs !== undefined && table.remainingMs !== null) {
+      remaining = Math.max(0, Math.ceil(table.remainingMs / 1000));
+      totalElapsed = Math.max(0, table.durationSec - remaining);
+    } else {
+      remaining = Math.max(0, table.durationSec - (table.elapsedBeforePause || 0));
+    }
   }
 
   // Проверка таймированной паузы в игре (Color-Up)
