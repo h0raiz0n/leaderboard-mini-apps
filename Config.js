@@ -59,9 +59,9 @@ var CONFIG = {
 
   // ID связки Google Forms <-> листы-приёмники
   FORMS: {
-    SNG:      { id: '1A66JMY-KDuCq6nMnfbFkawj-nIX_ZKdz5CpcKg6pTgo', sheetName: "Data",     sheet: "Data" },
-    MTT:      { id: '1s-OlXMhdWQEkY0g0i75Jbb1MS5AC0zBZjjYAzWh_KIU', sheetName: "MTT",     sheet: "MTT" },
-    MYSTERY:  { id: '1asemj8eLS8Dyu6P39VHf8v_dR7Cz3fomYfWnqWdIrC8', sheetName: "Mystery", sheet: "Mystery" }
+    SNG:      { id: '1A66JMY-KDuCq6nMnfbFkawj-nIX_ZKdz5CpcKg6pTgo', sheetName: "Data",     sheet: "Data",     viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfCfnN2LS4mAmbQfPtBLZGxPoiYfSqNoaX5xLrmyBr3S5FiEg/viewform" },
+    MTT:      { id: '1s-OlXMhdWQEkY0g0i75Jbb1MS5AC0zBZjjYAzWh_KIU', sheetName: "MTT",     sheet: "MTT",     viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSeIDDkj2iCPtMZm-0K5YdZFlopAR7aPfRer2n1o-FQD-Dr7FQ/viewform" },
+    MYSTERY:  { id: '1asemj8eLS8Dyu6P39VHf8v_dR7Cz3fomYfWnqWdIrC8', sheetName: "Mystery", sheet: "Mystery", viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA/viewform" }
   },
 
   // Заголовки вопросов В ФОРМАХ, по которым обновляются списки игроков
@@ -213,22 +213,6 @@ var CONFIG = {
   FORM_ENTRY_IDS: {
     DATE: "entry.1615126251",
     DEALER: "entry.1887911518"
-  },
-
-  // Google Forms для внесения результатов по форматам
-  FORMS: {
-    SNG: {
-      id: "1FAIpQLSfCfnN2LS4mAmbQfPtBLZGxPoiYfSqNoaX5xLrmyBr3S5FiEg",
-      viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfCfnN2LS4mAmbQfPtBLZGxPoiYfSqNoaX5xLrmyBr3S5FiEg/viewform"
-    },
-    MTT: {
-      id: "1FAIpQLSeIDDkj2iCPtMZm-0K5YdZFlopAR7aPfRer2n1o-FQD-Dr7FQ",
-      viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSeIDDkj2iCPtMZm-0K5YdZFlopAR7aPfRer2n1o-FQD-Dr7FQ/viewform"
-    },
-    MYSTERY: {
-      id: "1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA",
-      viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA/viewform"
-    }
   },
 
   // Базовый URL шины Firebase Realtime Database
