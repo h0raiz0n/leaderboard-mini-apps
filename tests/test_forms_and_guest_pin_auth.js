@@ -86,13 +86,14 @@ console.log("   ✅ Формат Mystery Bounty: ссылка ведет стр�
 // 2. Тест авторизации гостевого ведущего / без юзернейма по Master PIN
 console.log("\n2. Тест авторизации гостя / пользователя без юзернейма по Master PIN:");
 
-// Запуск ввода PIN
+// Запуск ввода PIN для дилера не из белого списка
+dom["dealer-name-select"].value = "Другое";
 dealerEngine.submitDealerPin();
 
 assert.strictEqual(global.sessionStorage.getItem("atmosphere_pin_auth"), "true", "Сессия PIN должна быть установлена");
-assert.strictEqual(global.sessionStorage.getItem("atmosphere_dealer_name"), "Гостевой ведущий", "Имя гостевого ведущего должно сохраниться");
-assert.strictEqual(dom["dealer-badge"].textContent, "Гостевой ведущий", "Бейдж должен обновиться");
-console.log("   ✅ Гостевой ведущий успешно авторизован с выбором имени.");
+assert.strictEqual(global.sessionStorage.getItem("atmosphere_dealer_name"), "Другое", "Имя ведущего не из белого списка должно быть 'Другое'");
+assert.strictEqual(dom["dealer-badge"].textContent, "Другое", "Бейдж должен отображать 'Другое'");
+console.log("   ✅ Ведущий не из белого списка корректно получает имя 'Другое'.");
 
 // 3. Тест ответа Telegram-бота для неизвестного пользователя (выдача кнопки PIN)
 console.log("\n3. Тест выдачи кнопки PIN-входа в Telegram-боте:");

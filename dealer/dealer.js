@@ -114,8 +114,8 @@ function initDealerIdentity() {
     }
   }
 
-  if (!DEALER_NAME || DEALER_NAME === "Ведущий") {
-    DEALER_NAME = registry.LIST[2] || "Влад"; // Дефолт Влад
+  if (!DEALER_NAME || DEALER_NAME === "Ведущий" || DEALER_NAME === "Гостевой ведущий") {
+    DEALER_NAME = "Другое";
   }
   
   applyDealerIdentity();
@@ -140,11 +140,14 @@ function populateDealerSelectDropdown(dealerList) {
     selectEl.appendChild(opt);
   });
 
-  // Дополнительная опция для разового ведущего
-  const guestOpt = document.createElement("option");
-  guestOpt.value = "Гостевой ведущий";
-  guestOpt.textContent = "👤 Гостевой ведущий";
-  selectEl.appendChild(guestOpt);
+  // Опция для ведущего не из белого списка
+  const otherOpt = document.createElement("option");
+  otherOpt.value = "Другое";
+  otherOpt.textContent = "👤 Другое";
+  if (DEALER_NAME === "Другое" || !DEALER_NAME) {
+    otherOpt.selected = true;
+  }
+  selectEl.appendChild(otherOpt);
 }
 
 function applyDealerIdentity() {
@@ -222,8 +225,8 @@ function submitDealerPin() {
     : "7777";
 
   if (enteredPin === expectedPin) {
-    const selectedName = selectEl ? selectEl.value : "Ведущий";
-    DEALER_NAME = selectedName || "Ведущий";
+    const selectedName = selectEl ? selectEl.value : "Другое";
+    DEALER_NAME = selectedName || "Другое";
 
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.setItem("atmosphere_pin_auth", "true");
