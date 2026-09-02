@@ -41,9 +41,22 @@ function sanitizeDealerKey(name) {
 
 // Инициализация имени ведущего из Telegram WebApp и реестра
 function initDealerIdentity() {
-  const registry = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.DEALERS_REGISTRY)
+  let registry = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.DEALERS_REGISTRY)
     ? POKER_CONFIG.DEALERS_REGISTRY
     : { LIST: ["Арина", "Арташес", "Влад", "Всеволод", "Дима", "Маша", "Нинель", "Паша", "Рома", "Саша", "Тимур", "Эмилия"], MAP: {} };
+
+  try {
+    const cached = localStorage.getItem("atmosphere_dealers_registry");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.MAP) {
+        registry = {
+          LIST: Array.from(new Set([...(registry.LIST || []), ...(parsed.LIST || [])])),
+          MAP: Object.assign({}, registry.MAP || {}, parsed.MAP || {})
+        };
+      }
+    }
+  } catch (e) {}
 
   let isTelegramAuth = false;
 
@@ -57,17 +70,18 @@ function initDealerIdentity() {
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
       const u = tg.initDataUnsafe.user;
       const uid = String(u.id || "");
-      const uname = String(u.username || "").toLowerCase().replace(/^@/, "");
+      const uname = String(u.username || "").toLowerCase().replace(/^@/, "").trim();
 
       // Поиск по реестру Telegram ID / Username
-      if (registry.MAP[uname]) {
+      if (uname && registry.MAP[uname]) {
         DEALER_NAME = registry.MAP[uname];
         isTelegramAuth = true;
-      } else if (registry.MAP[uid]) {
+      } else if (uid && registry.MAP[uid]) {
         DEALER_NAME = registry.MAP[uid];
         isTelegramAuth = true;
       } else {
-        showAccessDenied(uname || uid);
+        // Пробуем динамически подтянуть актуальный реестр из Firebase
+        fetchDynamicDealersRegistryAndRetry(uname, uid);
         return;
       }
     }
@@ -102,12 +116,50 @@ function initDealerIdentity() {
     DEALER_NAME = registry.LIST[2] || "Влад"; // Дефолт Влад
   }
   
+  applyDealerIdentity();
+}
+
+function applyDealerIdentity() {
   DEALER_ID = sanitizeDealerKey(DEALER_NAME);
-  
   const badgeEl = document.getElementById("dealer-badge");
   const nameEl = document.getElementById("identity-name");
   if (badgeEl) badgeEl.textContent = DEALER_NAME;
   if (nameEl) nameEl.textContent = DEALER_NAME;
+}
+
+async function fetchDynamicDealersRegistryAndRetry(uname, uid) {
+  try {
+    const firebaseUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+      ? POKER_CONFIG.FIREBASE_DB_URL
+      : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+    const res = await fetch(`${firebaseUrl}/atmosphere/dealers_registry.json`);
+    if (res.ok) {
+      const liveRegistry = await res.json();
+      if (liveRegistry && liveRegistry.MAP) {
+        try {
+          localStorage.setItem("atmosphere_dealers_registry", JSON.stringify(liveRegistry));
+        } catch (e) {}
+
+        if (uname && liveRegistry.MAP[uname]) {
+          DEALER_NAME = liveRegistry.MAP[uname];
+          applyDealerIdentity();
+          initTableRealtime();
+          renderDealerView();
+          return;
+        } else if (uid && liveRegistry.MAP[uid]) {
+          DEALER_NAME = liveRegistry.MAP[uid];
+          applyDealerIdentity();
+          initTableRealtime();
+          renderDealerView();
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("fetchDynamicDealersRegistryAndRetry error:", err);
+  }
+
+  showAccessDenied(uname || uid);
 }
 
 function showPinModal() {
