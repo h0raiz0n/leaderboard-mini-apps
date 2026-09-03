@@ -13,7 +13,7 @@ console.log("1. Тест структуры SNG_STANDARD:");
 const std = POKER_CONFIG.BLIND_STRUCTURES.SNG_STANDARD;
 assert.ok(std, "SNG_STANDARD должна существовать");
 assert.strictEqual(std.stack, 5000, "Стартовый стек должен быть 5000");
-assert.strictEqual(std.levels.length, 10, "Должно быть ровно 10 уровней блайндов");
+assert.strictEqual(std.levels.length, 11, "Должно быть 11 уровней блайндов (включая резерв)");
 
 // Проверка отсутствия встроенных перерывов
 const breaksInStd = std.levels.filter(l => l.isBreak === true || l.sb === 0);
@@ -22,8 +22,11 @@ assert.strictEqual(std.levels[0].sb, 25);
 assert.strictEqual(std.levels[0].bb, 50);
 assert.strictEqual(std.levels[5].sb, 200);
 assert.strictEqual(std.levels[5].ante, 400, "Анте со 6 уровня (200/400 BBA 400)");
-assert.strictEqual(std.levels[9].bb, 2000);
-console.log("   ✅ SNG_STANDARD (5 000 стек / 7 мин): 10 уровней без встроенных пауз.");
+assert.strictEqual(std.levels[7].sb, 400, "Уровень 8: 400/800 BBA 800");
+assert.strictEqual(std.levels[7].ante, 800, "Уровень 8: BBA 800");
+assert.strictEqual(std.levels[8].sb, 600, "Уровень 9: 600/1200 BBA 1200");
+assert.strictEqual(std.levels[9].bb, 2000, "Уровень 10: финал 1000/2000 BBA 2000");
+console.log("   ✅ SNG_STANDARD (5 000 стек / 7 мин): 11 уровней со сглаживающим 400/800 и 600/1200 BBA.");
 
 // 2. Проверка структуры SNG_DEEP_1500 (1 500 стек / 10 мин, без анте)
 console.log("\n2. Тест структуры SNG_DEEP_1500 (Классика):");

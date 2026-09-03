@@ -39,14 +39,20 @@
     <div class="selector-group">
       <label class="selector-label">Структура блайндов</label>
       <div class="pill-grid vertical" id="struct-pills">
-        <button type="button" class="pill active" data-struct="SNG_STANDARD">
-          <span class="pill-title">5 000 стек / 7 мин (BBA)</span>
-          <span class="pill-sub">Анте с 6 уровня</span>
-        </button>
-        <button type="button" class="pill" data-struct="SNG_DEEP_1500">
-          <span class="pill-title">1 500 стек / 10 мин (Классика)</span>
-          <span class="pill-sub">Без анте (5/10 -> 1000/2000)</span>
-        </button>
+        <div class="pill-row-wrap">
+          <button type="button" class="pill active" data-struct="SNG_DEEP_1500">
+            <span class="pill-title">1 500 стек / 10 мин (Классика)</span>
+            <span class="pill-sub">Без анте • Color-Up после 50/100</span>
+          </button>
+          <button type="button" class="btn-preview-struct" onclick="openStructurePreview('SNG_DEEP_1500')" title="Просмотреть таблицу уровней">ℹ️ Уровни</button>
+        </div>
+        <div class="pill-row-wrap">
+          <button type="button" class="pill" data-struct="SNG_STANDARD">
+            <span class="pill-title">5 000 стек / 7 мин (Атмосфера Pro)</span>
+            <span class="pill-sub">Анте с 6 уровня • Color-Up после 150/300</span>
+          </button>
+          <button type="button" class="btn-preview-struct" onclick="openStructurePreview('SNG_STANDARD')" title="Просмотреть таблицу уровней">ℹ️ Уровни</button>
+        </div>
       </div>
     </div>
 
@@ -174,6 +180,39 @@
       <div class="btn-stack" style="margin-top: 16px; width: 100%;">
         <button type="button" class="btn btn-form-action" onclick="submitDealerPin()">Войти в пульт</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Всплывающая шторка предпросмотра структуры (Bottom Sheet Modal) -->
+  <div class="struct-modal-backdrop" id="struct-modal-backdrop" onclick="closeStructurePreview()" style="display: none;"></div>
+  <div class="struct-modal-sheet" id="struct-modal-sheet" style="display: none;">
+    <div class="modal-sheet-handle"></div>
+    <div class="modal-sheet-header">
+      <div>
+        <h3 class="modal-sheet-title" id="preview-modal-title">1 500 стек / 10 мин (Классика)</h3>
+        <div class="modal-sheet-sub" id="preview-modal-sub">Базовая структура без анте</div>
+      </div>
+      <button type="button" class="btn-modal-close" onclick="closeStructurePreview()">✕</button>
+    </div>
+    <div class="modal-sheet-body">
+      <div class="struct-table-wrap">
+        <table class="struct-preview-table">
+          <thead>
+            <tr>
+              <th>Раунд</th>
+              <th>Блайнды</th>
+              <th>Анте (BBA)</th>
+              <th>Время</th>
+            </tr>
+          </thead>
+          <tbody id="preview-modal-tbody">
+            <!-- Заполняется динамически -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-sheet-footer">
+      <button type="button" class="btn btn-form-action" id="btn-choose-struct" onclick="applyPreviewedStructure()">✓ Выбрать эту структуру</button>
     </div>
   </div>
 </body>

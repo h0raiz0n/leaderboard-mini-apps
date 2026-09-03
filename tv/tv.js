@@ -556,22 +556,45 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     const now = Date.now();
 
     // Состояние перерыва (ручного или послеигрового)
-    const breakEndTime = (table.isBreakActive && table.breakEndsAt) ? table.breakEndsAt : (table.isPostGameBreak ? table.nextGameAt : null);
-    if (breakEndTime && breakEndTime > now) {
-      const breakRemaining = Math.max(0, Math.floor((breakEndTime - now) / 1000));
-      const bMin = Math.floor(breakRemaining / 60);
-      const bSec = breakRemaining % 60;
-      const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
-      
-      html += `
-        <div class="table-card break-screen-card state-break" id="card-${table.id || key}">
-          <div class="break-screen-title">☕ ПЕРЕРЫВ</div>
-          <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
-          <div class="break-screen-digits">${bFormatted}</div>
-          <div style="font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;">До старта следующей игры</div>
-        </div>
-      `;
-      return;
+    const isPostGame = Boolean(table.isPostGameBreak && table.nextGameAt);
+    const breakEndTime = (table.isBreakActive && table.breakEndsAt) ? table.breakEndsAt : (isPostGame ? table.nextGameAt : null);
+
+    if (breakEndTime) {
+      const isOvertime = now >= breakEndTime;
+      const isWithinOneHour = (now - breakEndTime < 3600 * 1000);
+
+      if (!isOvertime) {
+        const breakRemaining = Math.max(0, Math.floor((breakEndTime - now) / 1000));
+        const bMin = Math.floor(breakRemaining / 60);
+        const bSec = breakRemaining % 60;
+        const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+
+        html += `
+          <div class="table-card break-screen-card state-break" id="card-${table.id || key}">
+            <div class="break-screen-title">☕ ПЕРЕРЫВ</div>
+            <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
+            <div class="break-screen-digits">${bFormatted}</div>
+            <div style="font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;">До старта следующей игры</div>
+          </div>
+        `;
+        return;
+      } else if (isPostGame && isWithinOneHour) {
+        // Овертайм перерыва (+MM:SS)
+        const overdueSec = Math.floor((now - breakEndTime) / 1000);
+        const oMin = Math.floor(overdueSec / 60);
+        const oSec = overdueSec % 60;
+        const oFormatted = `+${String(oMin).padStart(2, "0")}:${String(oSec).padStart(2, "0")}`;
+
+        html += `
+          <div class="table-card break-screen-card state-break state-overtime" id="card-${table.id || key}">
+            <div class="break-screen-title" style="color: #f59e0b;">☕ ПЕРЕРЫВ ЗАДЕРЖИВАЕТСЯ</div>
+            <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
+            <div class="break-screen-digits" style="color: #f59e0b;">${oFormatted}</div>
+            <div style="font-size: 15px; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.08em;">Задержка старта: +${oMin} мин</div>
+          </div>
+        `;
+        return;
+      }
     }
 
     const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > now);
@@ -663,7 +686,7 @@ function renderTables() {
 
     if (t.status === "running" || t.status === "paused") return true;
     if (t.isBreakActive && t.breakEndsAt && (t.breakEndsAt > Date.now())) return true;
-    if (t.isPostGameBreak && t.nextGameAt && (t.nextGameAt > Date.now())) return true;
+    if (t.isPostGameBreak && t.nextGameAt && (Date.now() - t.nextGameAt < 3600 * 1000)) return true;
     return false;
   });
 
@@ -705,7 +728,7 @@ function renderTables() {
         canPatchDom = false;
         break;
       }
-      const isBreakScreen = (table.isBreakActive && table.breakEndsAt > Date.now()) || (table.isPostGameBreak && table.nextGameAt > Date.now());
+      const isBreakScreen = (table.isBreakActive && table.breakEndsAt > Date.now()) || (table.isPostGameBreak && table.nextGameAt && (Date.now() - table.nextGameAt < 3600 * 1000));
       if (isBreakScreen) {
         canPatchDom = false;
         break;

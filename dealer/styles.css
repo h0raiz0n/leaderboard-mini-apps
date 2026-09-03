@@ -713,3 +713,197 @@ body {
   font-weight: 700;
   padding: 8px 14px;
 }
+
+/* Строка выбора структуры с кнопкой предпросмотра */
+.pill-row-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.pill-row-wrap .pill {
+  flex: 1;
+}
+
+.btn-preview-struct {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-preview-struct:active {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: #60a5fa;
+  transform: scale(0.96);
+}
+
+/* Всплывающая шторка предпросмотра структуры (Bottom Sheet Modal) */
+.struct-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.struct-modal-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 85vh;
+  background: #111827;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px 20px 0 0;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  margin: 10px auto 4px auto;
+}
+
+.modal-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 20px 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-sheet-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f9fafb;
+  margin: 0;
+}
+
+.modal-sheet-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.btn-modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #9ca3af;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-modal-close:active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.modal-sheet-body {
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.struct-table-wrap {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.struct-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.struct-preview-table th {
+  background: rgba(255, 255, 255, 0.05);
+  color: #9ca3af;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.struct-preview-table td {
+  padding: 8px 12px;
+  color: #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-variant-numeric: tabular-nums;
+}
+
+.struct-preview-table tr:last-child td {
+  border-bottom: none;
+}
+
+.struct-preview-table tr.row-colorup td {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.badge-bba {
+  display: inline-block;
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.modal-sheet-footer {
+  padding: 12px 16px 24px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111827;
+}
+
+/* Овертайм таймера перерыва */
+.timer-readout.state-overtime,
+.active-break-timer.state-overtime {
+  color: #f59e0b !important;
+  animation: pulseOvertime 2s infinite ease-in-out;
+}
+
+@keyframes pulseOvertime {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.85; }
+}

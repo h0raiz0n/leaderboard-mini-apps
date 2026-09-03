@@ -701,6 +701,21 @@ body {
   letter-spacing: -0.02em;
 }
 
+.break-screen-card.state-overtime {
+  border-color: #f59e0b;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, var(--card) 100%);
+  animation: pulse-overtime-amber 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse-overtime-amber {
+  0%, 100% { border-color: #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.35); }
+  50% { border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 10px rgba(245, 158, 11, 0.1); }
+}
+
+.break-screen-card.state-overtime .break-screen-digits {
+  color: #f59e0b;
+}
+
 /* Состояние ожидания (Lounge Mode) */
 .lounge-container {
   display: flex;

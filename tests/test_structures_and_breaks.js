@@ -13,7 +13,7 @@ console.log("1. Проверка SNG_STANDARD (7 мин / BBA):");
 const standard = POKER_CONFIG.BLIND_STRUCTURES.SNG_STANDARD;
 assert(standard, "SNG_STANDARD должна присутствовать в конфигурации");
 assert.strictEqual(standard.stack, 5000);
-assert.strictEqual(standard.levels.length, 10);
+assert.strictEqual(standard.levels.length, 11);
 
 // Уровень 1: 25/50
 assert.strictEqual(standard.levels[0].durationSec, 420);

@@ -7,6 +7,7 @@ let DEALER_NAME = "Ведущий";
 let DEALER_ID = "dealer_vlad";
 let SELECTED_FORMAT = "SnG";
 let SELECTED_STRUCT = "SNG_STANDARD";
+let CURRENT_PREVIEW_STRUCT = "SNG_DEEP_1500";
 let TABLES_STATE = {};
 
 if (typeof document !== "undefined" && document.addEventListener) {
@@ -298,6 +299,12 @@ function initPillSelectors() {
   });
 
   const structPills = document.querySelectorAll("#struct-pills .pill");
+  if (typeof document !== "undefined" && typeof document.querySelector === "function") {
+    const activeStructPill = document.querySelector("#struct-pills .pill.active");
+    if (activeStructPill && activeStructPill.dataset && activeStructPill.dataset.struct) {
+      SELECTED_STRUCT = activeStructPill.dataset.struct;
+    }
+  }
   structPills.forEach(pill => {
     pill.addEventListener("click", () => {
       structPills.forEach(p => p.classList.remove("active"));
@@ -481,20 +488,92 @@ function getActiveStructure(structKey) {
     try { config = require("../shared/poker-config.js"); } catch (e) {}
   }
 
+  const key = structKey || SELECTED_STRUCT || "SNG_STANDARD";
   if (config && config.BLIND_STRUCTURES) {
-    return config.BLIND_STRUCTURES[structKey] || config.BLIND_STRUCTURES.SNG_STANDARD;
+    return config.BLIND_STRUCTURES[key] || config.BLIND_STRUCTURES[SELECTED_STRUCT] || config.BLIND_STRUCTURES.SNG_STANDARD || config.BLIND_STRUCTURES.SNG_DEEP_1500;
   }
   if (config && config.SNG_STRUCTURE) {
     return config.SNG_STRUCTURE;
   }
   return {
-    name: "5 000 стек / 7 мин (BBA)",
+    name: "5 000 стек / 7 мин (Атмосфера Pro)",
     stack: 5000,
     levels: [
       { level: 1, sb: 25, bb: 50, ante: 0, durationSec: 420, label: "25 / 50" },
       { level: 2, sb: 50, bb: 100, ante: 0, durationSec: 420, label: "50 / 100" }
     ]
   };
+}
+
+// Предпросмотр структуры уровней (Bottom Sheet)
+function openStructurePreview(structKey) {
+  CURRENT_PREVIEW_STRUCT = structKey || SELECTED_STRUCT || "SNG_DEEP_1500";
+  const structure = getActiveStructure(CURRENT_PREVIEW_STRUCT);
+  if (!structure) return;
+
+  const backdrop = document.getElementById("struct-modal-backdrop");
+  const sheet = document.getElementById("struct-modal-sheet");
+  const titleEl = document.getElementById("preview-modal-title");
+  const subEl = document.getElementById("preview-modal-sub");
+  const tbodyEl = document.getElementById("preview-modal-tbody");
+
+  if (titleEl) titleEl.textContent = structure.name || structKey;
+  if (subEl) subEl.textContent = structure.shortDesc || `Стартовый стек: ${structure.stack} фишек • Уровни по ${Math.round((structure.levels[0]?.durationSec || 600) / 60)} мин`;
+
+  if (tbodyEl && Array.isArray(structure.levels)) {
+    let html = "";
+    const colorUpLevel = structure.colorUpAfterLevel || (CURRENT_PREVIEW_STRUCT === "SNG_DEEP_1500" ? 4 : 5);
+
+    structure.levels.forEach((lvl, idx) => {
+      const anteHtml = lvl.ante > 0 ? `<span class="badge-bba">BBA ${lvl.ante}</span>` : `<span style="color: var(--muted); opacity: 0.5;">—</span>`;
+      const durMin = Math.round((lvl.durationSec || 420) / 60);
+
+      html += `
+        <tr>
+          <td><b>#${lvl.level || (idx + 1)}</b></td>
+          <td><b>${lvl.sb} / ${lvl.bb}</b></td>
+          <td>${anteHtml}</td>
+          <td>${durMin} мин</td>
+        </tr>
+      `;
+
+      if (lvl.level === colorUpLevel) {
+        const removedChips = CURRENT_PREVIEW_STRUCT === "SNG_DEEP_1500" ? "убираются номиналы 5, 10, 25, 50" : "убираются номиналы 25, 50";
+        html += `
+          <tr class="row-colorup">
+            <td colspan="4">☕ COLOR-UP (2 мин) • Размен мелких фишек (${removedChips})</td>
+          </tr>
+        `;
+      }
+    });
+    tbodyEl.innerHTML = html;
+  }
+
+  if (backdrop) backdrop.style.display = "block";
+  if (sheet) sheet.style.display = "flex";
+  triggerHaptic("medium");
+}
+
+function closeStructurePreview() {
+  const backdrop = document.getElementById("struct-modal-backdrop");
+  const sheet = document.getElementById("struct-modal-sheet");
+  if (backdrop) backdrop.style.display = "none";
+  if (sheet) sheet.style.display = "none";
+  triggerHaptic("light");
+}
+
+function applyPreviewedStructure() {
+  SELECTED_STRUCT = CURRENT_PREVIEW_STRUCT || "SNG_DEEP_1500";
+  const structPills = document.querySelectorAll("#struct-pills .pill");
+  structPills.forEach(p => {
+    if (p.dataset.struct === SELECTED_STRUCT) {
+      p.classList.add("active");
+    } else {
+      p.classList.remove("active");
+    }
+  });
+  closeStructurePreview();
+  triggerHaptic("success");
 }
 
 // 1. Старт игры
@@ -797,8 +876,11 @@ function checkAutoLevelProgression() {
     const levels = (struct && struct.levels) ? struct.levels : [];
     const currentLvl = levels[table.levelIndex || 0];
 
-    // Автоматический Color-Up после 100/200 (размен фишек <100)
-    if (currentLvl && currentLvl.sb === 100 && currentLvl.bb === 200 && !table.colorUpDone) {
+    // Автоматический Color-Up (после 100/200 или согласно colorUpAfterLevel структуры)
+    const isColorUpLevel = (struct && struct.colorUpAfterLevel && (table.levelIndex + 1) === struct.colorUpAfterLevel)
+      || (currentLvl && currentLvl.sb === 100 && currentLvl.bb === 200);
+
+    if (isColorUpLevel && !table.colorUpDone) {
       table.colorUpDone = true;
       table.isColorUpActive = true;
       table.status = "paused";
@@ -976,26 +1058,62 @@ function renderDealerView() {
     if (gameBtnStack) gameBtnStack.style.display = "none";
     if (postGamePanel) postGamePanel.style.display = "flex";
 
-    // Обработка перерыва после игры
-    if (table.isPostGameBreak && table.nextGameAt && table.nextGameAt > Date.now()) {
-      const remBreak = Math.max(0, Math.floor((table.nextGameAt - Date.now()) / 1000));
-      const bMin = Math.floor(remBreak / 60);
-      const bSec = remBreak % 60;
-      const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
-      if (postBreakButtons) postBreakButtons.style.display = "none";
-      if (postBreakActive) postBreakActive.style.display = "block";
-      if (postBreakDigits) postBreakDigits.textContent = bFormatted;
-      if (digitsEl) {
-        digitsEl.textContent = bFormatted;
-        digitsEl.style.color = "#fbbf24";
+    // Обработка перерыва после игры (с поддержкой овертайма +MM:SS до 1 часа)
+    if (table.isPostGameBreak && table.nextGameAt) {
+      const now = Date.now();
+      const isOvertime = now >= table.nextGameAt;
+      const isStaleOvertime = (now - table.nextGameAt >= 3600 * 1000); // 1 час задержки
+
+      if (isStaleOvertime) {
+        // Стол оставлен на 1 час после перерыва — сбрасываем в idle
+        resetTable();
+        return;
       }
-      if (statusEl) statusEl.textContent = "☕ Перерыв перед следующей игрой";
+
+      if (!isOvertime) {
+        const remBreak = Math.max(0, Math.floor((table.nextGameAt - now) / 1000));
+        const bMin = Math.floor(remBreak / 60);
+        const bSec = remBreak % 60;
+        const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+        if (postBreakButtons) postBreakButtons.style.display = "none";
+        if (postBreakActive) postBreakActive.style.display = "block";
+        if (postBreakDigits) {
+          postBreakDigits.textContent = bFormatted;
+          if (postBreakDigits.classList) postBreakDigits.classList.remove("state-overtime");
+        }
+        if (digitsEl) {
+          digitsEl.textContent = bFormatted;
+          digitsEl.style.color = "#fbbf24";
+          if (digitsEl.classList) digitsEl.classList.remove("state-overtime");
+        }
+        if (statusEl) statusEl.textContent = "☕ Перерыв перед следующей игрой";
+      } else {
+        // Задержка перерыва (+MM:SS)
+        const overdueSec = Math.floor((now - table.nextGameAt) / 1000);
+        const oMin = Math.floor(overdueSec / 60);
+        const oSec = overdueSec % 60;
+        const oFormatted = `+${String(oMin).padStart(2, "0")}:${String(oSec).padStart(2, "0")}`;
+
+        if (postBreakButtons) postBreakButtons.style.display = "none";
+        if (postBreakActive) postBreakActive.style.display = "block";
+        if (postBreakDigits) {
+          postBreakDigits.textContent = oFormatted;
+          if (postBreakDigits.classList) postBreakDigits.classList.add("state-overtime");
+        }
+        if (digitsEl) {
+          digitsEl.textContent = oFormatted;
+          digitsEl.style.color = "#f59e0b";
+          if (digitsEl.classList) digitsEl.classList.add("state-overtime");
+        }
+        if (statusEl) statusEl.textContent = `☕ Перерыв задерживается (+${oMin} мин)`;
+      }
     } else {
       if (postBreakButtons) postBreakButtons.style.display = "grid";
       if (postBreakActive) postBreakActive.style.display = "none";
       if (digitsEl) {
         digitsEl.textContent = "00:00";
         digitsEl.style.color = "";
+        if (digitsEl.classList) digitsEl.classList.remove("state-overtime");
       }
       if (statusEl) statusEl.textContent = "🏁 Игра завершена";
     }
@@ -1049,6 +1167,9 @@ if (typeof module !== "undefined" && module.exports) {
     confirmRebalance,
     checkAutoLevelProgression,
     skipColorUp,
-    setTablesState
+    setTablesState,
+    openStructurePreview,
+    closeStructurePreview,
+    applyPreviewedStructure
   };
 }
