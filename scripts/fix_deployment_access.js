@@ -69,7 +69,8 @@ async function createPublicDeployment(accessToken) {
 }
 
 async function setTelegramWebhook(url) {
-  const token = '8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8';
+  const token = process.env.DEALER_BOT_TOKEN;
+  if (!token) return { ok: false, error: 'NO_TOKEN' };
   return new Promise((resolve, reject) => {
     const tgUrl = 'https://api.telegram.org/bot' + token + '/setWebhook?url=' + encodeURIComponent(url) + '&drop_pending_updates=true';
     https.get(tgUrl, (res) => {
@@ -84,13 +85,15 @@ async function setTelegramWebhook(url) {
 }
 
 async function setChatMenuButton() {
-  const token = '8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8';
+  const token = process.env.DEALER_BOT_TOKEN;
+  if (!token) return;
+  const appUrl = process.env.DEALER_APP_URL || 'https://atmosphere-poker.vercel.app/dealer';
   const payload = JSON.stringify({
     menu_button: {
       type: "web_app",
       text: "🎛 Пульт",
       web_app: {
-        url: "https://h0raiz0n.github.io/leaderboard-mini-apps/dealer/"
+        url: appUrl
       }
     }
   });

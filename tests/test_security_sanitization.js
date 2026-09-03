@@ -19,17 +19,21 @@ const clientFiles = [
   "dealer/index.html",
   "dealer/dealer.js",
   "dealer/styles.css",
-  "index.html"
+  "index.html",
+  "Config.js",
+  "Setup.js",
+  "api/dealer-bot.js",
+  ".env.example"
 ];
 
-const tokenRegex = /8946471319:[A-Za-z0-9_-]{35}/g;
+const tokenRegex = /[0-9]{9,11}:[A-Za-z0-9_-]{34,36}/g;
 
 clientFiles.forEach(relPath => {
   const fullPath = path.join(__dirname, "..", relPath);
   if (fs.existsSync(fullPath)) {
     const content = fs.readFileSync(fullPath, "utf8");
     const matches = content.match(tokenRegex);
-    assert(!matches, `КРИТИЧЕСКАЯ УЯЗВИМОСТЬ: Токен бота найден в клиентском файле ${relPath}!`);
+    assert(!matches, `КРИТИЧЕСКАЯ УЯЗВИМОСТЬ: Боевой токен бота найден в файле ${relPath}!`);
     console.log(`   ✅ ${relPath}: чист от секретов.`);
   }
 });

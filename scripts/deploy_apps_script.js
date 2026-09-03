@@ -204,7 +204,11 @@ async function updateDeployment(accessToken, deploymentId, versionNumber) {
 }
 
 async function registerTelegramWebhook(webAppUrl) {
-  const token = process.env.DEALER_BOT_TOKEN || "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
+  const token = process.env.DEALER_BOT_TOKEN;
+  if (!token) {
+    console.log("ℹ️ Переменная DEALER_BOT_TOKEN не задана, пропускаем регистрацию вебхука.");
+    return;
+  }
   return new Promise((resolve, reject) => {
     const url = 'https://api.telegram.org/bot' + token + '/setWebhook?url=' + encodeURIComponent(webAppUrl) + '&drop_pending_updates=true';
     https.get(url, (res) => {
@@ -219,7 +223,8 @@ async function registerTelegramWebhook(webAppUrl) {
 }
 
 async function setBotCommands() {
-  const token = "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
+  const token = process.env.DEALER_BOT_TOKEN;
+  if (!token) return;
   const payload = JSON.stringify({
     commands: [
       { command: "start", description: "Запустить новый стол или открыть управление" },
@@ -279,13 +284,15 @@ async function main() {
 }
 
 async function setChatMenuButton() {
-  const token = "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8";
+  const token = process.env.DEALER_BOT_TOKEN;
+  if (!token) return;
+  const appUrl = process.env.DEALER_APP_URL || "https://atmosphere-poker.vercel.app/dealer";
   const payload = JSON.stringify({
     menu_button: {
       type: "web_app",
       text: "🎛 Пульт",
       web_app: {
-        url: "https://h0raiz0n.github.io/leaderboard-mini-apps/dealer/"
+        url: appUrl
       }
     }
   });

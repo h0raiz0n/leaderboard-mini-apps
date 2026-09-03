@@ -108,18 +108,19 @@ function showConfiguredSecrets() {
 /**
  * Быстрая установка боевых секретов для дилерского бота и Firebase
  */
-function setupDealerBotAndFirebase() {
+function setupDealerBotAndFirebase(customToken) {
   var props = PropertiesService.getScriptProperties();
   
-  // Устанавливаем токен бота @atmosphere_poker_dealer_bot
-  props.setProperty("DEALER_BOT_TOKEN", "8946471319:AAHKuZK8hcgebOvuNyHi21o5tjlbU7S0hG8");
+  if (customToken) {
+    props.setProperty("DEALER_BOT_TOKEN", customToken);
+  }
   
   // Устанавливаем URL базы Firebase
   props.setProperty("FIREBASE_DB_URL", "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app");
   
-  Logger.log("✅ Секреты DEALER_BOT_TOKEN и FIREBASE_DB_URL успешно сохранены!");
+  Logger.log("✅ Секреты DEALER_BOT_TOKEN и FIREBASE_DB_URL проверены!");
   try {
-    SpreadsheetApp.getUi().alert("Успешно!\n\nТокен дилерского бота и URL Firebase сохранены в свойства скрипта.");
+    SpreadsheetApp.getUi().alert("Успешно!\n\nКонфигурация Firebase и дилерского бота сохранена в свойства скрипта.");
   } catch (e) {}
 }
 
