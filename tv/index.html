@@ -23,6 +23,10 @@
         <span class="live-indicator-dot"></span>
         <span>LIVE</span>
       </div>
+      <div class="net-status-badge fast" id="net-status-badge" title="Сетевая задержка Firebase">
+        <span class="net-dot"></span>
+        <span id="net-ping-val">12 ms</span>
+      </div>
     </div>
     
     <div class="header-clock" id="header-clock">--:--:--</div>
@@ -32,5 +36,10 @@
   <main class="tv-viewport" id="tv-viewport" data-tables="1">
     <!-- Столы рендерятся через tv.js -->
   </main>
+
+  <!-- Информационный баннер разблокировки звука (исчезает при клике/клавише) -->
+  <div id="audio-unlock-overlay" class="audio-unlock-overlay" style="display: none;" onclick="unlockAudioContext()">
+    🔔 Нажмите в любом месте или клавишу F для активации звукового гонга и полного экрана
+  </div>
 </body>
 </html>

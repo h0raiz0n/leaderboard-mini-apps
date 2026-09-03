@@ -725,3 +725,78 @@ body {
   font-weight: 600;
   color: var(--muted);
 }
+
+/* Сетевой пинг-индикатор */
+.net-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 30, 50, 0.7);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  transition: all 0.3s ease;
+}
+
+.net-status-badge.fast {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.net-status-badge.medium {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.net-status-badge.slow {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.net-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* Пульсация карточки стола при 5-секундном отсчете (Countdown) */
+.table-card.countdown-pulse {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 35px var(--gold-glow) !important;
+  animation: pulse-countdown-frame 0.5s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-countdown-frame {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.006); }
+}
+
+/* Баннер разблокировки звукового контекста */
+.audio-unlock-overlay {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 22, 40, 0.95);
+  border: 1px solid var(--gold);
+  color: var(--ink);
+  padding: 12px 28px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  cursor: pointer;
+  animation: bounce-audio-prompt 2s infinite ease-in-out;
+}
+
+@keyframes bounce-audio-prompt {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
+}

@@ -467,6 +467,10 @@ function getMyTable() {
   return TABLES_STATE[DEALER_ID];
 }
 
+function setTablesState(tables) {
+  TABLES_STATE = tables || {};
+}
+
 function getActiveStructure(structKey) {
   let config = null;
   if (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG && POKER_CONFIG.BLIND_STRUCTURES) {
@@ -677,6 +681,9 @@ function generatePreFilledFormUrl() {
     "&entry.1887911518=" + encodeURIComponent(DEALER_NAME);
 }
 
+let TARGET_REBALANCE_TABLE_KEY = null;
+let CURRENT_REBALANCE_BOX = null;
+
 // МТТ управление игроками
 function adjustPlayers(delta) {
   triggerHaptic("light");
@@ -744,13 +751,34 @@ function showRebalanceModal(targetDealer) {
   if (modal) modal.style.display = "flex";
 }
 
+function syncTargetTablePlayersCount(targetKey, newCount) {
+  if (!targetKey) return;
+  if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+    try {
+      firebase.database().ref("atmosphere/tables/" + encodeURIComponent(targetKey) + "/playersCount").set(newCount);
+    } catch (e) {}
+  }
+  const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+    ? POKER_CONFIG.FIREBASE_DB_URL
+    : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+  if (typeof fetch === "function") {
+    fetch(`${dbUrl}/atmosphere/tables/${encodeURIComponent(targetKey)}/playersCount.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newCount)
+    }).catch(() => {});
+  }
+}
+
 function confirmRebalance() {
   triggerHaptic("success");
   const currentTable = getMyTable();
   currentTable.playersCount = Math.max(1, (currentTable.playersCount || 9) - 1);
 
   if (TARGET_REBALANCE_TABLE_KEY && TABLES_STATE[TARGET_REBALANCE_TABLE_KEY]) {
-    TABLES_STATE[TARGET_REBALANCE_TABLE_KEY].playersCount = (TABLES_STATE[TARGET_REBALANCE_TABLE_KEY].playersCount || 9) + 1;
+    const newTargetCount = (TABLES_STATE[TARGET_REBALANCE_TABLE_KEY].playersCount || 9) + 1;
+    TABLES_STATE[TARGET_REBALANCE_TABLE_KEY].playersCount = newTargetCount;
+    syncTargetTablePlayersCount(TARGET_REBALANCE_TABLE_KEY, newTargetCount);
   }
 
   saveState();
@@ -767,6 +795,20 @@ function checkAutoLevelProgression() {
   if (now >= table.levelEndsAt) {
     const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
     const levels = (struct && struct.levels) ? struct.levels : [];
+    const currentLvl = levels[table.levelIndex || 0];
+
+    // Автоматический Color-Up после 100/200 (размен фишек <100)
+    if (currentLvl && currentLvl.sb === 100 && currentLvl.bb === 200 && !table.colorUpDone) {
+      table.colorUpDone = true;
+      table.isColorUpActive = true;
+      table.status = "paused";
+      table.pauseEndsAt = now + (120 * 1000);
+      table.pauseTotalSec = 120;
+      saveState();
+      triggerHaptic("heavy");
+      return;
+    }
+
     if (table.levelIndex < levels.length - 1) {
       table.levelIndex += 1;
       const nextLvl = levels[table.levelIndex];
@@ -778,6 +820,28 @@ function checkAutoLevelProgression() {
       triggerHaptic("success");
     }
   }
+}
+
+// Пропуск перерыва Color-Up дилером
+function skipColorUp() {
+  triggerHaptic("medium");
+  const table = getMyTable();
+  table.isColorUpActive = false;
+  table.pauseEndsAt = null;
+  table.pauseTotalSec = null;
+  table.status = "running";
+  const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
+  const levels = (struct && struct.levels) ? struct.levels : [];
+  if (table.levelIndex < levels.length - 1) {
+    table.levelIndex += 1;
+    const nextLvl = levels[table.levelIndex];
+    table.durationSec = nextLvl.durationSec;
+    table.remainingMs = nextLvl.durationSec * 1000;
+    table.levelEndsAt = Date.now() + table.remainingMs;
+    table.elapsedBeforePause = 0;
+  }
+  saveState();
+  renderDealerView();
 }
 
 // Отрисовка состояния пульта
@@ -801,6 +865,7 @@ function renderDealerView() {
   const runningRow = document.getElementById("running-btn-row");
   const pauseBtn = document.getElementById("btn-pause");
   const colorUpBtn = document.getElementById("btn-colorup");
+  const skipColorUpBtn = document.getElementById("btn-skip-colorup");
   const resetBtn = document.getElementById("btn-reset");
   const finishBtn = document.getElementById("btn-finish");
 
@@ -874,6 +939,7 @@ function renderDealerView() {
     if (statusEl) statusEl.textContent = "🟢 Идёт игра";
     if (runningRow) runningRow.style.display = "grid";
     if (colorUpBtn) colorUpBtn.style.display = "flex";
+    if (skipColorUpBtn) skipColorUpBtn.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "⏸ Пауза";
     if (finishBtn) finishBtn.style.display = "flex";
 
@@ -887,10 +953,17 @@ function renderDealerView() {
     if (gameBtnStack) gameBtnStack.style.display = "flex";
     if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) {
-      statusEl.textContent = isTimedPause ? "☕ Перерыв • Color-Up" : "⏸ На паузе";
+      if (table.isColorUpActive && isTimedPause) {
+        statusEl.textContent = "☕ Color-Up • Размен фишек <100";
+      } else {
+        statusEl.textContent = isTimedPause ? "☕ Перерыв • Color-Up" : "⏸ На паузе";
+      }
     }
     if (runningRow) runningRow.style.display = "grid";
     if (colorUpBtn) colorUpBtn.style.display = "none";
+    if (skipColorUpBtn) {
+      skipColorUpBtn.style.display = (table.isColorUpActive && isTimedPause) ? "flex" : "none";
+    }
     if (pauseBtn) pauseBtn.textContent = "▶️ Продолжить";
     if (finishBtn) finishBtn.style.display = "flex";
 
@@ -974,6 +1047,8 @@ if (typeof module !== "undefined" && module.exports) {
     checkMttRebalance,
     rerollRebalanceBox,
     confirmRebalance,
-    checkAutoLevelProgression
+    checkAutoLevelProgression,
+    skipColorUp,
+    setTablesState
   };
 }

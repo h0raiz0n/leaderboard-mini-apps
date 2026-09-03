@@ -364,6 +364,25 @@ body {
   transform: scale(0.98);
 }
 
+.btn-skip-colorup {
+  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+  color: #08111e;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+  animation: pulse-colorup-btn 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-colorup-btn {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); }
+  50% { transform: scale(1.02); box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6); }
+}
+
+.btn-skip-colorup:active {
+  transform: scale(0.98);
+}
+
 /* Панель управления после завершения игры */
 .post-game-panel {
   display: flex;
