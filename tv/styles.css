@@ -1462,3 +1462,317 @@ body {
   animation: pulse-mtt-rebalance 3s infinite ease-in-out;
 }
 
+/* =========================================================
+   MTT CINEMA DECK (ЕДИНЫЙ ТУРНИРНЫЙ ЭКРАН НА ТВ)
+   ========================================================= */
+.mtt-cinema-deck {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 20px 36px;
+  background: radial-gradient(circle at 50% 10%, rgba(217, 119, 6, 0.12) 0%, transparent 60%),
+              radial-gradient(circle at 50% 90%, rgba(30, 41, 59, 0.4) 0%, transparent 70%),
+              var(--bg);
+  box-sizing: border-box;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* 1. Верхнее табло турнирной телеметрии */
+.mtt-telemetry-hud {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.telemetry-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.telemetry-card.highlight {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+
+.telemetry-lbl {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.telemetry-val {
+  font-size: 26px;
+  font-weight: 900;
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.telemetry-val .val-sub {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.telemetry-val .val-bb {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.telemetry-val.cyan { color: #38bdf8; }
+.telemetry-val.gold { color: var(--gold); }
+
+/* 2. Баннеры перерывов и ребаланса */
+.mtt-deck-banner-wrap {
+  width: 100%;
+}
+
+/* 3. Центральный блок Hero Clock */
+.mtt-hero-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.mtt-round-badge {
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 6px 24px;
+  border-radius: 9999px;
+  margin-bottom: 8px;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+}
+
+.mtt-digits-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mtt-hero-digits {
+  font-size: clamp(80px, 14vw, 140px);
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.15);
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.mtt-hero-digits.state-alert {
+  color: #ef4444;
+  text-shadow: 0 0 50px rgba(239, 68, 68, 0.6);
+  animation: pulse-alert 1s infinite ease-in-out;
+}
+
+.mtt-hero-digits.state-break {
+  color: #fbbf24;
+  text-shadow: 0 0 50px rgba(245, 158, 11, 0.5);
+}
+
+.mtt-hero-digits.state-paused {
+  color: #94a3b8;
+  opacity: 0.85;
+}
+
+.mtt-deck-rail {
+  width: 100%;
+  max-width: 800px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 14px 0 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.mtt-deck-rail-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 9999px;
+  transition: width 0.3s linear, background 0.3s ease;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+.mtt-deck-rail-fill.is-warning {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);
+}
+
+.mtt-subtext {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* 4. Блок блайндов */
+.mtt-blinds-deck {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.mtt-blinds-box {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.mtt-blinds-box.current {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.06) 0%, rgba(15, 23, 42, 0.8) 100%);
+}
+
+.deck-lbl {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.deck-blinds-val {
+  font-size: clamp(24px, 3.5vw, 38px);
+  font-weight: 950;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-bba-badge {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.4) 100%);
+  border: 1px solid var(--gold);
+  color: #fef08a;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+.deck-upcoming-val {
+  font-size: clamp(18px, 2.5vw, 26px);
+  font-weight: 800;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-milestone-sub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+/* 5. Нижняя панель столов (Dock) */
+.mtt-tables-dock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dock-table-chip {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.dock-table-chip.is-master {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.dock-table-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dock-table-role {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.dock-dealer-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.dock-table-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dock-players-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.dock-players-count b {
+  color: #ffffff;
+  font-size: 16px;
+}
+
+

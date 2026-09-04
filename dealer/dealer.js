@@ -99,16 +99,17 @@ function initDealerIdentity() {
     const savedName = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("atmosphere_dealer_name")) 
       || (typeof localStorage !== "undefined" && localStorage.getItem("atmosphere_dealer_name"));
 
-    // Поддержка query параметра ?dealer=... для авторизованных
+    // Поддержка query параметра ?dealer=... для авторизованных и быстрого тестирования
     if (typeof window !== "undefined" && window.location && window.location.search) {
       const params = new URLSearchParams(window.location.search);
       const qDealer = params.get("dealer");
-      if (qDealer && registry.LIST.includes(qDealer)) {
+      if (qDealer) {
         DEALER_NAME = qDealer;
+        isTelegramAuth = true;
       }
     }
 
-    if (!isPinAuthed) {
+    if (!isTelegramAuth && !isPinAuthed) {
       showPinModal();
       return;
     }
@@ -279,7 +280,7 @@ function showAccessDenied(identifier) {
 }
 
 function triggerHaptic(type = "light") {
-  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+  if (typeof window !== "undefined" && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
     try {
       if (type === "medium") window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
       else if (type === "heavy") window.Telegram.WebApp.HapticFeedback.impactOccurred("heavy");
@@ -289,39 +290,108 @@ function triggerHaptic(type = "light") {
   }
 }
 
+// Динамическое переключение видимости структур по формату турнира
+// Динамическое переключение видимости структур по формату турнира
+function updateStructureVisibilityForFormat(format) {
+  const classicCard = document.getElementById("struct-card-classic");
+  const proCard = document.getElementById("struct-card-pro");
+  const mttCard = document.getElementById("struct-card-mtt");
+
+  const isMtt = (format === "MTT");
+
+  if (isMtt) {
+    // Для МТТ: скрываем классику и про, показываем строго MTT Pro
+    if (classicCard) {
+      classicCard.style.display = "none";
+      if (classicCard.classList && typeof classicCard.classList.add === "function") {
+        classicCard.classList.add("hidden");
+      }
+    }
+    if (proCard) {
+      proCard.style.display = "none";
+      if (proCard.classList && typeof proCard.classList.add === "function") {
+        proCard.classList.add("hidden");
+      }
+    }
+    if (mttCard) {
+      mttCard.style.display = "flex";
+      if (mttCard.classList) {
+        if (typeof mttCard.classList.remove === "function") mttCard.classList.remove("hidden");
+        if (typeof mttCard.classList.add === "function") mttCard.classList.add("active", "locked");
+      }
+    }
+    SELECTED_STRUCT = "MTT_PRO_5000";
+  } else {
+    // Для SnG и Mystery: скрываем MTT Pro, показываем Классику и Про
+    if (mttCard) {
+      mttCard.style.display = "none";
+      if (mttCard.classList) {
+        if (typeof mttCard.classList.add === "function") mttCard.classList.add("hidden");
+        if (typeof mttCard.classList.remove === "function") mttCard.classList.remove("active", "locked");
+      }
+    }
+    if (classicCard) {
+      classicCard.style.display = "flex";
+      if (classicCard.classList && typeof classicCard.classList.remove === "function") {
+        classicCard.classList.remove("hidden");
+      }
+    }
+    if (proCard) {
+      proCard.style.display = "flex";
+      if (proCard.classList && typeof proCard.classList.remove === "function") {
+        proCard.classList.remove("hidden");
+      }
+    }
+
+    if (SELECTED_STRUCT === "MTT_PRO_5000" || !SELECTED_STRUCT) {
+      SELECTED_STRUCT = "SNG_STANDARD";
+    }
+
+    if (classicCard && proCard) {
+      if (classicCard.classList && typeof classicCard.classList.toggle === "function") {
+        classicCard.classList.toggle("active", SELECTED_STRUCT === "SNG_DEEP_1500");
+      }
+      if (proCard.classList && typeof proCard.classList.toggle === "function") {
+        proCard.classList.toggle("active", SELECTED_STRUCT === "SNG_STANDARD");
+      }
+    }
+  }
+
+  const table = getMyTable();
+  if (table) {
+    table.format = format;
+    table.structKey = SELECTED_STRUCT;
+  }
+}
+
 // Инициализация селекторов формата и структуры
 function initPillSelectors() {
   const formatPills = document.querySelectorAll("#format-pills .pill");
   const mttSetupBlock = document.getElementById("mtt-setup-block");
+
+  // Инициализируем правильное состояние при старте
+  updateStructureVisibilityForFormat(SELECTED_FORMAT);
 
   formatPills.forEach(pill => {
     pill.addEventListener("click", () => {
       formatPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
       SELECTED_FORMAT = pill.dataset.format;
+      const table = getMyTable();
+      table.format = SELECTED_FORMAT;
+
+      // Обновляем видимость карточек структур
+      updateStructureVisibilityForFormat(SELECTED_FORMAT);
 
       // Показ / скрытие блока параметров МТТ
       if (SELECTED_FORMAT === "MTT") {
         if (mttSetupBlock) mttSetupBlock.style.display = "flex";
-        // Автоматически переключаем структуру на MTT_PRO_5000
-        const mttCard = document.getElementById("struct-card-mtt");
-        if (mttCard) {
-          document.querySelectorAll("#struct-pills .pill").forEach(p => p.classList.remove("active"));
-          mttCard.classList.add("active");
-          SELECTED_STRUCT = "MTT_PRO_5000";
-        }
       } else {
         if (mttSetupBlock) mttSetupBlock.style.display = "none";
-        if (SELECTED_STRUCT === "MTT_PRO_5000") {
-          const defaultPill = document.querySelector('#struct-pills .pill[data-struct="SNG_STANDARD"]') || document.querySelector("#struct-pills .pill");
-          if (defaultPill) {
-            document.querySelectorAll("#struct-pills .pill").forEach(p => p.classList.remove("active"));
-            defaultPill.classList.add("active");
-            SELECTED_STRUCT = defaultPill.dataset.struct || "SNG_STANDARD";
-          }
-        }
       }
       triggerHaptic("light");
+      saveState();
+      renderDealerView();
     });
   });
 
@@ -334,10 +404,21 @@ function initPillSelectors() {
   }
   structPills.forEach(pill => {
     pill.addEventListener("click", () => {
+      if (pill.classList.contains("locked")) return;
+      const targetStruct = pill.dataset.struct;
+      const allowed = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.getAllowedStructuresForFormat)
+        ? POKER_CONFIG.getAllowedStructuresForFormat(SELECTED_FORMAT)
+        : null;
+      if (allowed && !allowed.includes(targetStruct)) return;
+
       structPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
-      SELECTED_STRUCT = pill.dataset.struct;
+      SELECTED_STRUCT = targetStruct;
+      const table = getMyTable();
+      table.structKey = SELECTED_STRUCT;
+      saveState();
       triggerHaptic("light");
+      renderDealerView();
     });
   });
 
@@ -602,6 +683,35 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
   }
 }
 
+function isTableStale(table) {
+  if (!table) return true;
+  if (table.dissolved) return true;
+  const now = Date.now();
+  const TWO_HOURS_MS = 2 * 3600 * 1000;
+
+  // Активные перерывы никогда не считаются устаревшими
+  if (table.isBreakActive && table.breakEndsAt && table.breakEndsAt > now) return false;
+  if (table.isPostGameBreak && table.nextGameAt && (now - table.nextGameAt < 3600 * 1000)) return false;
+
+  if (table.status === "running" || table.status === "paused") {
+    const activityTs = table.startedAt || table.createdAt || 0;
+    if (activityTs > 0 && (now - activityTs > 3.5 * 3600 * 1000)) return true;
+    return false;
+  }
+
+  if (table.status === "ready" || table.status === "lobby") {
+    const lobbyTs = table.createdAt || table.startedAt || 0;
+    if (lobbyTs > 0 && (now - lobbyTs > TWO_HOURS_MS)) return true;
+    return false;
+  }
+
+  if (table.status === "idle" || table.status === "finished") {
+    return true;
+  }
+
+  return false;
+}
+
 function getMyTable() {
   if (!TABLES_STATE[DEALER_ID]) {
     TABLES_STATE[DEALER_ID] = {
@@ -698,6 +808,15 @@ function openStructurePreview(structKey) {
     tbodyEl.innerHTML = html;
   }
 
+  const chooseBtn = document.getElementById("btn-choose-struct");
+  if (chooseBtn) {
+    const allowed = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.getAllowedStructuresForFormat)
+      ? POKER_CONFIG.getAllowedStructuresForFormat(SELECTED_FORMAT)
+      : null;
+    const canChoose = Boolean(allowed && allowed.includes(CURRENT_PREVIEW_STRUCT) && SELECTED_FORMAT !== "MTT");
+    chooseBtn.style.display = canChoose ? "flex" : "none";
+  }
+
   if (backdrop) backdrop.style.display = "block";
   if (sheet) sheet.style.display = "flex";
   triggerHaptic("medium");
@@ -712,17 +831,22 @@ function closeStructurePreview() {
 }
 
 function applyPreviewedStructure() {
-  SELECTED_STRUCT = CURRENT_PREVIEW_STRUCT || "SNG_DEEP_1500";
-  const structPills = document.querySelectorAll("#struct-pills .pill");
-  structPills.forEach(p => {
-    if (p.dataset.struct === SELECTED_STRUCT) {
-      p.classList.add("active");
-    } else {
-      p.classList.remove("active");
-    }
-  });
+  const targetStruct = CURRENT_PREVIEW_STRUCT || "SNG_DEEP_1500";
+  const allowed = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.getAllowedStructuresForFormat)
+    ? POKER_CONFIG.getAllowedStructuresForFormat(SELECTED_FORMAT)
+    : null;
+  if (allowed && !allowed.includes(targetStruct)) {
+    closeStructurePreview();
+    return;
+  }
+  SELECTED_STRUCT = targetStruct;
+  const table = getMyTable();
+  table.structKey = SELECTED_STRUCT;
+  saveState();
+  updateStructureVisibilityForFormat(SELECTED_FORMAT);
   closeStructurePreview();
   triggerHaptic("success");
+  renderDealerView();
 }
 
 // 1. Старт игры
@@ -779,7 +903,7 @@ function startTable() {
 function broadcastMttStartToSatellites(startedAt, levelEndsAt, durationSec, structKey) {
   const satelliteKeys = Object.keys(TABLES_STATE).filter(k => {
     const t = TABLES_STATE[k];
-    return t && t.id !== DEALER_ID && t.format === "MTT" && !t.dissolved && (t.status === "ready" || t.status === "idle" || t.status === "lobby");
+    return t && t.id !== DEALER_ID && t.format === "MTT" && !t.dissolved && !isTableStale(t) && (t.status === "ready");
   });
 
   satelliteKeys.forEach(satKey => {
@@ -853,6 +977,7 @@ function openMttLobby() {
   table.levelIndex = 0;
   table.startedAt = null;
   table.levelEndsAt = null;
+  table.createdAt = Date.now();
   table.elapsedBeforePause = 0;
   table.colorUpDone = false;
   table.isColorUpActive = false;
@@ -873,6 +998,45 @@ function cancelMttLobby() {
   renderDealerView();
 }
 
+// Ручное отключение стола/сателлита головным ведущим
+function kickSatelliteTable(targetKey) {
+  if (!targetKey) return;
+  triggerHaptic("heavy");
+
+  if (TABLES_STATE[targetKey]) {
+    TABLES_STATE[targetKey].status = "idle";
+    TABLES_STATE[targetKey].format = "SnG";
+    TABLES_STATE[targetKey].isMttMaster = false;
+    TABLES_STATE[targetKey].dissolved = true;
+  }
+
+  const patchObj = {
+    status: "idle",
+    format: "SnG",
+    isMttMaster: false,
+    dissolved: true
+  };
+
+  if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+    try {
+      firebase.database().ref("atmosphere/tables/" + encodeURIComponent(targetKey)).update(patchObj);
+    } catch (e) {}
+  }
+
+  const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+    ? POKER_CONFIG.FIREBASE_DB_URL
+    : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+  if (typeof fetch === "function") {
+    fetch(`${dbUrl}/atmosphere/tables/${encodeURIComponent(targetKey)}.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patchObj)
+    }).catch(() => {});
+  }
+
+  renderDealerView();
+}
+
 // Универсальная трансляция состояния мастер-таймера всем активным сателлитам турнира
 function broadcastMttMasterState(patchObj) {
   const myTable = getMyTable();
@@ -880,7 +1044,7 @@ function broadcastMttMasterState(patchObj) {
 
   const satelliteKeys = Object.keys(TABLES_STATE).filter(k => {
     const t = TABLES_STATE[k];
-    return t && t.id !== DEALER_ID && t.format === "MTT" && !t.dissolved && (t.status === "running" || t.status === "paused" || t.status === "ready" || t.status === "lobby");
+    return t && t.id !== DEALER_ID && t.format === "MTT" && !t.dissolved && !isTableStale(t) && (t.status === "running" || t.status === "paused");
   });
 
   satelliteKeys.forEach(satKey => {
@@ -1721,7 +1885,9 @@ function renderMttMasterLobby() {
   if (!listEl) return;
 
   const myTable = getMyTable();
-  const tables = Object.values(TABLES_STATE).filter(t => t && t.format === "MTT" && !t.dissolved);
+  const tables = Object.values(TABLES_STATE).filter(t => 
+    t && t.format === "MTT" && !t.dissolved && !isTableStale(t) && (t.status === "ready" || t.status === "lobby" || t.status === "running" || t.status === "paused")
+  );
 
   // Собираем список столов (текущий стол гарантированно первый)
   const allMtt = tables.filter(t => t.id !== DEALER_ID);
@@ -1737,13 +1903,17 @@ function renderMttMasterLobby() {
     totalPlayers += count;
 
     let statusPill = "";
+    let kickBtnHtml = "";
     if (isMaster) {
       statusPill = `<span class="lobby-table-status-pill ready">Головной стол</span>`;
-    } else if (t.status === "ready") {
-      statusPill = `<span class="lobby-table-status-pill ready">Готов к игре</span>`;
     } else {
-      statusPill = `<span class="lobby-table-status-pill waiting">Настраивает...</span>`;
-      allSatellitesReady = false;
+      kickBtnHtml = `<button type="button" class="btn-kick-satellite" onclick="kickSatelliteTable('${t.id}'); event.stopPropagation();" title="Отключить стол от турнира">✕ Отключить</button>`;
+      if (t.status === "ready") {
+        statusPill = `<span class="lobby-table-status-pill ready">Готов к игре</span>`;
+      } else {
+        statusPill = `<span class="lobby-table-status-pill waiting">Настраивает...</span>`;
+        allSatellitesReady = false;
+      }
     }
 
     html += `
@@ -1755,6 +1925,7 @@ function renderMttMasterLobby() {
         <div class="lobby-table-meta">
           <span class="lobby-table-players">${count} игр.</span>
           ${statusPill}
+          ${kickBtnHtml}
         </div>
       </div>
     `;
@@ -1784,13 +1955,43 @@ function renderMttMasterLobby() {
 function renderDealerView() {
   const table = getMyTable();
 
+  // Если стол был расформирован / отключен главным ведущим
+  if (table.dissolved) {
+    table.dissolved = false;
+    table.status = "idle";
+    table.format = "SnG";
+    table.isMttMaster = false;
+    SELECTED_FORMAT = "SnG";
+    updateStructureVisibilityForFormat("SnG");
+    saveState();
+  }
+
+  // Синхронизация формата и видимости структур при настройке
+  if (table.status === "idle" || !table.status || table.status === "lobby" || table.status === "ready") {
+    const activeFormat = SELECTED_FORMAT || table.format || "SnG";
+    table.format = activeFormat;
+    updateStructureVisibilityForFormat(activeFormat);
+    if (typeof document !== "undefined" && typeof document.querySelectorAll === "function") {
+      const formatPills = document.querySelectorAll("#format-pills .pill");
+      if (formatPills && formatPills.length > 0) {
+        formatPills.forEach(p => {
+          if (p.classList && typeof p.classList.toggle === "function") {
+            p.classList.toggle("active", p.dataset.format === activeFormat);
+          }
+        });
+      }
+    }
+  }
+
   // Синхронизация сателлитного стола с головным столом в режиме МТТ
   let masterTable = null;
   if (table.format === "MTT" && !table.isMttMaster) {
-    masterTable = Object.values(TABLES_STATE).find(t => t && t.format === "MTT" && t.isMttMaster && t.id !== table.id && (t.status === "running" || t.status === "paused"));
+    masterTable = Object.values(TABLES_STATE).find(t => 
+      t && t.format === "MTT" && t.isMttMaster && t.id !== table.id && !isTableStale(t) && (t.status === "running" || t.status === "paused")
+    );
 
-    // Если сателлит ожидает старта ("ready" или "idle"), он синхронизируется только когда master начинает турнир ("running" или "paused")
-    const canSync = (table.status === "ready" || table.status === "idle") ? Boolean(masterTable && (masterTable.status === "running" || masterTable.status === "paused")) : Boolean(masterTable);
+    // Сателлит синхронизируется с часами и статусом Master стола, если турнир запущен (running/paused)
+    const canSync = Boolean(masterTable && (masterTable.status === "running" || masterTable.status === "paused"));
 
     if (masterTable && canSync) {
       table.status = masterTable.status;
@@ -1906,7 +2107,7 @@ function renderDealerView() {
     // Расчет строгих 9-max порогов для объединения столов
     const activeMttTables = Object.keys(TABLES_STATE)
       .map(k => TABLES_STATE[k])
-      .filter(t => t && t.format === "MTT" && (t.status === "running" || t.status === "paused") && !t.dissolved);
+      .filter(t => t && t.format === "MTT" && (t.status === "running" || t.status === "paused") && !t.dissolved && !isTableStale(t));
 
     // Гарантируем присутствие текущего стола в расчете
     if (!activeMttTables.some(t => t.id === (table.id || DEALER_ID))) {
@@ -2282,6 +2483,9 @@ if (typeof module !== "undefined" && module.exports) {
     cancelSatelliteReady,
     openMttLobby,
     cancelMttLobby,
+    kickSatelliteTable,
+    isTableStale,
+    updateStructureVisibilityForFormat,
     broadcastMttMasterState,
     syncTargetTableLateEntry,
     fetchTablesRest,

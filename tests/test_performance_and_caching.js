@@ -21,7 +21,7 @@ console.log("⚡ Тестирование оптимизаций произво�
 console.log("[1] Проверка конфигурации и стратегий кэширования sw.js:");
 const swCode = fs.readFileSync(path.join(__dirname, "../sw.js"), "utf8");
 
-assert(swCode.includes("const CACHE = 'atmos-v10'") || swCode.includes("const CACHE = 'atmos-v17'"), "sw.js должен использовать актуальную версию кэша atmos-v17");
+assert(swCode.includes("const CACHE = 'atmos-v10'") || swCode.includes("const CACHE = 'atmos-v17'") || swCode.includes("const CACHE = 'atmos-v18'"), "sw.js должен использовать актуальную версию кэша atmos-v18");
 assert(swCode.includes("staleWhileRevalidate") || swCode.includes("networkFirst"), "sw.js должен реализовывать стратегию Stale-While-Revalidate или Network-First");
 assert(swCode.includes("/tv") && swCode.includes("/dealer"), "sw.js должен прекэшировать ТВ и пульт дилера");
 assert(swCode.includes("firebasedatabase.app"), "sw.js обязан исключать запросы Firebase из кэша (Network-Only)");

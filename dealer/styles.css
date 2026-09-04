@@ -2181,3 +2181,42 @@ body {
   transform: scale(0.98);
 }
 
+/* Кнопка отключения стола / сателлита в лобби */
+.btn-kick-satellite {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-kick-satellite:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.btn-kick-satellite:active {
+  transform: scale(0.95);
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.struct-card.locked {
+  border-color: rgba(217, 119, 6, 0.5);
+  background: rgba(217, 119, 6, 0.08);
+  cursor: default;
+}
+
+.struct-card.hidden {
+  display: none !important;
+}
+

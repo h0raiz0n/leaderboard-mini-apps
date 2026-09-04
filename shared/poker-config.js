@@ -161,6 +161,19 @@ const POKER_CONFIG = {
       id: "1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA",
       viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA/viewform"
     }
+  },
+
+  // Допустимые структуры по форматам
+  FORMAT_STRUCTURES: {
+    SnG: ["SNG_DEEP_1500", "SNG_STANDARD"],
+    Mystery: ["SNG_DEEP_1500", "SNG_STANDARD"],
+    MTT: ["MTT_PRO_5000"]
+  },
+
+  getAllowedStructuresForFormat: function(format) {
+    if (format === "MTT") return ["MTT_PRO_5000"];
+    if (format === "Mystery") return ["SNG_DEEP_1500", "SNG_STANDARD"];
+    return ["SNG_DEEP_1500", "SNG_STANDARD"];
   }
 };
 

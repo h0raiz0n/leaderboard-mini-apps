@@ -861,6 +861,404 @@ function buildMttLobbyHtml(lobbyTables) {
   `;
 }
 
+// Проверка стола на устаревание (ghost / stale сессии)
+function isTableStale(t) {
+  if (!t) return true;
+  if (t.dissolved) return true;
+  const now = Date.now();
+  const TWO_HOURS_MS = 2 * 3600 * 1000;
+
+  // Активные перерывы никогда не считаются устаревшими
+  if (t.isBreakActive && t.breakEndsAt && t.breakEndsAt > now) return false;
+  if (t.isPostGameBreak && t.nextGameAt && (now - t.nextGameAt < 3600 * 1000)) return false;
+
+  if (t.status === "running" || t.status === "paused") {
+    const activityTs = t.startedAt || t.createdAt || 0;
+    if (activityTs > 0 && (now - activityTs > 3.5 * 3600 * 1000)) return true;
+    return false;
+  }
+
+  if (t.status === "ready" || t.status === "lobby") {
+    const lobbyTs = t.createdAt || t.startedAt || 0;
+    if (lobbyTs > 0 && (now - lobbyTs > TWO_HOURS_MS)) return true;
+    return false;
+  }
+
+  if (t.status === "idle" || t.status === "finished") {
+    return true;
+  }
+
+  return false;
+}
+
+// Генерация специализированной разметки Cinema Deck для МТТ
+function buildMttCinemaDeckHtml(timingTable, activeMttTables) {
+  let totalPlayers = 0;
+  let totalStarting = 0;
+  activeMttTables.forEach(t => {
+    totalPlayers += (t.playersCount !== undefined ? t.playersCount : 9);
+    totalStarting += (t.initialPlayers !== undefined ? t.initialPlayers : 9);
+  });
+
+  const stack = 5000;
+  const totalChips = (totalStarting || 9) * stack;
+  const avgStack = totalPlayers > 0 ? Math.round(totalChips / totalPlayers) : stack;
+  const structure = getTableStructure(timingTable);
+  const maxIdx = structure.length ? structure.length - 1 : 0;
+  const safeIndex = Math.min(Math.max(0, timingTable.levelIndex || 0), maxIdx);
+  const isFinalLevel = (safeIndex >= maxIdx);
+  const currentLvl = structure[safeIndex] || structure[0];
+  const nextLvl = isFinalLevel ? null : (structure[safeIndex + 1] || null);
+  const currentBb = currentLvl.bb || 50;
+  const avgStackBb = Math.round(avgStack / currentBb);
+
+  const time = calculateTableTime(timingTable, isFinalLevel);
+  const now = Date.now();
+
+  const isTimedPause = (timingTable.status === "paused" && timingTable.pauseEndsAt && timingTable.pauseEndsAt > now);
+  const isConsolidationBreak = Boolean(timingTable.isBreakActive && timingTable.breakEndsAt && timingTable.breakEndsAt > now);
+
+  let displayFormattedTime = time.formatted;
+  const duration = timingTable.durationSec || 600;
+  let progressPercent = 100;
+  if (isConsolidationBreak) {
+    const bRem = Math.max(0, Math.floor((timingTable.breakEndsAt - now) / 1000));
+    const bMin = Math.floor(bRem / 60);
+    const bSec = bRem % 60;
+    displayFormattedTime = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+  } else if (isTimedPause) {
+    const pRem = Math.max(0, Math.floor((timingTable.pauseEndsAt - now) / 1000));
+    const pMin = Math.floor(pRem / 60);
+    const pSec = pRem % 60;
+    displayFormattedTime = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
+    const pTotal = timingTable.pauseTotalSec || 120;
+    progressPercent = Math.max(0, Math.min(100, (pRem / pTotal) * 100));
+  } else {
+    progressPercent = Math.max(0, Math.min(100, (time.remaining / duration) * 100));
+  }
+
+  let digitsClass = "mtt-hero-digits";
+  if (isConsolidationBreak || isTimedPause) digitsClass += " state-break";
+  else if (time.isAlert) digitsClass += " state-alert";
+  else if (timingTable.status === "paused") digitsClass += " state-paused";
+
+  let subtext = "Идёт уровень";
+  if (isConsolidationBreak) subtext = "☕ Перерыв 15 минут • Объединение столов";
+  else if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
+  else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
+  else if (timingTable.status === "paused") subtext = "Пауза";
+  else if (isFinalLevel) subtext = "Блайнды зафиксированы";
+  else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
+
+  const roundText = isConsolidationBreak ? "ПЕРЕРЫВ 15 МИН" : (timingTable.isColorUpActive && isTimedPause ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : `УРОВЕНЬ ${currentLvl.level}`)));
+  const nextBlindsStr = nextLvl ? `${nextLvl.sb.toLocaleString("ru-RU")} / ${nextLvl.bb.toLocaleString("ru-RU")}${nextLvl.ante > 0 ? ` (АНТЕ ${nextLvl.ante.toLocaleString("ru-RU")})` : ""}` : "—";
+  const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);
+
+  let bannerHtml = "";
+  let maxT = null;
+  let minT = null;
+  let delta = 0;
+  if (isConsolidationBreak) {
+    bannerHtml = `<div class="mtt-break-ticker">☕ <b>ПЕРЕРЫВ 15 МИНУТ:</b> Объединение столов. Пересадка участников.</div>`;
+  } else if (activeMttTables.length >= 2) {
+    maxT = activeMttTables[0];
+    minT = activeMttTables[0];
+    activeMttTables.forEach(t => {
+      const c = t.playersCount !== undefined ? t.playersCount : 9;
+      if (c > (maxT.playersCount !== undefined ? maxT.playersCount : 9)) maxT = t;
+      if (c < (minT.playersCount !== undefined ? minT.playersCount : 9)) minT = t;
+    });
+    delta = (maxT.playersCount !== undefined ? maxT.playersCount : 9) - (minT.playersCount !== undefined ? minT.playersCount : 9);
+    if (delta >= 2) {
+      bannerHtml = `<div class="mtt-rebalance-ticker">⚠️ <b>РЕБАЛАНС СТОЛОВ:</b> Пересадка игрока со стола ${maxT.dealerName || "Стол 1"} за стол ${minT.dealerName || "Стол 2"}</div>`;
+    }
+  }
+
+  let dockChipsHtml = "";
+  activeMttTables.forEach(t => {
+    const isMaster = Boolean(t.isMttMaster);
+    const count = t.playersCount !== undefined ? t.playersCount : 9;
+    let rebalanceFlagHtml = "";
+    if (delta >= 2 && maxT && minT) {
+      if (t === maxT || t.id === maxT.id) {
+        rebalanceFlagHtml = `<span class="table-rebalance-flag donor">Отдает игрока</span>`;
+      } else if (t === minT || t.id === minT.id) {
+        rebalanceFlagHtml = `<span class="table-rebalance-flag receiver">Принимает игрока</span>`;
+      }
+    }
+    const roleClass = isMaster ? "master" : "satellite";
+    dockChipsHtml += `
+      <div class="dock-table-chip ${isMaster ? "is-master" : ""}" id="dock-chip-${t.id || t.dealerName}">
+        <div class="dock-table-head">
+          <span class="dock-table-role mtt-role-pill ${roleClass}">${isMaster ? "★ Master (Главный)" : "● Сателлит"}</span>
+          <span class="dock-dealer-name">${t.dealerName || "Стол"}</span>
+          ${rebalanceFlagHtml}
+        </div>
+        <div class="dock-table-body">
+          <span class="dock-players-count">👥 <b>${count}</b> игр.</span>
+        </div>
+      </div>
+    `;
+  });
+
+  return `
+    <div class="mtt-cinema-deck" id="mtt-cinema-deck">
+      <div class="mtt-telemetry-hud mtt-top-bar">
+        <div class="telemetry-card">
+          <span class="telemetry-lbl">Осталось игроков</span>
+          <div class="telemetry-val" id="mtt-val-players">
+            <span class="val-current">${totalPlayers}</span>
+            <span class="val-sub">/ ${totalStarting}</span>
+          </div>
+        </div>
+        <div class="telemetry-card">
+          <span class="telemetry-lbl">Банк фишек</span>
+          <div class="telemetry-val cyan" id="mtt-val-chips">${totalChips.toLocaleString("ru-RU")}</div>
+        </div>
+        <div class="telemetry-card highlight">
+          <span class="telemetry-lbl">Средний стек</span>
+          <div class="telemetry-val gold" id="mtt-val-avg">
+            <span class="val-chips">${avgStack.toLocaleString("ru-RU")}</span>
+            <span class="val-bb">(${avgStackBb} BB)</span>
+          </div>
+        </div>
+        <div class="telemetry-card">
+          <span class="telemetry-lbl">Столов в игре</span>
+          <div class="telemetry-val" id="mtt-val-tables">${activeMttTables.length}</div>
+        </div>
+      </div>
+
+      <div class="mtt-deck-banner-wrap" id="mtt-deck-banner">${bannerHtml}</div>
+
+      <div class="mtt-hero-center">
+        <div class="mtt-round-badge" id="mtt-deck-round">${roundText}</div>
+        <div class="mtt-digits-wrap">
+          <div class="${digitsClass}" id="mtt-deck-digits">${displayFormattedTime}</div>
+        </div>
+        <div class="mtt-deck-rail">
+          <div class="mtt-deck-rail-fill ${time.isAlert && !isTimedPause && !isConsolidationBreak ? "is-warning" : ""}" id="mtt-deck-rail-fill" style="width: ${progressPercent.toFixed(1)}%;"></div>
+        </div>
+        <div class="mtt-subtext" id="mtt-deck-subtext">${subtext}</div>
+      </div>
+
+      <div class="mtt-blinds-deck">
+        <div class="mtt-blinds-box current">
+          <span class="deck-lbl">Текущие блайнды</span>
+          <div class="deck-blinds-val" id="mtt-deck-current-blinds">
+            ${currentLvl.sb.toLocaleString("ru-RU")} / ${currentLvl.bb.toLocaleString("ru-RU")}
+            ${currentLvl.ante > 0 ? `<span class="deck-bba-badge">BBA ${currentLvl.ante.toLocaleString("ru-RU")}</span>` : ""}
+          </div>
+        </div>
+        <div class="mtt-blinds-box upcoming">
+          <span class="deck-lbl">Следующий уровень</span>
+          <div class="deck-upcoming-val" id="mtt-deck-next-blinds">${nextBlindsStr}</div>
+          <div class="deck-milestone-sub" id="mtt-deck-milestone">${milestoneText}</div>
+        </div>
+      </div>
+
+      <div class="mtt-tables-dock mtt-tables-deck" id="mtt-tables-dock" data-deck-tables="${activeMttTables.length}">
+        ${dockChipsHtml}
+      </div>
+    </div>
+  `;
+}
+
+// Высокопроизводительный DOM-патчинг Cinema Deck для 60 FPS
+function patchMttCinemaDeck(deckEl, timingTable, activeMttTables, time, currentLvl, nextLvl, structure, safeIndex, isFinalLevel) {
+  const now = Date.now();
+  let totalPlayers = 0;
+  let totalStarting = 0;
+  activeMttTables.forEach(t => {
+    totalPlayers += (t.playersCount !== undefined ? t.playersCount : 9);
+    totalStarting += (t.initialPlayers !== undefined ? t.initialPlayers : 9);
+  });
+
+  const stack = 5000;
+  const totalChips = (totalStarting || 9) * stack;
+  const avgStack = totalPlayers > 0 ? Math.round(totalChips / totalPlayers) : stack;
+  const currentBb = currentLvl.bb || 50;
+  const avgStackBb = Math.round(avgStack / currentBb);
+
+  const playersEl = document.getElementById("mtt-val-players") || document.getElementById("mtt-live-players");
+  if (playersEl) {
+    const pStr = `<span class="val-current">${totalPlayers}</span><span class="val-sub">/ ${totalStarting}</span>`;
+    if (playersEl.innerHTML !== pStr) playersEl.innerHTML = pStr;
+  }
+
+  const chipsEl = document.getElementById("mtt-val-chips") || document.getElementById("mtt-live-chips");
+  const chipsStr = totalChips.toLocaleString("ru-RU");
+  if (chipsEl && chipsEl.textContent !== chipsStr) chipsEl.textContent = chipsStr;
+
+  const avgEl = document.getElementById("mtt-val-avg") || document.getElementById("mtt-live-avg");
+  if (avgEl) {
+    const avgStr = `<span class="val-chips">${avgStack.toLocaleString("ru-RU")}</span><span class="val-bb">(${avgStackBb} BB)</span>`;
+    if (avgEl.innerHTML !== avgStr) avgEl.innerHTML = avgStr;
+  }
+
+  const tablesEl = document.getElementById("mtt-val-tables") || document.getElementById("mtt-live-tables");
+  const tablesCountStr = String(activeMttTables.length);
+  if (tablesEl && tablesEl.textContent !== tablesCountStr) tablesEl.textContent = tablesCountStr;
+
+  const isTimedPause = (timingTable.status === "paused" && timingTable.pauseEndsAt && timingTable.pauseEndsAt > now);
+  const isConsolidationBreak = Boolean(timingTable.isBreakActive && timingTable.breakEndsAt && timingTable.breakEndsAt > now);
+
+  let displayFormattedTime = time.formatted;
+  const duration = timingTable.durationSec || 600;
+  let progressPercent = 100;
+
+  if (isConsolidationBreak) {
+    const bRem = Math.max(0, Math.floor((timingTable.breakEndsAt - now) / 1000));
+    const bMin = Math.floor(bRem / 60);
+    const bSec = bRem % 60;
+    displayFormattedTime = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+  } else if (isTimedPause) {
+    const pRem = Math.max(0, Math.floor((timingTable.pauseEndsAt - now) / 1000));
+    const pMin = Math.floor(pRem / 60);
+    const pSec = pRem % 60;
+    displayFormattedTime = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
+    const pTotal = timingTable.pauseTotalSec || 120;
+    progressPercent = Math.max(0, Math.min(100, (pRem / pTotal) * 100));
+  } else {
+    progressPercent = Math.max(0, Math.min(100, (time.remaining / duration) * 100));
+  }
+
+  const digitsEl = document.getElementById("mtt-deck-digits");
+  if (digitsEl) {
+    if (digitsEl.textContent !== displayFormattedTime) digitsEl.textContent = displayFormattedTime;
+    digitsEl.className = "mtt-hero-digits" + (isConsolidationBreak || isTimedPause ? " state-break" : (time.isAlert ? " state-alert" : (timingTable.status === "paused" ? " state-paused" : "")));
+  }
+
+  const railFillEl = document.getElementById("mtt-deck-rail-fill");
+  if (railFillEl) {
+    railFillEl.style.width = `${progressPercent.toFixed(1)}%`;
+    if (railFillEl.classList && typeof railFillEl.classList.toggle === "function") {
+      railFillEl.classList.toggle("is-warning", Boolean(time.isAlert && !isTimedPause && !isConsolidationBreak));
+    }
+  }
+
+  let subtext = "Идёт уровень";
+  if (isConsolidationBreak) subtext = "☕ Перерыв 15 минут • Объединение столов";
+  else if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
+  else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
+  else if (timingTable.status === "paused") subtext = "Пауза";
+  else if (isFinalLevel) subtext = "Блайнды зафиксированы";
+  else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
+
+  const subtextEl = document.getElementById("mtt-deck-subtext");
+  if (subtextEl && subtextEl.textContent !== subtext) subtextEl.textContent = subtext;
+
+  const roundText = isConsolidationBreak ? "ПЕРЕРЫВ 15 МИН" : (timingTable.isColorUpActive && isTimedPause ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : `УРОВЕНЬ ${currentLvl.level}`)));
+  const roundEl = document.getElementById("mtt-deck-round");
+  if (roundEl && roundEl.textContent !== roundText) roundEl.textContent = roundText;
+
+  const currentBlindsEl = document.getElementById("mtt-deck-current-blinds");
+  if (currentBlindsEl) {
+    const anteHtml = currentLvl.ante > 0 ? `<span class="deck-bba-badge">BBA ${currentLvl.ante.toLocaleString("ru-RU")}</span>` : "";
+    const blindsStr = `${currentLvl.sb.toLocaleString("ru-RU")} / ${currentLvl.bb.toLocaleString("ru-RU")} ${anteHtml}`.trim();
+    if (currentBlindsEl.innerHTML.trim() !== blindsStr) currentBlindsEl.innerHTML = blindsStr;
+  }
+
+  const nextBlindsEl = document.getElementById("mtt-deck-next-blinds");
+  const nextBlindsStr = nextLvl ? `${nextLvl.sb.toLocaleString("ru-RU")} / ${nextLvl.bb.toLocaleString("ru-RU")}${nextLvl.ante > 0 ? ` (АНТЕ ${nextLvl.ante.toLocaleString("ru-RU")})` : ""}` : "—";
+  if (nextBlindsEl && nextBlindsEl.textContent !== nextBlindsStr) nextBlindsEl.textContent = nextBlindsStr;
+
+  const milestoneEl = document.getElementById("mtt-deck-milestone");
+  const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);
+  if (milestoneEl && milestoneEl.textContent !== milestoneText) milestoneEl.textContent = milestoneText;
+
+  // Патчим док столов
+  activeMttTables.forEach(t => {
+    const chip = document.getElementById(`dock-chip-${t.id || t.dealerName}`);
+    if (chip) {
+      const pCountEl = chip.querySelector(".dock-players-count");
+      const count = t.playersCount !== undefined ? t.playersCount : 9;
+      const expectedP = `👥 <b>${count}</b> игр.`;
+      if (pCountEl && pCountEl.innerHTML !== expectedP) {
+        pCountEl.innerHTML = expectedP;
+      }
+    }
+  });
+}
+
+function renderMttCinemaMode(viewport, activeMttTables, tableKeys) {
+  const masterMttTable = activeMttTables.find(t => t.isMttMaster) || activeMttTables[0];
+  const structure = getTableStructure(masterMttTable);
+  const now = Date.now();
+
+  // 1. Автопрогрессия уровней и Color-Up
+  if (masterMttTable.status === "running" && masterMttTable.levelEndsAt && now >= masterMttTable.levelEndsAt) {
+    const currentLevel = structure[masterMttTable.levelIndex] || structure[0];
+    const isColorUpLevel = (currentLevel.sb === 150 && currentLevel.bb === 300);
+
+    if (isColorUpLevel && !masterMttTable.colorUpDone) {
+      masterMttTable.colorUpDone = true;
+      masterMttTable.isColorUpActive = true;
+      masterMttTable.status = "paused";
+      masterMttTable.pauseEndsAt = now + (120 * 1000);
+      masterMttTable.pauseTotalSec = 120;
+      playTournamentChime();
+      syncTableAutoProgression(masterMttTable.id || "master", masterMttTable);
+    } else if (masterMttTable.levelIndex < structure.length - 1) {
+      masterMttTable.levelIndex += 1;
+      const nextLvl = structure[masterMttTable.levelIndex];
+      masterMttTable.durationSec = nextLvl.durationSec;
+      masterMttTable.remainingMs = nextLvl.durationSec * 1000;
+      masterMttTable.levelEndsAt = now + masterMttTable.remainingMs;
+      playTournamentChime();
+      syncTableAutoProgression(masterMttTable.id || "master", masterMttTable);
+    }
+  }
+
+  if (masterMttTable.isColorUpActive && masterMttTable.pauseEndsAt && now >= masterMttTable.pauseEndsAt) {
+    masterMttTable.isColorUpActive = false;
+    masterMttTable.pauseEndsAt = null;
+    masterMttTable.pauseTotalSec = null;
+    masterMttTable.status = "running";
+    if (masterMttTable.levelIndex < structure.length - 1) {
+      masterMttTable.levelIndex += 1;
+      const nextLvl = structure[masterMttTable.levelIndex];
+      masterMttTable.durationSec = nextLvl.durationSec;
+      masterMttTable.remainingMs = nextLvl.durationSec * 1000;
+      masterMttTable.levelEndsAt = now + masterMttTable.remainingMs;
+      playTournamentChime();
+      syncTableAutoProgression(masterMttTable.id || "master", masterMttTable);
+    }
+  }
+
+  const maxIdx = structure.length ? structure.length - 1 : 0;
+  const safeIndex = Math.min(Math.max(0, masterMttTable.levelIndex || 0), maxIdx);
+  const isFinalLevel = (safeIndex >= maxIdx);
+  const currentLvl = structure[safeIndex] || structure[0];
+  const nextLvl = isFinalLevel ? null : (structure[safeIndex + 1] || null);
+  const time = calculateTableTime(masterMttTable, isFinalLevel);
+
+  // 2. Звуковой 5-секундный отсчет
+  if (masterMttTable.status === "running" && time.remaining <= 5 && time.remaining >= 1 && !time.isOvertime) {
+    if (LAST_TICK_SECONDS["MTT_MASTER"] !== time.remaining) {
+      LAST_TICK_SECONDS["MTT_MASTER"] = time.remaining;
+      playCountdownTick(time.remaining);
+    }
+  } else if (time.remaining > 5 || time.remaining === 0) {
+    LAST_TICK_SECONDS["MTT_MASTER"] = 0;
+  }
+
+  const deckEl = document.getElementById("mtt-cinema-deck");
+  const mttSignature = `CINEMA:${activeMttTables.map(t => `${t.id || t.dealerName}`).sort().join(",")}`;
+
+  if (LAST_RENDERED_MODE !== "mtt_cinema" || !deckEl || LAST_RENDERED_SIGNATURE !== mttSignature) {
+    viewport.innerHTML = buildMttCinemaDeckHtml(masterMttTable, activeMttTables);
+    LAST_RENDERED_MODE = "mtt_cinema";
+    LAST_RENDERED_SIGNATURE = mttSignature;
+    const newDeckEl = document.getElementById("mtt-cinema-deck");
+    if (newDeckEl) {
+      patchMttCinemaDeck(newDeckEl, masterMttTable, activeMttTables, time, currentLvl, nextLvl, structure, safeIndex, isFinalLevel);
+    }
+    return;
+  }
+
+  patchMttCinemaDeck(deckEl, masterMttTable, activeMttTables, time, currentLvl, nextLvl, structure, safeIndex, isFinalLevel);
+}
+
 // =========================================================
 // ОСНОВНОЙ РЕНДЕРЕР: ВЫСОКОПРОИЗВОДИТЕЛЬНЫЙ DOM-PATCHING
 // =========================================================
@@ -872,10 +1270,7 @@ function renderTables() {
   
   const tableKeys = Object.keys(ACTIVE_TABLES).filter(k => {
     const t = ACTIVE_TABLES[k];
-    if (!t) return false;
-    const isStaleGame = t.startedAt && (Date.now() - t.startedAt > 3.5 * 3600 * 1000);
-    if (isStaleGame) return false;
-
+    if (!t || isTableStale(t)) return false;
     if (t.status === "running" || t.status === "paused") return true;
     if (t.isBreakActive && t.breakEndsAt && (t.breakEndsAt > Date.now())) return true;
     if (t.isPostGameBreak && t.nextGameAt && (Date.now() - t.nextGameAt < 3600 * 1000)) return true;
@@ -888,7 +1283,9 @@ function renderTables() {
   }
   
   // 1. Состояние ожидания сбора столов МТТ (Lobby Assembly Board)
-  const lobbyMttTables = Object.values(ACTIVE_TABLES).filter(t => t && t.format === "MTT" && !t.dissolved && (t.status === "lobby" || t.status === "ready" || t.status === "idle"));
+  const lobbyMttTables = Object.values(ACTIVE_TABLES).filter(t => 
+    t && t.format === "MTT" && !t.dissolved && !isTableStale(t) && (t.status === "lobby" || t.status === "ready")
+  );
 
   if (count === 0 && lobbyMttTables.length > 0) {
     if (viewport.classList && typeof viewport.classList.toggle === "function") {
@@ -929,19 +1326,28 @@ function renderTables() {
     return;
   }
   
-  // Анализ режима МТТ
+  // Анализ режима МТТ: Cinema Deck активируется, если запущен МТТ и все активные столы — МТТ
   const activeMttTables = tableKeys
     .map(k => ACTIVE_TABLES[k])
-    .filter(t => t && t.format === "MTT" && (t.status === "running" || t.status === "paused"));
+    .filter(t => t && t.format === "MTT" && (t.status === "running" || t.status === "paused") && !isTableStale(t));
 
-  const isMttMode = activeMttTables.length > 0;
-  const currentSignature = `${isMttMode ? "MTT" : "SNG"}:${tableKeys.slice(0, 4).sort().join(",")}`;
+  const isMttMode = activeMttTables.length > 0 && tableKeys.every(k => {
+    const t = ACTIVE_TABLES[k];
+    return t && t.format === "MTT";
+  });
 
   if (viewport.classList && typeof viewport.classList.toggle === "function") {
     viewport.classList.toggle("is-mtt-mode", isMttMode);
   }
 
-  // Проверяем: можно ли выполнить чистый DOM-Patching существующих карточек
+  // 3. Если запущен МТТ — рендерим единый Cinema Deck
+  if (isMttMode) {
+    renderMttCinemaMode(viewport, activeMttTables, tableKeys);
+    return;
+  }
+
+  // 4. Обычный режим SnG / Mystery (мульти-карточное табло)
+  const currentSignature = `SNG:${tableKeys.slice(0, 4).sort().join(",")}`;
   let canPatchDom = (LAST_RENDERED_MODE === "tables" && LAST_RENDERED_SIGNATURE === currentSignature);
   if (canPatchDom) {
     for (const key of tableKeys.slice(0, 4)) {
@@ -1242,6 +1648,10 @@ if (typeof module !== "undefined" && module.exports) {
     updateNetPingDisplay,
     initTvHotkeys,
     getTournamentMilestone,
-    buildMttLobbyHtml
+    buildMttLobbyHtml,
+    buildMttCinemaDeckHtml,
+    renderMttCinemaMode,
+    patchMttCinemaDeck,
+    isTableStale
   };
 }

@@ -2,7 +2,7 @@
    Кэширует HTML, CSS, JS, шрифты и данные API для мгновенного старта (0ms cold start).
    Динамические шины Firebase Realtime Database и Telegram исключены из кэша (Network-Only). */
 
-const CACHE = 'atmos-v17';
+const CACHE = 'atmos-v18';
 const API_PREFIX = 'https://script.google.com/macros/s/';
 const API_TTL = 120000; // 2 минуты
 
