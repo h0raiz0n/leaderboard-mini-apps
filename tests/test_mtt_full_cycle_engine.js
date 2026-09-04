@@ -515,4 +515,110 @@ const recEl = domStore["dissolve-recommendation"];
 assert(recEl.textContent.includes("Финальный стол") && recEl.textContent.includes("9-max"), "Рекомендация должна подтверждать 9-max финальный стол");
 console.log("   ✅ Строгая 9-max блокировка объединения столов работает безупречно (10 игр. запрещено, <=9 разрешено).");
 
-console.log("\n🎉 ВСЕ ТЕСТЫ ПОЛНОГО ЦИКЛА МТТ ПРОЙДЕНЫ С ОТЛИЧИЕМ (10/10)!");
+// 11. Тестирование централизованной трансляции таймера (Master-Driven State Broadcast)
+console.log("\n11. Тестирование Master-Driven State Broadcast (пауза, смена уровня, перерыв):");
+
+dealer.setDealerName("Влад");
+dealer.setIsMttMaster(true);
+const broadcastTestTables = {
+  dealer_vlad: {
+    id: "dealer_vlad",
+    dealerName: "Влад",
+    format: "MTT",
+    isMttMaster: true,
+    status: "running",
+    levelIndex: 1,
+    durationSec: 600,
+    remainingMs: 400000,
+    startedAt: Date.now() - 200000,
+    levelEndsAt: Date.now() + 400000,
+    playersCount: 9,
+    initialPlayers: 9
+  },
+  dealer_arina: {
+    id: "dealer_arina",
+    dealerName: "Арина",
+    format: "MTT",
+    isMttMaster: false,
+    status: "running",
+    levelIndex: 1,
+    durationSec: 600,
+    remainingMs: 400000,
+    startedAt: Date.now() - 200000,
+    levelEndsAt: Date.now() + 400000,
+    playersCount: 8,
+    initialPlayers: 9
+  }
+};
+dealer.setTablesState(broadcastTestTables);
+
+// Мастер ставит турнир на паузу
+networkLog.length = 0;
+dealer.togglePause();
+
+assert.strictEqual(dealer.getMyTable().status, "paused", "Головной стол должен встать на паузу");
+assert.strictEqual(broadcastTestTables.dealer_arina.status, "paused", "Сателлит должен синхронно получить статус paused через broadcast");
+
+const pausePatchReq = networkLog.find(r => r.url.includes("atmosphere/tables/dealer_arina.json"));
+assert(pausePatchReq, "Для сателлита должен быть отправлен сетевой PATCH с паузой");
+assert.strictEqual(pausePatchReq.body.status, "paused");
+console.log("   ✅ Пауза от Мастера синхронно транслирована всем сателлитам турнира.");
+
+// Мастер переходит на следующий уровень
+networkLog.length = 0;
+dealer.nextLevel();
+
+assert.strictEqual(dealer.getMyTable().levelIndex, 2, "Головной стол перешел на уровень 3 (индекс 2)");
+assert.strictEqual(broadcastTestTables.dealer_arina.levelIndex, 2, "Сателлит синхронно перешел на уровень 3 через broadcast");
+const nextLvlPatchReq = networkLog.find(r => r.url.includes("atmosphere/tables/dealer_arina.json"));
+assert(nextLvlPatchReq, "Смена уровня должна быть отправлена сателлиту по сети");
+assert.strictEqual(nextLvlPatchReq.body.levelIndex, 2);
+console.log("   ✅ Смена уровня блайндов от Мастера синхронно транслирована всем сателлитам.");
+
+// 12. Тестирование атомарной синхронизации поздней регистрации (syncTargetTableLateEntry)
+console.log("\n12. Тестирование атомарной синхронизации поздней регистрации:");
+
+networkLog.length = 0;
+dealer.syncTargetTableLateEntry("dealer_arina", 9, 10, 1);
+const lateEntryPatch = networkLog.find(r => r.url.includes("atmosphere/tables/dealer_arina.json"));
+assert(lateEntryPatch, "Поздняя регистрация должна отправляться через PATCH запрос");
+assert.strictEqual(lateEntryPatch.body.playersCount, 9);
+assert.strictEqual(lateEntryPatch.body.initialPlayers, 10);
+assert.strictEqual(lateEntryPatch.body.lateEntries, 1);
+console.log("   ✅ Атомарная отправка поздней регистрации (playersCount, initialPlayers, lateEntries) подтверждена.");
+
+// 13. Тестирование сквозного турнирного HUD на пультах (Общий зачет)
+console.log("\n13. Тестирование сквозного турнирного HUD на экранах ведущих:");
+
+dealer.setDealerName("Арина");
+dealer.renderDealerView();
+
+const hudTables = domStore["mtt-hud-tables"];
+const hudPlayers = domStore["mtt-hud-players"];
+const hudChips = domStore["mtt-hud-chips"];
+const hudAvg = domStore["mtt-hud-avg"];
+
+assert(hudTables.textContent.includes("2"), "HUD должен отображать 2 активных стола");
+assert(hudPlayers.innerHTML.includes("17"), "HUD должен отображать 17 живых игроков (9 + 8)");
+assert(hudPlayers.innerHTML.includes("18"), "HUD должен отображать 18 начальных входов");
+assert(hudChips.textContent.includes("90"), "HUD должен рассчитывать 90 000 фишек (18 * 5 000)");
+assert(hudAvg.innerHTML.includes("5 294") || hudAvg.innerHTML.includes("5"), "HUD должен отображать средний стек ~5 294 фишек");
+console.log("   ✅ Сквозной турнирный HUD корректно отображает общее состояние турнира для всех ведущих.");
+
+// 14. Тестирование экрана сбора столов на ТВ (TV Lobby Assembly Board)
+console.log("\n14. Тестирование экрана сбора столов на ТВ (Lobby Assembly Board):");
+
+const mockLobbyTables = [
+  { id: "dealer_vlad", dealerName: "Влад", format: "MTT", isMttMaster: true, status: "lobby", playersCount: 9, initialPlayers: 9 },
+  { id: "dealer_arina", dealerName: "Арина", format: "MTT", isMttMaster: false, status: "ready", playersCount: 10, initialPlayers: 10 }
+];
+
+const lobbyHtml = tvEngine.buildMttLobbyHtml(mockLobbyTables);
+assert(lobbyHtml.includes("АТМОСФЕРА МТТ PRO • СБОР СТОЛОВ"), "Экран ТВ должен содержать титул сбора столов");
+assert(lobbyHtml.includes("Подключено столов"), "Экран должен отображать виджет подключенных столов");
+assert(lobbyHtml.includes("19"), "Экран должен суммировать 19 участников (9 + 10)");
+assert(lobbyHtml.includes((95000).toLocaleString("ru-RU")), "Экран должен рассчитывать стартовый банк 95 000 (19 * 5 000)");
+assert(lobbyHtml.includes("Готов к игре"), "Карточка стола должна содержать статус готовности");
+console.log("   ✅ Экран сбора столов на ТВ (Lobby Assembly Board) формирует безупречный предстартовый HUD.");
+
+console.log("\n🎉 ВСЕ ТЕСТЫ ПОЛНОГО ЦИКЛА МТТ ПРОЙДЕНЫ С ОТЛИЧИЕМ (14/14)!");

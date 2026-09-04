@@ -355,6 +355,7 @@ function initPillSelectors() {
           : "Таймер этого стола синхронизируется с головным столом турнира.";
       }
       triggerHaptic("light");
+      renderDealerView();
     });
   });
 }
@@ -365,6 +366,10 @@ function initButtonListeners() {
   document.getElementById("btn-step")?.addEventListener("click", handleStepClick);
   document.getElementById("btn-reset")?.addEventListener("click", resetTable);
   document.getElementById("btn-finish")?.addEventListener("click", openFinishModal);
+  document.getElementById("btn-mtt-open-lobby")?.addEventListener("click", openMttLobby);
+  document.getElementById("btn-mtt-start-all")?.addEventListener("click", startTable);
+  document.getElementById("btn-mtt-cancel-lobby")?.addEventListener("click", cancelMttLobby);
+  document.getElementById("btn-satellite-ready")?.addEventListener("click", setSatelliteReady);
 }
 
 let LAST_FIREBASE_SYNC_TS = 0;
@@ -419,11 +424,12 @@ function initDataSource() {
         renderDealerView();
       });
       console.log("⚡ Пульт подключен к Firebase Realtime DB (europe-west1)");
-      return;
     } catch (err) {
       console.warn("Ошибка Firebase, переключение на локальный fallback:", err);
     }
   }
+
+  startRestPollingFallback();
 
   // Fallback для оффлайн разработки
   if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
@@ -455,6 +461,46 @@ function initDataSource() {
   if (typeof localStorage !== "undefined") {
     const saved = localStorage.getItem("atmosphere_tables");
     if (saved) TABLES_STATE = JSON.parse(saved);
+  }
+}
+
+let REST_POLL_INTERVAL = null;
+
+async function fetchTablesRest() {
+  try {
+    const start = Date.now();
+    const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+      ? POKER_CONFIG.FIREBASE_DB_URL
+      : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+    const res = await fetch(`${dbUrl}/atmosphere/tables.json`);
+    if (res.ok) {
+      const latency = Date.now() - start;
+      const data = await res.json();
+      if (data) {
+        const isPendingLocalSync = (typeof localStorage !== "undefined" && 
+          (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || localStorage.getItem("atmosphere_pending_sync") === "true"));
+        if (!isPendingLocalSync) {
+          TABLES_STATE = data;
+        } else {
+          TABLES_STATE = Object.assign({}, data, { [DEALER_ID]: TABLES_STATE[DEALER_ID] });
+        }
+        LAST_FIREBASE_SYNC_TS = Date.now();
+        updateDealerPingDisplay(latency);
+        renderDealerView();
+      }
+    }
+  } catch (e) {}
+}
+
+function startRestPollingFallback() {
+  if (REST_POLL_INTERVAL) return;
+  REST_POLL_INTERVAL = setInterval(() => {
+    if (Date.now() - LAST_FIREBASE_SYNC_TS > 3000) {
+      fetchTablesRest();
+    }
+  }, 2500);
+  if (REST_POLL_INTERVAL && typeof REST_POLL_INTERVAL.unref === "function") {
+    REST_POLL_INTERVAL.unref();
   }
 }
 
@@ -710,9 +756,9 @@ function startTable() {
 
   if (table.format === "MTT") {
     table.isMttMaster = (typeof IS_MTT_MASTER !== "undefined") ? IS_MTT_MASTER : true;
-    table.playersCount = MTT_SETUP_PLAYERS || 9;
-    table.initialPlayers = table.playersCount;
-    table.lateEntries = 0;
+    table.playersCount = table.playersCount || MTT_SETUP_PLAYERS || 9;
+    table.initialPlayers = table.initialPlayers || table.playersCount;
+    table.lateEntries = table.lateEntries || 0;
 
     // Головной стол синхронно запускает все подключенные сателлитные столы
     if (table.isMttMaster) {
@@ -733,7 +779,7 @@ function startTable() {
 function broadcastMttStartToSatellites(startedAt, levelEndsAt, durationSec, structKey) {
   const satelliteKeys = Object.keys(TABLES_STATE).filter(k => {
     const t = TABLES_STATE[k];
-    return t && t.id !== DEALER_ID && t.format === "MTT" && !t.dissolved && (t.status === "ready" || t.status === "idle");
+    return t && t.id !== DEALER_ID && t.format === "MTT" && !t.dissolved && (t.status === "ready" || t.status === "idle" || t.status === "lobby");
   });
 
   satelliteKeys.forEach(satKey => {
@@ -787,6 +833,76 @@ function broadcastMttStartToSatellites(startedAt, levelEndsAt, durationSec, stru
           colorUpDone: false,
           isColorUpActive: false
         })
+      }).catch(() => {});
+    }
+  });
+}
+
+// Открытие этапа сбора турнира (Lobby) головным столом
+function openMttLobby() {
+  triggerHaptic("success");
+  const table = getMyTable();
+  table.format = "MTT";
+  table.structKey = SELECTED_STRUCT || "MTT_PRO_5000";
+  table.isMttMaster = true;
+  table.status = "lobby";
+  table.playersCount = MTT_SETUP_PLAYERS || 9;
+  table.initialPlayers = table.playersCount;
+  table.lateEntries = 0;
+  table.dealerName = DEALER_NAME;
+  table.levelIndex = 0;
+  table.startedAt = null;
+  table.levelEndsAt = null;
+  table.elapsedBeforePause = 0;
+  table.colorUpDone = false;
+  table.isColorUpActive = false;
+  table.isBreakActive = false;
+  table.breakEndsAt = null;
+  table.isPostGameBreak = false;
+  table.nextGameAt = null;
+  saveState();
+  renderDealerView();
+}
+
+// Отмена сбора турнира
+function cancelMttLobby() {
+  triggerHaptic("light");
+  const table = getMyTable();
+  table.status = "idle";
+  saveState();
+  renderDealerView();
+}
+
+// Универсальная трансляция состояния мастер-таймера всем активным сателлитам турнира
+function broadcastMttMasterState(patchObj) {
+  const myTable = getMyTable();
+  if (myTable.format !== "MTT" || !myTable.isMttMaster) return;
+
+  const satelliteKeys = Object.keys(TABLES_STATE).filter(k => {
+    const t = TABLES_STATE[k];
+    return t && t.id !== DEALER_ID && t.format === "MTT" && !t.dissolved && (t.status === "running" || t.status === "paused" || t.status === "ready" || t.status === "lobby");
+  });
+
+  satelliteKeys.forEach(satKey => {
+    const satTable = TABLES_STATE[satKey];
+    if (satTable) {
+      Object.assign(satTable, patchObj);
+    }
+
+    if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+      try {
+        firebase.database().ref("atmosphere/tables/" + encodeURIComponent(satKey)).update(patchObj);
+      } catch (e) {}
+    }
+
+    const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+      ? POKER_CONFIG.FIREBASE_DB_URL
+      : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+    if (typeof fetch === "function") {
+      fetch(`${dbUrl}/atmosphere/tables/${encodeURIComponent(satKey)}.json`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patchObj)
       }).catch(() => {});
     }
   });
@@ -851,6 +967,21 @@ function togglePause() {
     table.levelEndsAt = now + remainingMs;
   }
   saveState();
+  if (table.format === "MTT" && table.isMttMaster) {
+    broadcastMttMasterState({
+      status: table.status,
+      remainingMs: table.remainingMs,
+      elapsedBeforePause: table.elapsedBeforePause,
+      startedAt: table.startedAt,
+      levelEndsAt: table.levelEndsAt,
+      pauseEndsAt: table.pauseEndsAt,
+      pauseTotalSec: table.pauseTotalSec,
+      isBreakActive: table.isBreakActive || false,
+      breakEndsAt: table.breakEndsAt || null,
+      breakDurationSec: table.breakDurationSec || null,
+      breakReason: table.breakReason || null
+    });
+  }
   renderDealerView();
 }
 
@@ -875,6 +1006,17 @@ function startTimedPause(seconds = 120) {
   table.pauseEndsAt = now + seconds * 1000;
   table.pauseTotalSec = seconds;
   saveState();
+  if (table.format === "MTT" && table.isMttMaster) {
+    broadcastMttMasterState({
+      status: "paused",
+      remainingMs: table.remainingMs,
+      elapsedBeforePause: table.elapsedBeforePause,
+      startedAt: null,
+      levelEndsAt: null,
+      pauseEndsAt: table.pauseEndsAt,
+      pauseTotalSec: table.pauseTotalSec
+    });
+  }
   renderDealerView();
 }
 
@@ -953,6 +1095,16 @@ function nextLevel() {
     table.startedAt = Date.now();
     table.levelEndsAt = Date.now() + (table.durationSec * 1000);
     saveState();
+    if (table.format === "MTT" && table.isMttMaster) {
+      broadcastMttMasterState({
+        levelIndex: table.levelIndex,
+        durationSec: table.durationSec,
+        remainingMs: table.remainingMs,
+        elapsedBeforePause: 0,
+        startedAt: table.startedAt,
+        levelEndsAt: table.levelEndsAt
+      });
+    }
     renderDealerView();
   }
 }
@@ -963,20 +1115,46 @@ function resetTable() {
   dismissStepToast();
   dismissFinishModal();
   const table = getMyTable();
+  const wasMttMaster = Boolean(table.format === "MTT" && table.isMttMaster);
   table.status = "idle";
   table.levelIndex = 0;
   table.startedAt = null;
   table.elapsedBeforePause = 0;
   table.colorUpDone = false;
   table.isColorUpActive = false;
+  table.remainingMs = null;
+  table.levelEndsAt = null;
   table.pauseEndsAt = null;
   table.pauseTotalSec = null;
   table.breakEndsAt = null;
   table.isBreakActive = false;
+  table.breakDurationSec = null;
+  table.breakReason = null;
   table.isPostGameBreak = false;
   table.nextGameAt = null;
   table.postGameBreakMinutes = null;
   saveState();
+  if (wasMttMaster) {
+    broadcastMttMasterState({
+      status: "idle",
+      levelIndex: 0,
+      startedAt: null,
+      levelEndsAt: null,
+      elapsedBeforePause: 0,
+      colorUpDone: false,
+      isColorUpActive: false,
+      remainingMs: null,
+      pauseEndsAt: null,
+      pauseTotalSec: null,
+      breakEndsAt: null,
+      isBreakActive: false,
+      breakDurationSec: null,
+      breakReason: null,
+      isPostGameBreak: false,
+      nextGameAt: null,
+      postGameBreakMinutes: null
+    });
+  }
   renderDealerView();
 }
 
@@ -1120,7 +1298,29 @@ function registerLateEntry() {
   table.initialPlayers = (table.initialPlayers || 9) + 1;
   table.lateEntries = (table.lateEntries || 0) + 1;
   saveState();
+  syncTargetTableLateEntry(table.id || DEALER_ID, table.playersCount, table.initialPlayers, table.lateEntries);
   renderDealerView();
+}
+
+// Атомарная синхронизация поздней регистрации в Firebase
+function syncTargetTableLateEntry(targetKey, playersCount, initialPlayers, lateEntries) {
+  if (!targetKey) return;
+  const patchObj = { playersCount, initialPlayers, lateEntries };
+  if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+    try {
+      firebase.database().ref("atmosphere/tables/" + encodeURIComponent(targetKey)).update(patchObj);
+    } catch (e) {}
+  }
+  const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+    ? POKER_CONFIG.FIREBASE_DB_URL
+    : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+  if (typeof fetch === "function") {
+    fetch(`${dbUrl}/atmosphere/tables/${encodeURIComponent(targetKey)}.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patchObj)
+    }).catch(() => {});
+  }
 }
 
 // МТТ управление игроками
@@ -1364,6 +1564,18 @@ function startConsolidationBreak(dissolveTableKey, breakDurationSec = 900) {
   masterTable.pauseTotalSec = null;
   saveState();
 
+  if (masterTable.format === "MTT" && masterTable.isMttMaster) {
+    broadcastMttMasterState({
+      status: "paused",
+      isBreakActive: true,
+      breakEndsAt: breakEndsAt,
+      breakDurationSec: breakDurationSec,
+      breakReason: "consolidation",
+      pauseEndsAt: null,
+      pauseTotalSec: null
+    });
+  }
+
   if (dissolveTableKey) {
     dissolveTable(dissolveTableKey);
   }
@@ -1403,6 +1615,9 @@ function dissolveTable(tableKey) {
 function checkAutoLevelProgression() {
   const table = getMyTable();
   if (table.status !== "running" || !table.levelEndsAt) return;
+  // Сателлитные столы в режиме МТТ не прогрессируют таймер независимо
+  if (table.format === "MTT" && !table.isMttMaster) return;
+
   const now = Date.now();
   if (now >= table.levelEndsAt) {
     const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
@@ -1420,6 +1635,15 @@ function checkAutoLevelProgression() {
       table.pauseEndsAt = now + (120 * 1000);
       table.pauseTotalSec = 120;
       saveState();
+      if (table.format === "MTT" && table.isMttMaster) {
+        broadcastMttMasterState({
+          colorUpDone: true,
+          isColorUpActive: true,
+          status: "paused",
+          pauseEndsAt: table.pauseEndsAt,
+          pauseTotalSec: table.pauseTotalSec
+        });
+      }
       triggerHaptic("heavy");
       return;
     }
@@ -1433,6 +1657,15 @@ function checkAutoLevelProgression() {
       table.levelEndsAt = now + table.remainingMs;
       table.elapsedBeforePause = 0;
       saveState();
+      if (table.format === "MTT" && table.isMttMaster) {
+        broadcastMttMasterState({
+          levelIndex: table.levelIndex,
+          durationSec: table.durationSec,
+          remainingMs: table.remainingMs,
+          levelEndsAt: table.levelEndsAt,
+          elapsedBeforePause: 0
+        });
+      }
       triggerHaptic("success");
     } else {
       // Финальный уровень: блайнды зафиксированы, отсчет продолжается
@@ -1463,6 +1696,19 @@ function skipColorUp() {
     table.elapsedBeforePause = 0;
   }
   saveState();
+  if (table.format === "MTT" && table.isMttMaster) {
+    broadcastMttMasterState({
+      isColorUpActive: false,
+      pauseEndsAt: null,
+      pauseTotalSec: null,
+      status: "running",
+      levelIndex: table.levelIndex,
+      durationSec: table.durationSec,
+      remainingMs: table.remainingMs,
+      levelEndsAt: table.levelEndsAt,
+      elapsedBeforePause: 0
+    });
+  }
   renderDealerView();
 }
 
@@ -1543,8 +1789,8 @@ function renderDealerView() {
   if (table.format === "MTT" && !table.isMttMaster) {
     masterTable = Object.values(TABLES_STATE).find(t => t && t.format === "MTT" && t.isMttMaster && t.id !== table.id && (t.status === "running" || t.status === "paused"));
 
-    // Если сателлит ожидает старта ("ready"), он синхронизируется только когда master начинает турнир ("running")
-    const canSync = (table.status === "ready") ? Boolean(masterTable && masterTable.status === "running") : Boolean(masterTable);
+    // Если сателлит ожидает старта ("ready" или "idle"), он синхронизируется только когда master начинает турнир ("running" или "paused")
+    const canSync = (table.status === "ready" || table.status === "idle") ? Boolean(masterTable && (masterTable.status === "running" || masterTable.status === "paused")) : Boolean(masterTable);
 
     if (masterTable && canSync) {
       table.status = masterTable.status;
@@ -1566,6 +1812,27 @@ function renderDealerView() {
   } else {
     // Автоматическая смена уровней запускается только для ведущего или обычных SnG столов
     checkAutoLevelProgression();
+  }
+
+  // Автоматическое определение роли сателлита, если в сети уже есть головной стол
+  if ((table.format === "MTT" || SELECTED_FORMAT === "MTT") && (table.status === "idle" || !table.status)) {
+    const existingMaster = Object.values(TABLES_STATE).find(t => 
+      t && t.id !== (table.id || DEALER_ID) && t.format === "MTT" && t.isMttMaster && !t.dissolved && 
+      (t.status === "lobby" || t.status === "running" || t.status === "paused")
+    );
+    if (existingMaster && IS_MTT_MASTER) {
+      IS_MTT_MASTER = false;
+      const masterPill = document.querySelector('#mtt-role-pills .pill[data-mtt-role="master"]');
+      const satPill = document.querySelector('#mtt-role-pills .pill[data-mtt-role="satellite"]');
+      if (masterPill && satPill) {
+        masterPill.classList.remove("active");
+        satPill.classList.add("active");
+      }
+      const captionEl = document.getElementById("mtt-role-caption");
+      if (captionEl) {
+        captionEl.textContent = "Таймер этого стола синхронизируется с головным столом турнира.";
+      }
+    }
   }
 
   const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
@@ -1641,11 +1908,37 @@ function renderDealerView() {
       .map(k => TABLES_STATE[k])
       .filter(t => t && t.format === "MTT" && (t.status === "running" || t.status === "paused") && !t.dissolved);
 
+    // Гарантируем присутствие текущего стола в расчете
+    if (!activeMttTables.some(t => t.id === (table.id || DEALER_ID))) {
+      activeMttTables.push(table);
+    }
+
     let totalMttPlayers = 0;
+    let totalTournamentStarting = 0;
     activeMttTables.forEach(t => {
       totalMttPlayers += (t.playersCount !== undefined ? t.playersCount : 9);
+      totalTournamentStarting += (t.initialPlayers !== undefined ? t.initialPlayers : (t.playersCount !== undefined ? t.playersCount : 9));
     });
     const activeCount = activeMttTables.length;
+
+    // Сквозной турнирный HUD (Общий зачет)
+    const mttStack = 5000;
+    const totalChips = totalTournamentStarting * mttStack;
+    const avgStack = totalMttPlayers > 0 ? Math.round(totalChips / totalMttPlayers) : mttStack;
+    const currentBb = currentLvl.bb || 50;
+    const avgStackBb = Math.round(avgStack / currentBb);
+
+    const hudTablesEl = document.getElementById("mtt-hud-tables");
+    if (hudTablesEl) hudTablesEl.textContent = `Столов: ${Math.max(1, activeCount)}`;
+
+    const hudPlayersEl = document.getElementById("mtt-hud-players");
+    if (hudPlayersEl) hudPlayersEl.innerHTML = `${totalMttPlayers} <small id="mtt-hud-total-sub">/ ${totalTournamentStarting}</small>`;
+
+    const hudChipsEl = document.getElementById("mtt-hud-chips");
+    if (hudChipsEl) hudChipsEl.textContent = totalChips.toLocaleString("ru-RU");
+
+    const hudAvgEl = document.getElementById("mtt-hud-avg");
+    if (hudAvgEl) hudAvgEl.innerHTML = `${avgStack.toLocaleString("ru-RU")} <small id="mtt-hud-avg-bb">(${avgStackBb} BB)</small>`;
 
     let canConsolidate = false;
     let consolidateSubtextMsg = "";
@@ -1872,11 +2165,12 @@ function renderDealerView() {
       if (statusEl) statusEl.textContent = "🏁 Игра завершена";
     }
   } else {
-    // idle или ready -> показываем экран выбора параметров
+    // idle, lobby или ready -> показываем экран выбора параметров
     if (setupPanel) setupPanel.style.display = "flex";
     if (controlCard) controlCard.style.display = "none";
 
     const isMttSetup = (SELECTED_FORMAT === "MTT" || table.format === "MTT");
+    const mttMasterIdleActions = document.getElementById("mtt-master-idle-actions");
     const mttMasterLobby = document.getElementById("mtt-master-lobby");
     const satelliteSetupActions = document.getElementById("satellite-setup-actions");
     const btnStart = document.getElementById("btn-start");
@@ -1885,16 +2179,17 @@ function renderDealerView() {
     const satelliteWaitingCard = document.getElementById("satellite-waiting-card");
 
     if (isMttSetup) {
-      if (IS_MTT_MASTER) {
-        if (mttMasterLobby) mttMasterLobby.style.display = "flex";
-        if (satelliteSetupActions) satelliteSetupActions.style.display = "none";
-        if (btnStart) btnStart.style.display = "flex";
-        if (btnStartLabel) btnStartLabel.textContent = "Запустить турнир для всех столов";
+      if (btnStart) btnStart.style.display = "none";
 
+      if (IS_MTT_MASTER) {
+        if (satelliteSetupActions) satelliteSetupActions.style.display = "none";
+        if (mttMasterIdleActions) mttMasterIdleActions.style.display = "none";
+        if (mttMasterLobby) mttMasterLobby.style.display = "flex";
         renderMttMasterLobby();
       } else {
+        // Сателлит
+        if (mttMasterIdleActions) mttMasterIdleActions.style.display = "none";
         if (mttMasterLobby) mttMasterLobby.style.display = "none";
-        if (btnStart) btnStart.style.display = "none";
         if (satelliteSetupActions) satelliteSetupActions.style.display = "flex";
 
         const isReady = (table.status === "ready");
@@ -1908,6 +2203,7 @@ function renderDealerView() {
         }
       }
     } else {
+      if (mttMasterIdleActions) mttMasterIdleActions.style.display = "none";
       if (mttMasterLobby) mttMasterLobby.style.display = "none";
       if (satelliteSetupActions) satelliteSetupActions.style.display = "none";
       if (btnStart) btnStart.style.display = "flex";
@@ -1984,6 +2280,12 @@ if (typeof module !== "undefined" && module.exports) {
     broadcastMttStartToSatellites,
     setSatelliteReady,
     cancelSatelliteReady,
+    openMttLobby,
+    cancelMttLobby,
+    broadcastMttMasterState,
+    syncTargetTableLateEntry,
+    fetchTablesRest,
+    startRestPollingFallback,
     renderMttMasterLobby,
     showEliminationToast,
     setSelectedFormat: (f) => { SELECTED_FORMAT = f; },

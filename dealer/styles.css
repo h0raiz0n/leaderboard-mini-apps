@@ -2056,3 +2056,128 @@ body {
   transform: scale(0.95);
 }
 
+/* =========================================================
+   MTT TOURNAMENT HUD («ОБЩИЙ ЗАЧЕТ НА ПУЛЬТЕ») & LOBBY BUTTONS
+   ========================================================= */
+.mtt-tournament-hud {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.hud-tournament-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  background: rgba(217, 119, 6, 0.18);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.hud-tables-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+.hud-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 8px;
+  text-align: center;
+}
+
+.hud-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+}
+
+.hud-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-val small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.hud-val.cyan {
+  color: #38bdf8;
+}
+
+.hud-val.gold {
+  color: var(--gold);
+}
+
+.btn-mtt-open-lobby {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: var(--radius-btn);
+  padding: 16px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.4);
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.btn-mtt-open-lobby:active {
+  transform: scale(0.98);
+}
+
+.btn-mtt-start-all {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: var(--radius-btn);
+  padding: 16px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.45);
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.btn-mtt-start-all:active {
+  transform: scale(0.98);
+}
+

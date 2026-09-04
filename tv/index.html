@@ -5,17 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Атмосфера — Tournament Board</title>
   
-  <link rel="stylesheet" href="/tv/styles.css">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
+  <link rel="stylesheet" href="/tv/styles.css?v=17.0">
   
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   
-  <script src="/shared/poker-config.js"></script>
-  <script src="/tv/tv.js" defer></script>
+  <script src="/shared/poker-config.js?v=17.0"></script>
+  <script src="/tv/tv.js?v=17.0" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(function () {});
+      navigator.serviceWorker.register('/sw.js?v=17.0').catch(function () {});
     }
   </script>
 </head>

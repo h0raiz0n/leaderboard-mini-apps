@@ -2,7 +2,7 @@
    Кэширует HTML, CSS, JS, шрифты и данные API для мгновенного старта (0ms cold start).
    Динамические шины Firebase Realtime Database и Telegram исключены из кэша (Network-Only). */
 
-const CACHE = 'atmos-v10';
+const CACHE = 'atmos-v17';
 const API_PREFIX = 'https://script.google.com/macros/s/';
 const API_TTL = 120000; // 2 минуты
 
@@ -58,11 +58,34 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
+  // ТВ и Пульт дилера: Network-First для 100% актуальности интерфейса при любых обновлениях
+  if (url.indexOf('/tv') > -1 || url.indexOf('/dealer') > -1 || url.indexOf('/shared/') > -1) {
+    e.respondWith(networkFirst(req));
+    return;
+  }
+
   // Статические ассеты (HTML, CSS, JS, шрифты): Stale-While-Revalidate для 0ms отдачи
   if (url.indexOf(self.location.origin) === 0 || url.indexOf('fonts.googleapis.com') > -1 || url.indexOf('fonts.gstatic.com') > -1) {
     e.respondWith(staleWhileRevalidate(req));
   }
 });
+
+// Стратегия Network-First для ТВ и дилерских пультов
+async function networkFirst(req) {
+  try {
+    var res = await fetch(req);
+    if (res && res.ok) {
+      var cache = await caches.open(CACHE);
+      cache.put(req, res.clone());
+      return res;
+    }
+    return res;
+  } catch (err) {
+    var cache = await caches.open(CACHE);
+    var hit = await cache.match(req);
+    return hit || new Response('Offline', { status: 503 });
+  }
+}
 
 // Стратегия Stale-While-Revalidate: мгновенный возврат из кэша с фоновым обновлением
 async function staleWhileRevalidate(req) {

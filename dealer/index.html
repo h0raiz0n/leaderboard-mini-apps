@@ -5,16 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Атмосфера — Пульт Ведущего</title>
   
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   
-  <link rel="stylesheet" href="/dealer/styles.css">
-  <script src="/shared/poker-config.js"></script>
-  <script src="/dealer/dealer.js" defer></script>
+  <link rel="stylesheet" href="/dealer/styles.css?v=17.0">
+  <script src="/shared/poker-config.js?v=17.0"></script>
+  <script src="/dealer/dealer.js?v=17.0" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(function () {});
+      navigator.serviceWorker.register('/sw.js?v=17.0').catch(function () {});
     }
   </script>
 </head>
@@ -168,7 +172,18 @@
         </div>
       </div>
 
-      <!-- Лобби подключенных столов для головного ведущего -->
+      <!-- Кнопка открытия сбора турнира для головного стола (когда статус idle) -->
+      <div id="mtt-master-idle-actions" style="display: none; width: 100%;">
+        <button type="button" class="btn btn-mtt-open-lobby" id="btn-mtt-open-lobby" onclick="openMttLobby()">
+          <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span>Открыть сбор столов (Lobby)</span>
+        </button>
+      </div>
+
+      <!-- Лобби подключенных столов для головного ведущего (когда статус lobby) -->
       <div class="mtt-master-lobby" id="mtt-master-lobby" style="display: none;">
         <div class="lobby-header">
           <span class="lobby-title">Подключённые столы турнира</span>
@@ -180,6 +195,15 @@
         <div class="mtt-lobby-summary" id="mtt-lobby-summary">
           Всего столов: 1 • Игроков: 9
         </div>
+        <button type="button" class="btn btn-mtt-start-all" id="btn-mtt-start-all" onclick="startTable()" style="margin-top: 14px;">
+          <svg class="btn-action-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M6.3 2.8A1.5 1.5 0 0 0 4 4.1v11.8a1.5 1.5 0 0 0 2.3 1.3l9.8-5.9a1.5 1.5 0 0 0 0-2.6L6.3 2.8z"/>
+          </svg>
+          <span>🏁 ОБЩИЙ СТАРТ ТУРНИРА</span>
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-mtt-cancel-lobby" onclick="cancelMttLobby()" style="margin-top: 8px; width: 100%;">
+          Отменить сбор турнира
+        </button>
       </div>
 
       <!-- Блок готовности для сателлитного стола -->
@@ -188,7 +212,7 @@
           <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
-          <span>Готов к игре</span>
+          <span>Подключить стол (Готов к игре)</span>
         </button>
         <div class="satellite-waiting-card" id="satellite-waiting-card" style="display: none;">
           <div class="waiting-spinner"></div>
@@ -199,7 +223,7 @@
       </div>
     </div>
 
-    <!-- Кнопка запуска турнира с выбранными параметрами -->
+    <!-- Кнопка запуска обычного турнира (SnG / Mystery) -->
     <button type="button" class="btn btn-start" id="btn-start">
       <svg class="btn-action-icon" viewBox="0 0 20 20" fill="currentColor">
         <path d="M6.3 2.8A1.5 1.5 0 0 0 4 4.1v11.8a1.5 1.5 0 0 0 2.3 1.3l9.8-5.9a1.5 1.5 0 0 0 0-2.6L6.3 2.8z"/>
@@ -240,9 +264,32 @@
 
     <!-- МТТ панель игроков (отображается при формате MTT) -->
     <div class="mtt-control-box" id="mtt-control-box" style="display: none;">
+      <!-- Сквозной турнирный HUD (Общий зачет) -->
+      <div class="mtt-tournament-hud" id="mtt-tournament-hud">
+        <div class="hud-tournament-title">
+          <span class="hud-badge">МТТ ТУРНИР</span>
+          <span class="hud-tables-count" id="mtt-hud-tables">Столов: 1</span>
+        </div>
+        <div class="hud-metrics-grid">
+          <div class="hud-metric">
+            <span class="hud-lbl">В игре</span>
+            <span class="hud-val" id="mtt-hud-players">9 <small id="mtt-hud-total-sub">/ 9</small></span>
+          </div>
+          <div class="hud-metric">
+            <span class="hud-lbl">Банк фишек</span>
+            <span class="hud-val cyan" id="mtt-hud-chips">45 000</span>
+          </div>
+          <div class="hud-metric">
+            <span class="hud-lbl">Средний стек</span>
+            <span class="hud-val gold" id="mtt-hud-avg">5 000 <small id="mtt-hud-avg-bb">(100 BB)</small></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Локальный состав за текущим столом -->
       <div class="mtt-header-row">
         <div class="mtt-label-wrap">
-          <span class="mtt-label">Игроков за столом</span>
+          <span class="mtt-label">За вашим столом</span>
           <span class="mtt-sub-label" id="mtt-reg-sub-label">Поздняя регистрация открыта</span>
         </div>
         <div class="mtt-counter-wrap">

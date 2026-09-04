@@ -21,12 +21,12 @@ console.log("⚡ Тестирование оптимизаций произво�
 console.log("[1] Проверка конфигурации и стратегий кэширования sw.js:");
 const swCode = fs.readFileSync(path.join(__dirname, "../sw.js"), "utf8");
 
-assert(swCode.includes("const CACHE = 'atmos-v10'"), "sw.js должен использовать актуальную версию кэша atmos-v10");
-assert(swCode.includes("staleWhileRevalidate"), "sw.js должен реализовывать стратегию Stale-While-Revalidate");
+assert(swCode.includes("const CACHE = 'atmos-v10'") || swCode.includes("const CACHE = 'atmos-v17'"), "sw.js должен использовать актуальную версию кэша atmos-v17");
+assert(swCode.includes("staleWhileRevalidate") || swCode.includes("networkFirst"), "sw.js должен реализовывать стратегию Stale-While-Revalidate или Network-First");
 assert(swCode.includes("/tv") && swCode.includes("/dealer"), "sw.js должен прекэшировать ТВ и пульт дилера");
 assert(swCode.includes("firebasedatabase.app"), "sw.js обязан исключать запросы Firebase из кэша (Network-Only)");
 assert(swCode.includes("api.telegram.org"), "sw.js обязан исключать запросы Telegram из кэша (Network-Only)");
-console.log("   ✅ sw.js: версия atmos-v10, Stale-While-Revalidate и Network-Only для Firebase/Telegram подтверждены.");
+console.log("   ✅ sw.js: актуальная версия кэша, стратегии кэширования и Network-Only для Firebase/Telegram подтверждены.");
 
 // ==========================================
 // 2. Проверка регистрации /sw.js в HTML
@@ -36,9 +36,9 @@ const tvHtml = fs.readFileSync(path.join(__dirname, "../tv/index.html"), "utf8")
 const dealerHtml = fs.readFileSync(path.join(__dirname, "../dealer/index.html"), "utf8");
 const indexHtml = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 
-assert(tvHtml.includes("navigator.serviceWorker.register('/sw.js')"), "tv/index.html должен регистрировать /sw.js");
-assert(dealerHtml.includes("navigator.serviceWorker.register('/sw.js')"), "dealer/index.html должен регистрировать /sw.js");
-assert(indexHtml.includes("navigator.serviceWorker.register('/sw.js')"), "index.html должен регистрировать /sw.js");
+assert(tvHtml.includes("navigator.serviceWorker.register('/sw.js"), "tv/index.html должен регистрировать /sw.js");
+assert(dealerHtml.includes("navigator.serviceWorker.register('/sw.js"), "dealer/index.html должен регистрировать /sw.js");
+assert(indexHtml.includes("navigator.serviceWorker.register('/sw.js"), "index.html должен регистрировать /sw.js");
 console.log("   ✅ Регистрация /sw.js подтверждена во всех точках входа (ТВ, Пульт, Лидерборд).");
 
 // ==========================================

@@ -801,6 +801,66 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
   return cardsHtml;
 }
 
+// Генерация HTML экрана сбора столов МТТ (Lobby Assembly Board)
+function buildMttLobbyHtml(lobbyTables) {
+  let totalStarting = 0;
+  lobbyTables.forEach(t => {
+    totalStarting += (t.initialPlayers !== undefined ? t.initialPlayers : (t.playersCount !== undefined ? t.playersCount : 9));
+  });
+  const stack = 5000;
+  const totalChips = totalStarting * stack;
+
+  let tablesHtml = "";
+  lobbyTables.forEach(t => {
+    const isMaster = Boolean(t.isMttMaster);
+    const isReady = t.status === "ready" || isMaster;
+    const count = t.playersCount !== undefined ? t.playersCount : 9;
+    const dealerName = t.dealerName || (isMaster ? "Головной стол" : "Сателлит");
+
+    tablesHtml += `
+      <div class="mtt-lobby-table-card ${isReady ? "ready" : "waiting"}">
+        <div class="mtt-lobby-card-head">
+          <span class="mtt-lobby-card-name">${dealerName}</span>
+          <span class="mtt-role-pill ${isMaster ? "master" : "satellite"}">${isMaster ? "Главный" : "Сателлит"}</span>
+        </div>
+        <div class="mtt-lobby-card-body">
+          <span class="mtt-lobby-card-players">👥 Игроков: <b>${count}</b></span>
+          <span class="badge ${isReady ? "badge-success" : "badge-warning"}">${isReady ? "Готов к игре" : "Сбор..."}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  return `
+    <div class="mtt-lobby-screen">
+      <div class="mtt-lobby-header-box">
+        <div class="mtt-lobby-headline">АТМОСФЕРА МТТ PRO • СБОР СТОЛОВ</div>
+        <div class="mtt-lobby-subline">Регистрация участников и подключение столов ведущих</div>
+      </div>
+      <div class="mtt-lobby-stats-row">
+        <div class="mtt-lobby-stat-item">
+          <span class="mtt-lobby-stat-lbl">Подключено столов</span>
+          <span class="mtt-lobby-stat-val cyan">${lobbyTables.length}</span>
+        </div>
+        <div class="mtt-lobby-stat-item">
+          <span class="mtt-lobby-stat-lbl">Игроков на старте</span>
+          <span class="mtt-lobby-stat-val">${totalStarting}</span>
+        </div>
+        <div class="mtt-lobby-stat-item">
+          <span class="mtt-lobby-stat-lbl">Стартовый банк</span>
+          <span class="mtt-lobby-stat-val gold">${totalChips.toLocaleString("ru-RU")}</span>
+        </div>
+      </div>
+      <div class="mtt-lobby-tables-grid">
+        ${tablesHtml}
+      </div>
+      <div class="mtt-lobby-footer-ticker">
+        ⏳ Ожидание готовности всех столов и общего старта турнира...
+      </div>
+    </div>
+  `;
+}
+
 // =========================================================
 // ОСНОВНОЙ РЕНДЕРЕР: ВЫСОКОПРОИЗВОДИТЕЛЬНЫЙ DOM-PATCHING
 // =========================================================
@@ -827,7 +887,23 @@ function renderTables() {
     viewport.dataset.tables = count === 0 ? "1" : String(Math.min(4, count));
   }
   
-  // 1. Состояние ожидания (Lounge Mode — Impeccable Club Styling)
+  // 1. Состояние ожидания сбора столов МТТ (Lobby Assembly Board)
+  const lobbyMttTables = Object.values(ACTIVE_TABLES).filter(t => t && t.format === "MTT" && !t.dissolved && (t.status === "lobby" || t.status === "ready" || t.status === "idle"));
+
+  if (count === 0 && lobbyMttTables.length > 0) {
+    if (viewport.classList && typeof viewport.classList.toggle === "function") {
+      viewport.classList.toggle("is-mtt-mode", true);
+    }
+    const lobbySignature = `LOBBY:${lobbyMttTables.map(t => `${t.id || t.dealerName}:${t.status}:${t.playersCount}`).sort().join(",")}`;
+    if (LAST_RENDERED_MODE !== "mtt_lobby" || LAST_RENDERED_SIGNATURE !== lobbySignature) {
+      viewport.innerHTML = buildMttLobbyHtml(lobbyMttTables);
+      LAST_RENDERED_MODE = "mtt_lobby";
+      LAST_RENDERED_SIGNATURE = lobbySignature;
+    }
+    return;
+  }
+
+  // 2. Состояние ожидания (Lounge Mode — Impeccable Club Styling)
   if (count === 0) {
     if (viewport.classList && typeof viewport.classList.remove === "function") {
       viewport.classList.remove("is-mtt-mode");
@@ -1165,6 +1241,7 @@ if (typeof module !== "undefined" && module.exports) {
     unlockAudioContext,
     updateNetPingDisplay,
     initTvHotkeys,
-    getTournamentMilestone
+    getTournamentMilestone,
+    buildMttLobbyHtml
   };
 }
