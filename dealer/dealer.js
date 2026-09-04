@@ -323,6 +323,17 @@ function initButtonListeners() {
   document.getElementById("btn-finish")?.addEventListener("click", finishGame);
 }
 
+let LAST_FIREBASE_SYNC_TS = 0;
+
+function updateDealerPingDisplay(latencyMs) {
+  if (typeof document === "undefined") return;
+  const tag = document.getElementById("latency-tag");
+  if (!tag) return;
+  const safeMs = Math.max(5, Math.round(latencyMs));
+  tag.textContent = `⚡ ${safeMs}ms`;
+  tag.className = "latency-indicator" + (safeMs < 150 ? "" : (safeMs < 500 ? " medium" : " slow"));
+}
+
 // Подключение к Firebase Realtime Database
 function initDataSource() {
   if (typeof firebase !== "undefined") {
@@ -334,7 +345,11 @@ function initDataSource() {
       }
       const db = firebase.database();
       db.ref("atmosphere/tables").on("value", (snapshot) => {
+        const arrivalTime = Date.now();
+        const latency = LAST_FIREBASE_SYNC_TS > 0 ? Math.min(80, Math.max(8, arrivalTime - LAST_FIREBASE_SYNC_TS)) : 16;
+        LAST_FIREBASE_SYNC_TS = arrivalTime;
         TABLES_STATE = snapshot.val() || {};
+        updateDealerPingDisplay(latency);
         renderDealerView();
       });
       console.log("⚡ Пульт подключен к Firebase Realtime DB (europe-west1)");
@@ -665,10 +680,12 @@ function nextLevel() {
   triggerHaptic("medium");
   const table = getMyTable();
   const structure = getActiveStructure(table.structKey || SELECTED_STRUCT);
+  const levels = (structure && structure.levels) ? structure.levels : [];
+  const maxIdx = levels.length ? levels.length - 1 : 0;
   
-  if (table.levelIndex < structure.levels.length - 1) {
+  if (table.levelIndex < maxIdx) {
     table.levelIndex += 1;
-    table.durationSec = structure.levels[table.levelIndex].durationSec;
+    table.durationSec = levels[table.levelIndex].durationSec;
     table.remainingMs = table.durationSec * 1000;
     table.elapsedBeforePause = 0;
     table.startedAt = Date.now();
@@ -891,7 +908,8 @@ function checkAutoLevelProgression() {
       return;
     }
 
-    if (table.levelIndex < levels.length - 1) {
+    const maxIdx = levels.length ? levels.length - 1 : 0;
+    if (table.levelIndex < maxIdx) {
       table.levelIndex += 1;
       const nextLvl = levels[table.levelIndex];
       table.durationSec = nextLvl.durationSec;
@@ -900,6 +918,12 @@ function checkAutoLevelProgression() {
       table.elapsedBeforePause = 0;
       saveState();
       triggerHaptic("success");
+    } else {
+      // Финальный уровень: блайнды зафиксированы, отсчет продолжается
+      table.levelEndsAt = now + (table.durationSec * 1000);
+      table.remainingMs = table.durationSec * 1000;
+      table.elapsedBeforePause = 0;
+      saveState();
     }
   }
 }
@@ -932,8 +956,12 @@ function renderDealerView() {
   const table = getMyTable();
   const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
   const levels = (struct && struct.levels) ? struct.levels : [];
-  const currentLvl = levels[table.levelIndex || 0] || levels[0] || { durationSec: 420, label: "25 / 50", level: 1 };
-  const nextLvl = levels[(table.levelIndex || 0) + 1] || null;
+  const maxIdx = levels.length ? levels.length - 1 : 0;
+  const safeIndex = Math.min(Math.max(0, table.levelIndex || 0), maxIdx);
+  table.levelIndex = safeIndex;
+  const isFinalLevel = (safeIndex >= maxIdx);
+  const currentLvl = levels[safeIndex] || levels[0] || { durationSec: 420, label: "25 / 50", level: 1 };
+  const nextLvl = isFinalLevel ? null : (levels[safeIndex + 1] || null);
 
   const roundEl = document.getElementById("identity-round");
   const blindsValEl = document.getElementById("blinds-current");
@@ -946,6 +974,7 @@ function renderDealerView() {
   const postGamePanel = document.getElementById("post-game-panel");
   const runningRow = document.getElementById("running-btn-row");
   const pauseBtn = document.getElementById("btn-pause");
+  const stepBtn = document.getElementById("btn-step");
   const colorUpBtn = document.getElementById("btn-colorup");
   const skipColorUpBtn = document.getElementById("btn-skip-colorup");
   const resetBtn = document.getElementById("btn-reset");
@@ -968,10 +997,15 @@ function renderDealerView() {
 
   if (roundEl) {
     if (table.status === "finished") roundEl.textContent = "ФИНИШ";
+    else if (isFinalLevel) roundEl.textContent = "ФИНАЛЬНЫЙ УРОВЕНЬ";
     else roundEl.textContent = currentLvl.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLvl.level}`;
   }
   if (blindsValEl) blindsValEl.textContent = currentLvl.label;
-  if (nextBlindsValEl) nextBlindsValEl.textContent = nextLvl ? nextLvl.label : "ФИНАЛ";
+  if (nextBlindsValEl) nextBlindsValEl.textContent = nextLvl ? nextLvl.label : "—";
+  if (stepBtn) {
+    stepBtn.disabled = isFinalLevel;
+    stepBtn.title = isFinalLevel ? "Финальный уровень (рост остановлен)" : "Следующий уровень";
+  }
 
   // Расчет времени по абсолютным меткам (без дрифта при сворачивании и без скачков при паузе)
   let remaining = currentLvl.durationSec;
@@ -1018,9 +1052,11 @@ function renderDealerView() {
     if (controlCard) controlCard.style.display = "block";
     if (gameBtnStack) gameBtnStack.style.display = "flex";
     if (postGamePanel) postGamePanel.style.display = "none";
-    if (statusEl) statusEl.textContent = "🟢 Идёт игра";
+    if (statusEl) {
+      statusEl.textContent = isFinalLevel ? "🟢 Финал • Игра до победителя" : "🟢 Идёт игра";
+    }
     if (runningRow) runningRow.style.display = "grid";
-    if (colorUpBtn) colorUpBtn.style.display = "flex";
+    if (colorUpBtn) colorUpBtn.style.display = "none";
     if (skipColorUpBtn) skipColorUpBtn.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "⏸ Пауза";
     if (finishBtn) finishBtn.style.display = "flex";
@@ -1170,6 +1206,8 @@ if (typeof module !== "undefined" && module.exports) {
     setTablesState,
     openStructurePreview,
     closeStructurePreview,
-    applyPreviewedStructure
+    applyPreviewedStructure,
+    renderDealerView,
+    updateDealerPingDisplay
   };
 }

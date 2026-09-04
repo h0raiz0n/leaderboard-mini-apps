@@ -192,38 +192,37 @@ body {
   gap: 10px;
 }
 
+.format-badge,
+.round-pill,
+.players-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
 .format-badge {
   background: rgba(251, 191, 36, 0.15);
   border: 1px solid rgba(251, 191, 36, 0.4);
   color: var(--gold);
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 .round-pill {
   background: var(--card-elevated);
   border: 1px solid var(--line-strong);
   color: var(--ink);
-  padding: 6px 18px;
-  border-radius: var(--radius-pill);
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .players-pill {
   background: rgba(59, 130, 246, 0.15);
   border: 1px solid rgba(59, 130, 246, 0.4);
   color: #93c5fd;
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
@@ -416,14 +415,11 @@ body {
   font-size: 38px;
 }
 
-.tv-viewport[data-tables="1"] .format-badge {
-  font-size: 18px;
-  padding: 8px 18px;
-}
-
-.tv-viewport[data-tables="1"] .round-pill {
-  font-size: 22px;
-  padding: 10px 26px;
+.tv-viewport[data-tables="1"] .format-badge,
+.tv-viewport[data-tables="1"] .round-pill,
+.tv-viewport[data-tables="1"] .players-pill {
+  font-size: 20px;
+  padding: 10px 24px;
 }
 
 .tv-viewport[data-tables="1"] .timer-digits {
@@ -465,8 +461,10 @@ body {
   font-size: 32px;
 }
 
-.tv-viewport[data-tables="2"] .round-pill {
-  font-size: 18px;
+.tv-viewport[data-tables="2"] .format-badge,
+.tv-viewport[data-tables="2"] .round-pill,
+.tv-viewport[data-tables="2"] .players-pill {
+  font-size: 17px;
   padding: 8px 20px;
 }
 
@@ -509,9 +507,11 @@ body {
   font-size: 26px;
 }
 
-.tv-viewport[data-tables="3"] .round-pill {
+.tv-viewport[data-tables="3"] .format-badge,
+.tv-viewport[data-tables="3"] .round-pill,
+.tv-viewport[data-tables="3"] .players-pill {
   font-size: 15px;
-  padding: 6px 14px;
+  padding: 6px 16px;
 }
 
 .tv-viewport[data-tables="3"] .timer-digits {
@@ -554,9 +554,11 @@ body {
   font-size: 24px;
 }
 
-.tv-viewport[data-tables="4"] .round-pill {
+.tv-viewport[data-tables="4"] .format-badge,
+.tv-viewport[data-tables="4"] .round-pill,
+.tv-viewport[data-tables="4"] .players-pill {
   font-size: 14px;
-  padding: 4px 12px;
+  padding: 5px 12px;
 }
 
 .tv-viewport[data-tables="4"] .timer-digits {
@@ -716,7 +718,7 @@ body {
   color: #f59e0b;
 }
 
-/* Состояние ожидания (Lounge Mode) */
+/* Состояние ожидания (Lounge Mode — Impeccable Club Styling) */
 .lounge-container {
   display: flex;
   flex-direction: column;
@@ -724,21 +726,56 @@ body {
   justify-content: center;
   height: 100%;
   text-align: center;
-  gap: 16px;
+  gap: 20px;
+  position: relative;
+  background: radial-gradient(circle at 50% 45%, rgba(251, 191, 36, 0.08) 0%, rgba(10, 15, 29, 0.95) 65%);
+  border-radius: var(--radius-card);
 }
 
-.lounge-brand {
-  font-size: 56px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+.lounge-suits {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 48px;
+  margin-bottom: 2px;
+  animation: float-suits 4s ease-in-out infinite alternate;
+}
+
+@keyframes float-suits {
+  0% { transform: translateY(0px); opacity: 0.85; }
+  100% { transform: translateY(-6px); opacity: 1; }
+}
+
+.suit {
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.35));
+}
+
+.suit-spade, .suit-club {
   color: var(--ink);
-  text-transform: uppercase;
+}
+
+.suit-heart, .suit-diamond {
+  color: #ef4444;
+  filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.4));
+}
+
+.lounge-time {
+  font-size: clamp(80px, 14vw, 150px);
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow: 0 0 40px rgba(251, 191, 36, 0.25);
 }
 
 .lounge-status {
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Сетевой пинг-индикатор */

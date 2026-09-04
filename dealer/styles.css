@@ -84,6 +84,17 @@ body {
   padding: 3px 8px;
   border-radius: 6px;
   letter-spacing: 0.02em;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.latency-indicator.medium {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.latency-indicator.slow {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
 }
 
 /* Панель настройки турнира */
@@ -319,10 +330,24 @@ body {
   background: var(--amber-active);
 }
 
+#running-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 68px;
+  gap: 10px;
+}
+
 .btn-step {
   background: var(--card-elevated);
   border: 1px solid var(--line-strong);
   color: var(--ink);
+  font-size: 18px;
+  padding: 15px 0;
+}
+
+.btn-step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-reset {

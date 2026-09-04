@@ -37,10 +37,13 @@ if (typeof document !== "undefined" && document.addEventListener) {
 // Часы в шапке
 function initClock() {
   const clockEl = document.getElementById("header-clock");
-  if (!clockEl) return;
   const update = () => {
     const now = new Date();
-    clockEl.textContent = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    if (clockEl) clockEl.textContent = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const loungeTimeEl = document.getElementById("lounge-time");
+    if (loungeTimeEl) {
+      loungeTimeEl.textContent = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    }
   };
   update();
   setInterval(update, 1000);
@@ -548,10 +551,13 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
   tableKeys.slice(0, 4).forEach(key => {
     const table = ACTIVE_TABLES[key];
     const structure = getTableStructure(table);
-    const isFinalLevel = (table.levelIndex >= structure.length - 1);
+    const maxIdx = structure.length ? structure.length - 1 : 0;
+    const safeIndex = Math.min(Math.max(0, table.levelIndex || 0), maxIdx);
+    table.levelIndex = safeIndex;
+    const isFinalLevel = (safeIndex >= maxIdx);
     const time = calculateTableTime(table, isFinalLevel);
-    const currentLevel = structure[table.levelIndex] || structure[0];
-    const nextLevel = structure[table.levelIndex + 1] || null;
+    const currentLevel = structure[safeIndex] || structure[0];
+    const nextLevel = isFinalLevel ? null : (structure[safeIndex + 1] || null);
     const formatLabel = getFormatLabel(table.format);
     const now = Date.now();
 
@@ -618,12 +624,11 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     if (table.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
     else if (isTimedPause) subtext = (table.pauseTotalSec === 120 ? "☕ Перерыв • Размен фишек (Color-Up)" : `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`);
     else if (table.status === "paused") subtext = "Пауза";
-    else if (time.isOvertime) subtext = "Финальный уровень • Блайнды зафиксированы";
+    else if (isFinalLevel) subtext = "Игра до победителя • Блайнды зафиксированы";
     else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
-    else if (isFinalLevel) subtext = "Финальный уровень турнира";
 
-    const roundText = (table.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`));
+    const roundText = (table.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
 
     html += `
       <div class="${cardClass}" id="card-${table.id || key}">
@@ -657,9 +662,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
           </div>
           <div class="blinds-item">
             <span class="blinds-caption">Следующие</span>
-            <span class="blinds-number upcoming">
-              ${nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "ФИНАЛ"}
-            </span>
+            <span class="blinds-number upcoming">${nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—"}</span>
           </div>
         </div>
       </div>
@@ -695,13 +698,21 @@ function renderTables() {
     viewport.dataset.tables = count === 0 ? "1" : String(Math.min(4, count));
   }
   
-  // 1. Состояние ожидания (Lounge Mode)
+  // 1. Состояние ожидания (Lounge Mode — Impeccable Club Styling)
   if (count === 0) {
     if (LAST_RENDERED_MODE !== "lounge") {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
       viewport.innerHTML = `
         <div class="lounge-container">
-          <div class="lounge-brand">АТМОСФЕРА</div>
-          <div class="lounge-status">Антикафе «Атмосфера» • Ожидание запуска столов</div>
+          <div class="lounge-suits lounge-brand">
+            <span class="suit suit-spade">♠</span>
+            <span class="suit suit-heart">♥</span>
+            <span class="suit suit-diamond">♦</span>
+            <span class="suit suit-club">♣</span>
+          </div>
+          <div class="lounge-time" id="lounge-time">${timeStr}</div>
+          <div class="lounge-status">Свободная посадка • Ожидание открытия столов</div>
         </div>
       `;
       LAST_RENDERED_MODE = "lounge";
@@ -807,8 +818,11 @@ function renderTables() {
     // Если карточка существует в DOM и поддерживает querySelector -> точечно патчим её
     const card = document.getElementById("card-" + (table.id || key));
     if (card && typeof card.querySelector === "function") {
-      const currentLevel = structure[table.levelIndex] || structure[0];
-      const nextLevel = structure[table.levelIndex + 1] || null;
+      const maxIdx = structure.length ? structure.length - 1 : 0;
+      const safeIndex = Math.min(Math.max(0, table.levelIndex || 0), maxIdx);
+      const isFinalLevel = (safeIndex >= maxIdx);
+      const currentLevel = structure[safeIndex] || structure[0];
+      const nextLevel = isFinalLevel ? null : (structure[safeIndex + 1] || null);
 
       const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > now);
       let displayFormattedTime = time.formatted;
@@ -823,10 +837,9 @@ function renderTables() {
       if (table.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
       else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`;
       else if (table.status === "paused") subtext = "Пауза";
-      else if (time.isOvertime) subtext = "Финальный уровень • Блайнды зафиксированы";
+      else if (isFinalLevel) subtext = "Игра до победителя • Блайнды зафиксированы";
       else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
       else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
-      else if (isFinalLevel) subtext = "Финальный уровень турнира";
 
       const digitsEl = card.querySelector(".timer-digits");
       if (digitsEl && digitsEl.textContent !== displayFormattedTime) {
@@ -855,13 +868,13 @@ function renderTables() {
       }
 
       const upcomingBlindsEl = card.querySelector(".blinds-number.upcoming");
-      const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "ФИНАЛ";
+      const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
       if (upcomingBlindsEl && upcomingBlindsEl.textContent !== upcomingStr) {
         upcomingBlindsEl.textContent = upcomingStr;
       }
 
       const roundPill = card.querySelector(".round-pill");
-      const roundText = (table.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`));
+      const roundText = (table.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
       if (roundPill && roundPill.textContent !== roundText) {
         roundPill.textContent = roundText;
       }

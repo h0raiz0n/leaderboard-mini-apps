@@ -41,15 +41,15 @@
       <div class="pill-grid vertical" id="struct-pills">
         <div class="pill-row-wrap">
           <button type="button" class="pill active" data-struct="SNG_DEEP_1500">
-            <span class="pill-title">1 500 стек / 10 мин (Классика)</span>
-            <span class="pill-sub">Без анте • Color-Up после 50/100</span>
+            <span class="pill-title">1 500 стек • 10 мин</span>
+            <span class="pill-sub">Классика • Без анте</span>
           </button>
           <button type="button" class="btn-preview-struct" onclick="openStructurePreview('SNG_DEEP_1500')" title="Просмотреть таблицу уровней">ℹ️ Уровни</button>
         </div>
         <div class="pill-row-wrap">
-          <button type="button" class="pill" data-struct="SNG_STANDARD">
-            <span class="pill-title">5 000 стек / 7 мин (Атмосфера Pro)</span>
-            <span class="pill-sub">Анте с 6 уровня • Color-Up после 150/300</span>
+          <button type="button" class="pill" data-struct="SNG_STANDARD" data-info="Анте с 6 уровня • Color-Up после 150/300">
+            <span class="pill-title">5 000 стек • 7 мин</span>
+            <span class="pill-sub">Pro • С анте (BBA)</span>
           </button>
           <button type="button" class="btn-preview-struct" onclick="openStructurePreview('SNG_STANDARD')" title="Просмотреть таблицу уровней">ℹ️ Уровни</button>
         </div>
@@ -105,11 +105,9 @@
     <div class="btn-stack" id="game-btn-stack">
       <div class="btn-row" id="running-btn-row">
         <button class="btn btn-pause" id="btn-pause">⏸ Пауза</button>
-        <button class="btn btn-step" id="btn-step">⏩ След. уровень</button>
+        <button class="btn btn-step" id="btn-step" title="Следующий уровень">⏩</button>
       </div>
 
-      <!-- Кнопка 2-минутной паузы (Color-Up) -->
-      <button type="button" class="btn btn-timed-pause-single" id="btn-colorup" onclick="startTimedPause(120)">⏱ Пауза 2 мин (Color-Up)</button>
       <button type="button" class="btn btn-skip-colorup" id="btn-skip-colorup" style="display: none;" onclick="skipColorUp()">▶️ Пропустить Color-Up (к 150/300)</button>
 
       <!-- Кнопка сброса (исчезает через 3 мин) -->
