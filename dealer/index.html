@@ -108,6 +108,17 @@
         <button class="btn btn-step" id="btn-step" title="Следующий уровень">⏩</button>
       </div>
 
+      <!-- Всплывающий тост подтверждения смены уровня -->
+      <div class="confirm-step-toast" id="confirm-step-toast" style="display: none;">
+        <div class="confirm-toast-content">
+          <span class="confirm-toast-text">Перейти на след. уровень?</span>
+          <div class="confirm-toast-actions">
+            <button type="button" class="btn-toast-confirm" onclick="confirmNextLevel()">⏩ Да</button>
+            <button type="button" class="btn-toast-cancel" onclick="dismissStepToast()">✕</button>
+          </div>
+        </div>
+      </div>
+
       <button type="button" class="btn btn-skip-colorup" id="btn-skip-colorup" style="display: none;" onclick="skipColorUp()">▶️ Пропустить Color-Up (к 150/300)</button>
 
       <!-- Кнопка сброса (исчезает через 3 мин) -->

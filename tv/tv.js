@@ -624,7 +624,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     if (table.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
     else if (isTimedPause) subtext = (table.pauseTotalSec === 120 ? "☕ Перерыв • Размен фишек (Color-Up)" : `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`);
     else if (table.status === "paused") subtext = "Пауза";
-    else if (isFinalLevel) subtext = "Игра до победителя • Блайнды зафиксированы";
+    else if (isFinalLevel) subtext = "Блайнды зафиксированы";
     else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
 
@@ -712,7 +712,7 @@ function renderTables() {
             <span class="suit suit-club">♣</span>
           </div>
           <div class="lounge-time" id="lounge-time">${timeStr}</div>
-          <div class="lounge-status">Свободная посадка • Ожидание открытия столов</div>
+          <div class="lounge-status">Ожидание начала игр</div>
         </div>
       `;
       LAST_RENDERED_MODE = "lounge";
@@ -837,7 +837,7 @@ function renderTables() {
       if (table.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
       else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`;
       else if (table.status === "paused") subtext = "Пауза";
-      else if (isFinalLevel) subtext = "Игра до победителя • Блайнды зафиксированы";
+      else if (isFinalLevel) subtext = "Блайнды зафиксированы";
       else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
       else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
 

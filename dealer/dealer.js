@@ -318,7 +318,7 @@ function initPillSelectors() {
 function initButtonListeners() {
   document.getElementById("btn-start")?.addEventListener("click", startTable);
   document.getElementById("btn-pause")?.addEventListener("click", togglePause);
-  document.getElementById("btn-step")?.addEventListener("click", nextLevel);
+  document.getElementById("btn-step")?.addEventListener("click", handleStepClick);
   document.getElementById("btn-reset")?.addEventListener("click", resetTable);
   document.getElementById("btn-finish")?.addEventListener("click", finishGame);
 }
@@ -607,7 +607,15 @@ function startTable() {
   table.remainingMs = table.durationSec * 1000;
   table.levelEndsAt = Date.now() + table.remainingMs;
   table.elapsedBeforePause = 0;
+  table.colorUpDone = false;
+  table.isColorUpActive = false;
+  table.pauseEndsAt = null;
+  table.pauseTotalSec = null;
+  table.breakEndsAt = null;
+  table.isBreakActive = false;
   table.isPostGameBreak = false;
+  table.nextGameAt = null;
+  table.postGameBreakMinutes = null;
   table.createdAt = Date.now();
 
   saveState();
@@ -675,7 +683,66 @@ function startTimedPause(seconds = 120) {
   renderDealerView();
 }
 
-// 3. Следующий раунд
+// 3. Следующий раунд с подтверждением через тост
+let STEP_TOAST_TIMER = null;
+
+function handleStepClick() {
+  const table = getMyTable();
+  const structure = getActiveStructure(table.structKey || SELECTED_STRUCT);
+  const levels = (structure && structure.levels) ? structure.levels : [];
+  const maxIdx = levels.length ? levels.length - 1 : 0;
+  
+  if (table.levelIndex >= maxIdx) {
+    return;
+  }
+
+  const toast = document.getElementById("confirm-step-toast");
+  if (!toast) {
+    nextLevel();
+    return;
+  }
+
+  if (toast.style.display !== "none") {
+    confirmNextLevel();
+  } else {
+    showStepToast();
+  }
+}
+
+function showStepToast() {
+  triggerHaptic("light");
+  const toast = document.getElementById("confirm-step-toast");
+  if (!toast) return;
+
+  if (STEP_TOAST_TIMER) {
+    clearTimeout(STEP_TOAST_TIMER);
+    STEP_TOAST_TIMER = null;
+  }
+
+  toast.style.display = "block";
+  toast.classList.add("visible");
+
+  STEP_TOAST_TIMER = setTimeout(() => {
+    dismissStepToast();
+  }, 3500);
+}
+
+function dismissStepToast() {
+  const toast = document.getElementById("confirm-step-toast");
+  if (!toast) return;
+  if (STEP_TOAST_TIMER) {
+    clearTimeout(STEP_TOAST_TIMER);
+    STEP_TOAST_TIMER = null;
+  }
+  toast.classList.remove("visible");
+  toast.style.display = "none";
+}
+
+function confirmNextLevel() {
+  dismissStepToast();
+  nextLevel();
+}
+
 function nextLevel() {
   triggerHaptic("medium");
   const table = getMyTable();
@@ -698,11 +765,21 @@ function nextLevel() {
 // 4. Сброс запуска (ошибка)
 function resetTable() {
   triggerHaptic("heavy");
+  dismissStepToast();
   const table = getMyTable();
   table.status = "idle";
   table.levelIndex = 0;
   table.startedAt = null;
   table.elapsedBeforePause = 0;
+  table.colorUpDone = false;
+  table.isColorUpActive = false;
+  table.pauseEndsAt = null;
+  table.pauseTotalSec = null;
+  table.breakEndsAt = null;
+  table.isBreakActive = false;
+  table.isPostGameBreak = false;
+  table.nextGameAt = null;
+  table.postGameBreakMinutes = null;
   saveState();
   renderDealerView();
 }
@@ -749,11 +826,21 @@ function stopPostGameBreak() {
 
 function startNewGameFromPostGame() {
   triggerHaptic("medium");
+  dismissStepToast();
   const table = getMyTable();
   table.status = "idle";
+  table.levelIndex = 0;
+  table.startedAt = null;
+  table.elapsedBeforePause = 0;
+  table.colorUpDone = false;
+  table.isColorUpActive = false;
+  table.pauseEndsAt = null;
+  table.pauseTotalSec = null;
+  table.breakEndsAt = null;
+  table.isBreakActive = false;
   table.isPostGameBreak = false;
   table.nextGameAt = null;
-  table.startedAt = null;
+  table.postGameBreakMinutes = null;
   saveState();
   renderDealerView();
 }
@@ -1006,6 +1093,9 @@ function renderDealerView() {
     stepBtn.disabled = isFinalLevel;
     stepBtn.title = isFinalLevel ? "Финальный уровень (рост остановлен)" : "Следующий уровень";
   }
+  if (isFinalLevel || (table.status !== "running" && table.status !== "paused")) {
+    dismissStepToast();
+  }
 
   // Расчет времени по абсолютным меткам (без дрифта при сворачивании и без скачков при паузе)
   let remaining = currentLvl.durationSec;
@@ -1028,12 +1118,12 @@ function renderDealerView() {
     }
   }
 
-  // Проверка таймированной паузы в игре (Color-Up)
+  // Отображение таймера (если активен таймированный перерыв / Color-Up, показываем отсчет перерыва)
   const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > Date.now());
   if (isTimedPause) {
-    const pRem = Math.max(0, Math.floor((table.pauseEndsAt - Date.now()) / 1000));
-    const pMin = Math.floor(pRem / 60);
-    const pSec = pRem % 60;
+    const pRemaining = Math.max(0, Math.ceil((table.pauseEndsAt - Date.now()) / 1000));
+    const pMin = Math.floor(pRemaining / 60);
+    const pSec = pRemaining % 60;
     if (digitsEl) {
       digitsEl.textContent = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
       digitsEl.style.color = "#fbbf24";
@@ -1053,7 +1143,7 @@ function renderDealerView() {
     if (gameBtnStack) gameBtnStack.style.display = "flex";
     if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) {
-      statusEl.textContent = isFinalLevel ? "🟢 Финал • Игра до победителя" : "🟢 Идёт игра";
+      statusEl.textContent = isFinalLevel ? "🟢 Блайнды зафиксированы" : "🟢 Идёт игра";
     }
     if (runningRow) runningRow.style.display = "grid";
     if (colorUpBtn) colorUpBtn.style.display = "none";
@@ -1208,6 +1298,10 @@ if (typeof module !== "undefined" && module.exports) {
     closeStructurePreview,
     applyPreviewedStructure,
     renderDealerView,
-    updateDealerPingDisplay
+    updateDealerPingDisplay,
+    handleStepClick,
+    showStepToast,
+    dismissStepToast,
+    confirmNextLevel
   };
 }

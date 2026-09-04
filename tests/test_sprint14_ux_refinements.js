@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UNIT & INTEGRATION TEST: Sprint 14 UX/UI Refinements & Tournament Final Cycle
  * Антикафе «Атмосфера»
  */
@@ -145,7 +145,8 @@ tv.setActiveTables(tvTables);
 tv.renderTables();
 
 assert(capturedTvHtml.includes("ФИНАЛЬНЫЙ УРОВЕНЬ"), "ТВ должно отображать 'ФИНАЛЬНЫЙ УРОВЕНЬ'");
-assert(capturedTvHtml.includes("Игра до победителя • Блайнды зафиксированы"), "ТВ должно информировать игроков о фиксации блайндов");
+assert(capturedTvHtml.includes("Блайнды зафиксированы"), "ТВ должно информировать игроков о фиксации блайндов");
+assert(!capturedTvHtml.includes("Игра до победителя"), "ТВ не должно содержать устаревшую формулировку 'Игра до победителя'");
 assert(!capturedTvHtml.includes("ФИНАЛ</span>"), "Устаревшая формулировка 'ФИНАЛ' в плашке 'Следующие' должна быть заменена на '—'");
 assert(capturedTvHtml.includes("—</span>"), "Плашка следующих блайндов на ТВ должна отображать '—'");
 console.log("   ✅ ТВ-дашборд безопасно обработал финал: 'ФИНАЛЬНЫЙ УРОВЕНЬ', '—', блайнды зафиксированы.");
