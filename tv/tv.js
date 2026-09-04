@@ -667,13 +667,57 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
         const bMin = Math.floor(breakRemaining / 60);
         const bSec = breakRemaining % 60;
         const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+        const breakTotalSec = (timingTable.breakDurationSec || (isPostGame ? Math.round((breakEndTime - (timingTable.finishedAt || (breakEndTime - 600000))) / 1000) : 600)) || 600;
+        const progressPercent = Math.max(0, Math.min(100, (breakRemaining / breakTotalSec) * 100));
 
         cardsHtml += `
           <div class="table-card break-screen-card state-break" id="card-${table.id || key}">
-            <div class="break-screen-title">☕ ПЕРЕРЫВ</div>
-            <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
-            <div class="break-screen-digits">${bFormatted}</div>
-            <div style="font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;">До старта следующей игры</div>
+            <!-- Шапка стола -->
+            <div class="card-top">
+              <div class="dealer-identity dealer-brand-box">
+                <svg class="dealer-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                  <path d="M4 22h16"/>
+                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                </svg>
+                <div class="dealer-meta">
+                  <span class="dealer-label">ВЕДУЩИЙ</span>
+                  <span class="dealer-name">${table.dealerName || "Ведущий"}</span>
+                </div>
+                <div class="break-screen-dealer" style="display: none;">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
+              </div>
+              <div class="pill-group">
+                <span class="format-badge">${formatLabel}</span>
+                <div class="round-pill state-break-pill">☕ ПЕРЕРЫВ</div>
+              </div>
+            </div>
+
+            <!-- Центральный таймер и лазерный Time Rail -->
+            <div class="timer-block">
+              <div class="timer-digits state-break-digits">${bFormatted}</div>
+              <div class="time-rail-track">
+                <div class="time-rail-fill state-break-rail" style="transform: scaleX(${(progressPercent / 100).toFixed(4)}); width: ${progressPercent.toFixed(1)}%;"></div>
+              </div>
+              <div class="timer-subtext">До старта следующей игры</div>
+            </div>
+
+            <!-- Монолит следующей игры (EPT Style) -->
+            <div class="blinds-grid blinds-monolith break-monolith">
+              <div class="blinds-item current-blinds-box">
+                <span class="blinds-caption">Старт следующей игры</span>
+                <div class="blinds-main-row">
+                  <span class="blinds-number current">25 / 50</span>
+                  <span class="ante-badge ante-strip">РЕГИСТРАЦИЯ</span>
+                </div>
+              </div>
+              <div class="blinds-item next-blinds-box">
+                <span class="blinds-caption">Статус стола</span>
+                <div class="next-blinds-value break-status-val">Подготовка к игре</div>
+              </div>
+            </div>
           </div>
         `;
         return;
@@ -686,10 +730,52 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
 
         cardsHtml += `
           <div class="table-card break-screen-card state-break state-overtime" id="card-${table.id || key}">
-            <div class="break-screen-title" style="color: #f59e0b;">☕ ПЕРЕРЫВ ЗАДЕРЖИВАЕТСЯ</div>
-            <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
-            <div class="break-screen-digits" style="color: #f59e0b;">${oFormatted}</div>
-            <div style="font-size: 15px; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.08em;">Задержка старта: +${oMin} мин</div>
+            <!-- Шапка стола -->
+            <div class="card-top">
+              <div class="dealer-identity dealer-brand-box">
+                <svg class="dealer-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                  <path d="M4 22h16"/>
+                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                </svg>
+                <div class="dealer-meta">
+                  <span class="dealer-label">ВЕДУЩИЙ</span>
+                  <span class="dealer-name">${table.dealerName || "Ведущий"}</span>
+                </div>
+                <div class="break-screen-dealer" style="display: none;">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
+              </div>
+              <div class="pill-group">
+                <span class="format-badge">${formatLabel}</span>
+                <div class="round-pill state-break-pill" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4);">☕ ЗАДЕРЖКА</div>
+              </div>
+            </div>
+
+            <!-- Центральный таймер и лазерный Time Rail -->
+            <div class="timer-block">
+              <div class="timer-digits state-break-digits state-overtime">${oFormatted}</div>
+              <div class="time-rail-track">
+                <div class="time-rail-fill is-warning" style="transform: scaleX(1); width: 100%;"></div>
+              </div>
+              <div class="timer-subtext" style="color: #f59e0b;">Задержка старта: +${oMin} мин</div>
+            </div>
+
+            <!-- Монолит следующей игры (EPT Style) -->
+            <div class="blinds-grid blinds-monolith break-monolith">
+              <div class="blinds-item current-blinds-box">
+                <span class="blinds-caption">Старт следующей игры</span>
+                <div class="blinds-main-row">
+                  <span class="blinds-number current">25 / 50</span>
+                  <span class="ante-badge ante-strip" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4);">ОЖИДАНИЕ</span>
+                </div>
+              </div>
+              <div class="blinds-item next-blinds-box">
+                <span class="blinds-caption">Статус стола</span>
+                <div class="next-blinds-value break-status-val" style="color: #fbbf24;">Задержка старта (+${oMin} мин)</div>
+              </div>
+            </div>
           </div>
         `;
         return;

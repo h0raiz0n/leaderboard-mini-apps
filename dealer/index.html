@@ -61,12 +61,13 @@
           </svg>
           <span class="format-text">Mystery</span>
         </button>
-        <button type="button" class="pill" data-format="MTT">
+        <button type="button" class="pill is-disabled" data-format="MTT" data-disabled="true" title="Формат в разработке">
           <svg class="format-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M5 4h10v3a5 5 0 0 1-10 0V4z" />
             <path d="M10 12v4m-4 0h8M3 6a2 2 0 0 0 2 2M17 6a2 2 0 0 1-2 2" stroke-linecap="round" />
           </svg>
           <span class="format-text">MTT</span>
+          <span class="badge-soon">🔒 Скоро</span>
         </button>
       </div>
     </div>
@@ -637,6 +638,12 @@
         <span>Выбрать эту структуру</span>
       </button>
     </div>
+  </div>
+
+  <!-- Системный всплывающий тост приложения -->
+  <div class="app-toast" id="app-toast" style="display: none;">
+    <span class="app-toast-icon" id="app-toast-icon">⚠️</span>
+    <span class="app-toast-msg" id="app-toast-msg">Формат МТТ в разработке</span>
   </div>
 </body>
 </html>

@@ -365,16 +365,55 @@ function updateStructureVisibilityForFormat(format) {
   }
 }
 
+let APP_TOAST_TIMER = null;
+
+function showAppToast(message, icon = "⚠️") {
+  if (typeof document === "undefined") return;
+  const toast = document.getElementById("app-toast");
+  const msgEl = document.getElementById("app-toast-msg");
+  const iconEl = document.getElementById("app-toast-icon");
+  if (!toast) return;
+
+  if (msgEl) msgEl.textContent = message;
+  if (iconEl) iconEl.textContent = icon;
+  toast.style.display = "flex";
+
+  if (APP_TOAST_TIMER) clearTimeout(APP_TOAST_TIMER);
+  APP_TOAST_TIMER = setTimeout(() => {
+    if (toast) toast.style.display = "none";
+  }, 2800);
+}
+
 // Инициализация селекторов формата и структуры
 function initPillSelectors() {
   const formatPills = document.querySelectorAll("#format-pills .pill");
   const mttSetupBlock = document.getElementById("mtt-setup-block");
+
+  // Защита: если сохранен MTT, сбрасываем на SnG
+  if (SELECTED_FORMAT === "MTT") {
+    SELECTED_FORMAT = "SnG";
+  }
 
   // Инициализируем правильное состояние при старте
   updateStructureVisibilityForFormat(SELECTED_FORMAT);
 
   formatPills.forEach(pill => {
     pill.addEventListener("click", () => {
+      // Заглушка для формата MTT (в разработке)
+      if (pill.dataset.disabled === "true" || pill.dataset.format === "MTT" || (pill.classList && pill.classList.contains("is-disabled"))) {
+        triggerHaptic("heavy");
+        showAppToast("⚠️ Режим МТТ в разработке. Доступны форматы SnG и Mystery Bounty");
+        // Принудительно удерживаем активную плашку выбранного формата
+        const safeFormat = (SELECTED_FORMAT === "MTT" ? "SnG" : SELECTED_FORMAT);
+        SELECTED_FORMAT = safeFormat;
+        formatPills.forEach(p => {
+          if (p.classList && typeof p.classList.toggle === "function") {
+            p.classList.toggle("active", p.dataset.format === safeFormat);
+          }
+        });
+        return;
+      }
+
       formatPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
       SELECTED_FORMAT = pill.dataset.format;
@@ -2677,6 +2716,7 @@ if (typeof module !== "undefined" && module.exports) {
     startRestPollingFallback,
     renderMttMasterLobby,
     cleanupStaleTablesInFirebase,
+    showAppToast,
     getCurrentMttSession: () => CURRENT_MTT_SESSION,
     setCurrentMttSession: (s) => { CURRENT_MTT_SESSION = s; },
     setSelectedFormat: (f) => { SELECTED_FORMAT = f; },

@@ -939,12 +939,37 @@ body {
   border-color: var(--red);
 }
 
-.table-card.state-break .timer-digits {
-  color: #f87171;
+/* Перерыв (EPT Club Styling) */
+.table-card.state-break {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: radial-gradient(circle at 50% 30%, rgba(251, 191, 36, 0.07) 0%, var(--card) 70%);
+}
+
+.table-card.state-break .state-break-digits {
+  color: #fbbf24;
+  text-shadow: 0 0 25px rgba(251, 191, 36, 0.25);
+}
+
+.table-card.state-break .state-break-rail {
+  background: linear-gradient(90deg, #d97706 0%, #fbbf24 100%);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+}
+
+.table-card.state-break .state-break-pill {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
 }
 
 .table-card.state-break .timer-subtext {
-  color: var(--red);
+  color: var(--muted);
+}
+
+.break-monolith .break-status-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 0.02em;
 }
 
 /* Пауза */
@@ -957,40 +982,10 @@ body {
   color: var(--amber);
 }
 
-/* Завершение игры / перерыв */
-.break-screen-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 16px;
-}
-
-.break-screen-title {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--gold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.break-screen-dealer {
-  font-size: 20px;
-  color: var(--ink-secondary);
-}
-
-.break-screen-digits {
-  font-size: 88px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  letter-spacing: -0.02em;
-}
-
-.break-screen-card.state-overtime {
+/* Овертайм перерыва */
+.table-card.state-break.state-overtime {
   border-color: #f59e0b;
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, var(--card) 100%);
+  background: radial-gradient(circle at 50% 30%, rgba(245, 158, 11, 0.14) 0%, var(--card) 70%);
   animation: pulse-overtime-amber 1.8s infinite ease-in-out;
 }
 
@@ -999,8 +994,9 @@ body {
   50% { border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 10px rgba(245, 158, 11, 0.1); }
 }
 
-.break-screen-card.state-overtime .break-screen-digits {
+.table-card.state-break.state-overtime .state-break-digits {
   color: #f59e0b;
+  text-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
 }
 
 /* Состояние ожидания (Lounge Mode — Impeccable Club Styling) */
