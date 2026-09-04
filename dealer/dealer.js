@@ -8,6 +8,9 @@ let DEALER_ID = "dealer_vlad";
 let SELECTED_FORMAT = "SnG";
 let SELECTED_STRUCT = "SNG_STANDARD";
 let CURRENT_PREVIEW_STRUCT = "SNG_DEEP_1500";
+let IS_MTT_MASTER = true;
+let MTT_SETUP_PLAYERS = 9;
+let DISSOLVE_TARGET_TABLE_KEY = null;
 let TABLES_STATE = {};
 
 if (typeof document !== "undefined" && document.addEventListener) {
@@ -289,11 +292,35 @@ function triggerHaptic(type = "light") {
 // Инициализация селекторов формата и структуры
 function initPillSelectors() {
   const formatPills = document.querySelectorAll("#format-pills .pill");
+  const mttSetupBlock = document.getElementById("mtt-setup-block");
+
   formatPills.forEach(pill => {
     pill.addEventListener("click", () => {
       formatPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
       SELECTED_FORMAT = pill.dataset.format;
+
+      // Показ / скрытие блока параметров МТТ
+      if (SELECTED_FORMAT === "MTT") {
+        if (mttSetupBlock) mttSetupBlock.style.display = "flex";
+        // Автоматически переключаем структуру на MTT_PRO_5000
+        const mttCard = document.getElementById("struct-card-mtt");
+        if (mttCard) {
+          document.querySelectorAll("#struct-pills .pill").forEach(p => p.classList.remove("active"));
+          mttCard.classList.add("active");
+          SELECTED_STRUCT = "MTT_PRO_5000";
+        }
+      } else {
+        if (mttSetupBlock) mttSetupBlock.style.display = "none";
+        if (SELECTED_STRUCT === "MTT_PRO_5000") {
+          const defaultPill = document.querySelector('#struct-pills .pill[data-struct="SNG_STANDARD"]') || document.querySelector("#struct-pills .pill");
+          if (defaultPill) {
+            document.querySelectorAll("#struct-pills .pill").forEach(p => p.classList.remove("active"));
+            defaultPill.classList.add("active");
+            SELECTED_STRUCT = defaultPill.dataset.struct || "SNG_STANDARD";
+          }
+        }
+      }
       triggerHaptic("light");
     });
   });
@@ -310,6 +337,23 @@ function initPillSelectors() {
       structPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
       SELECTED_STRUCT = pill.dataset.struct;
+      triggerHaptic("light");
+    });
+  });
+
+  // Селектор роли стола в МТТ (Master vs Satellite)
+  const rolePills = document.querySelectorAll("#mtt-role-pills .pill");
+  rolePills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      rolePills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      IS_MTT_MASTER = (pill.dataset.mttRole === "master");
+      const captionEl = document.getElementById("mtt-role-caption");
+      if (captionEl) {
+        captionEl.textContent = IS_MTT_MASTER
+          ? "Головной стол управляет общим таймером турнира и перерывами на объединение столов."
+          : "Таймер этого стола синхронизируется с головным столом турнира.";
+      }
       triggerHaptic("light");
     });
   });
@@ -523,7 +567,11 @@ function getMyTable() {
       levelIndex: 0,
       durationSec: 420,
       elapsedBeforePause: 0,
-      isPostGameBreak: false
+      isPostGameBreak: false,
+      isMttMaster: true,
+      playersCount: 9,
+      initialPlayers: 9,
+      lateEntries: 0
     };
   }
   return TABLES_STATE[DEALER_ID];
@@ -653,10 +701,24 @@ function startTable() {
   table.pauseTotalSec = null;
   table.breakEndsAt = null;
   table.isBreakActive = false;
+  table.breakDurationSec = null;
+  table.breakReason = null;
   table.isPostGameBreak = false;
   table.nextGameAt = null;
   table.postGameBreakMinutes = null;
   table.createdAt = Date.now();
+
+  if (table.format === "MTT") {
+    table.isMttMaster = (typeof IS_MTT_MASTER !== "undefined") ? IS_MTT_MASTER : true;
+    table.playersCount = MTT_SETUP_PLAYERS || 9;
+    table.initialPlayers = table.playersCount;
+    table.lateEntries = 0;
+  } else {
+    table.isMttMaster = true;
+    table.playersCount = 9;
+    table.initialPlayers = 9;
+    table.lateEntries = 0;
+  }
 
   saveState();
   renderDealerView();
@@ -942,6 +1004,32 @@ function generatePreFilledFormUrl() {
 let TARGET_REBALANCE_TABLE_KEY = null;
 let CURRENT_REBALANCE_BOX = null;
 
+// МТТ управление игроками при настройке
+function adjustSetupPlayers(delta) {
+  triggerHaptic("light");
+  MTT_SETUP_PLAYERS = Math.max(2, Math.min(10, (MTT_SETUP_PLAYERS || 9) + delta));
+  const el = document.getElementById("mtt-setup-players-val");
+  if (el) el.textContent = MTT_SETUP_PLAYERS;
+}
+
+// Поздняя регистрация игрока (уровни 1-5)
+function registerLateEntry() {
+  const table = getMyTable();
+  if (table.format !== "MTT") return;
+  const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
+  const maxLateLvl = (struct && struct.lateRegLevels) ? struct.lateRegLevels : 5;
+  if (table.levelIndex >= maxLateLvl) {
+    triggerHaptic("warning");
+    return;
+  }
+  triggerHaptic("success");
+  table.playersCount = (table.playersCount || 9) + 1;
+  table.initialPlayers = (table.initialPlayers || 9) + 1;
+  table.lateEntries = (table.lateEntries || 0) + 1;
+  saveState();
+  renderDealerView();
+}
+
 // МТТ управление игроками
 function adjustPlayers(delta) {
   triggerHaptic("light");
@@ -1045,6 +1133,140 @@ function confirmRebalance() {
   renderDealerView();
 }
 
+// Открытие модалки объединения столов (головной стол)
+function openConsolidationModal() {
+  triggerHaptic("medium");
+  const modal = document.getElementById("dissolve-table-modal");
+  if (!modal) return;
+
+  const activeMttTables = Object.keys(TABLES_STATE)
+    .map(k => TABLES_STATE[k])
+    .filter(t => t && t.format === "MTT" && (t.status === "running" || t.status === "paused") && !t.dissolved);
+
+  let totalPlayers = 0;
+  activeMttTables.forEach(t => {
+    totalPlayers += (t.playersCount !== undefined ? t.playersCount : 9);
+  });
+
+  const totalEl = document.getElementById("dissolve-total-players");
+  if (totalEl) totalEl.textContent = totalPlayers;
+
+  const recEl = document.getElementById("dissolve-recommendation");
+  if (recEl) {
+    if (totalPlayers <= 9 && activeMttTables.length > 1) {
+      recEl.textContent = "Финальный стол (объединение в 1 стол)!";
+    } else if (totalPlayers <= 18 && activeMttTables.length > 2) {
+      recEl.textContent = `Порог 18: объединение ${activeMttTables.length} → 2 стола`;
+    } else if (totalPlayers <= 27 && activeMttTables.length > 3) {
+      recEl.textContent = `Порог 27: объединение 4 → 3 стола`;
+    } else {
+      recEl.textContent = `Объединение ${activeMttTables.length} → ${Math.max(1, activeMttTables.length - 1)} столов`;
+    }
+  }
+
+  const listEl = document.getElementById("dissolve-tables-list");
+  if (listEl) {
+    listEl.innerHTML = "";
+    // Кандидаты на расформирование: сателлитные столы, или любые другие активные столы
+    const candidates = activeMttTables.filter(t => t.id !== DEALER_ID);
+    if (candidates.length === 0 && activeMttTables.length > 0) {
+      candidates.push(activeMttTables[0]);
+    }
+
+    DISSOLVE_TARGET_TABLE_KEY = candidates.length > 0 ? candidates[0].id : null;
+
+    if (typeof document.createElement === "function") {
+      candidates.forEach(cand => {
+        const opt = document.createElement("div");
+        opt.className = "dissolve-table-option" + (cand.id === DISSOLVE_TARGET_TABLE_KEY ? " selected" : "");
+        if (opt.dataset) opt.dataset.tableKey = cand.id;
+        opt.innerHTML = `
+          <span class="dissolve-table-name">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            Стол ${cand.dealerName || cand.id}
+          </span>
+          <span class="dissolve-table-count">${cand.playersCount || 9} игр.</span>
+        `;
+        opt.onclick = () => {
+          DISSOLVE_TARGET_TABLE_KEY = cand.id;
+          listEl.querySelectorAll(".dissolve-table-option").forEach(el => el.classList.remove("selected"));
+          opt.classList.add("selected");
+          triggerHaptic("light");
+        };
+        listEl.appendChild(opt);
+      });
+    }
+  }
+
+  modal.style.display = "flex";
+}
+
+function dismissConsolidationModal() {
+  triggerHaptic("light");
+  const modal = document.getElementById("dissolve-table-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function confirmConsolidationBreak() {
+  dismissConsolidationModal();
+  startConsolidationBreak(DISSOLVE_TARGET_TABLE_KEY, 900);
+}
+
+// Запуск 15-минутного клубного перерыва на объединение столов
+function startConsolidationBreak(dissolveTableKey, breakDurationSec = 900) {
+  triggerHaptic("heavy");
+  const masterTable = getMyTable();
+  const now = Date.now();
+  const breakEndsAt = now + (breakDurationSec * 1000);
+
+  masterTable.isBreakActive = true;
+  masterTable.breakEndsAt = breakEndsAt;
+  masterTable.breakDurationSec = breakDurationSec;
+  masterTable.breakReason = "consolidation";
+  masterTable.status = "paused";
+  masterTable.pauseEndsAt = null;
+  masterTable.pauseTotalSec = null;
+  saveState();
+
+  if (dissolveTableKey) {
+    dissolveTable(dissolveTableKey);
+  }
+
+  renderDealerView();
+}
+
+// Расформирование стола при объединении
+function dissolveTable(tableKey) {
+  if (!tableKey) return;
+  if (TABLES_STATE[tableKey]) {
+    TABLES_STATE[tableKey].status = "finished";
+    TABLES_STATE[tableKey].dissolved = true;
+    TABLES_STATE[tableKey].isBreakActive = false;
+  }
+  if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
+    try {
+      firebase.database().ref("atmosphere/tables/" + encodeURIComponent(tableKey)).update({
+        status: "finished",
+        dissolved: true
+      });
+    } catch (e) {}
+  }
+  const dbUrl = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.FIREBASE_DB_URL)
+    ? POKER_CONFIG.FIREBASE_DB_URL
+    : "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app";
+  if (typeof fetch === "function") {
+    fetch(`${dbUrl}/atmosphere/tables/${encodeURIComponent(tableKey)}.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "finished", dissolved: true })
+    }).catch(() => {});
+  }
+}
+
 // Автоматическое переключение уровней блайндов по истечении таймера (стандарт TDv3)
 function checkAutoLevelProgression() {
   const table = getMyTable();
@@ -1055,9 +1277,9 @@ function checkAutoLevelProgression() {
     const levels = (struct && struct.levels) ? struct.levels : [];
     const currentLvl = levels[table.levelIndex || 0];
 
-    // Автоматический Color-Up (после 100/200 или согласно colorUpAfterLevel структуры)
+    // Автоматический Color-Up (после 150/300 для MTT Pro, после 100/200 для SnG Pro)
     const isColorUpLevel = (struct && struct.colorUpAfterLevel && (table.levelIndex + 1) === struct.colorUpAfterLevel)
-      || (currentLvl && currentLvl.sb === 100 && currentLvl.bb === 200);
+      || (struct && struct.id !== "MTT_PRO_5000" && currentLvl && currentLvl.sb === 100 && currentLvl.bb === 200);
 
     if (isColorUpLevel && !table.colorUpDone) {
       table.colorUpDone = true;
@@ -1114,8 +1336,34 @@ function skipColorUp() {
 
 // Отрисовка состояния пульта
 function renderDealerView() {
-  checkAutoLevelProgression();
   const table = getMyTable();
+
+  // Синхронизация сателлитного стола с головным столом в режиме МТТ
+  let masterTable = null;
+  if (table.format === "MTT" && !table.isMttMaster) {
+    masterTable = Object.values(TABLES_STATE).find(t => t && t.format === "MTT" && t.isMttMaster && t.id !== table.id && t.status !== "finished" && t.status !== "idle");
+    if (masterTable) {
+      table.status = masterTable.status;
+      table.levelIndex = masterTable.levelIndex;
+      table.durationSec = masterTable.durationSec;
+      table.remainingMs = masterTable.remainingMs;
+      table.levelEndsAt = masterTable.levelEndsAt;
+      table.startedAt = masterTable.startedAt;
+      table.elapsedBeforePause = masterTable.elapsedBeforePause;
+      table.colorUpDone = masterTable.colorUpDone;
+      table.isColorUpActive = masterTable.isColorUpActive;
+      table.pauseEndsAt = masterTable.pauseEndsAt;
+      table.pauseTotalSec = masterTable.pauseTotalSec;
+      table.isBreakActive = masterTable.isBreakActive;
+      table.breakEndsAt = masterTable.breakEndsAt;
+      table.breakDurationSec = masterTable.breakDurationSec;
+      table.breakReason = masterTable.breakReason;
+    }
+  } else {
+    // Автоматическая смена уровней запускается только для ведущего или обычных SnG столов
+    checkAutoLevelProgression();
+  }
+
   const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
   const levels = (struct && struct.levels) ? struct.levels : [];
   const maxIdx = levels.length ? levels.length - 1 : 0;
@@ -1146,10 +1394,19 @@ function renderDealerView() {
   const postBreakActive = document.getElementById("post-break-active");
   const postBreakDigits = document.getElementById("post-break-digits");
 
-  // МТТ панель
+  // МТТ панель и элементы управления
   const mttBox = document.getElementById("mtt-control-box");
   const mttVal = document.getElementById("mtt-players-val");
-  if (mttBox) {
+  const lateRegBtn = document.getElementById("btn-late-reg");
+  const lateRegText = document.getElementById("late-reg-btn-text");
+  const mttRegSubLabel = document.getElementById("mtt-reg-sub-label");
+  const consolidateBtn = document.getElementById("btn-consolidate");
+  const syncBadge = document.getElementById("satellite-sync-badge");
+  const syncText = document.getElementById("satellite-sync-text");
+
+  const isConsolidationBreak = Boolean(table.isBreakActive && table.breakEndsAt && table.breakEndsAt > Date.now());
+
+  if (mttBox && mttBox.style) {
     const isMtt = (table.format === "MTT" || SELECTED_FORMAT === "MTT");
     mttBox.style.display = (isMtt && (table.status === "running" || table.status === "paused")) ? "flex" : "none";
   }
@@ -1157,8 +1414,51 @@ function renderDealerView() {
     mttVal.textContent = table.playersCount || 9;
   }
 
+  if (table.format === "MTT") {
+    const maxLateLvl = (struct && struct.lateRegLevels) ? struct.lateRegLevels : 5;
+    const isLateRegOpen = (table.levelIndex < maxLateLvl) && (table.status === "running" || table.status === "paused") && !isConsolidationBreak;
+    if (lateRegBtn) {
+      lateRegBtn.disabled = !isLateRegOpen;
+      if (isLateRegOpen) {
+        if (lateRegBtn.classList) lateRegBtn.classList.remove("disabled");
+        if (lateRegText) lateRegText.textContent = "+ Игрок (Поздняя рега)";
+        if (mttRegSubLabel) mttRegSubLabel.textContent = "Поздняя регистрация открыта";
+      } else {
+        if (lateRegBtn.classList) lateRegBtn.classList.add("disabled");
+        if (lateRegText) lateRegText.textContent = "Поздняя рега закрыта";
+        if (mttRegSubLabel) mttRegSubLabel.textContent = "Регистрация закрыта (уровень > 5)";
+      }
+    }
+
+    if (consolidateBtn && consolidateBtn.style) {
+      consolidateBtn.style.display = (table.isMttMaster && (table.status === "running" || table.status === "paused")) ? "flex" : "none";
+    }
+
+    if (syncBadge && syncBadge.style) {
+      syncBadge.style.display = (!table.isMttMaster && (table.status === "running" || table.status === "paused")) ? "flex" : "none";
+      if (!table.isMttMaster && syncText) {
+        syncText.textContent = masterTable ? `Синхронизировано со столом ${masterTable.dealerName || "Master"}` : "Синхронизировано с головным столом";
+      }
+    }
+
+    // Для сателлитного стола кнопки паузы и шага скрыты (управление у головного стола)
+    if (!table.isMttMaster) {
+      if (pauseBtn && pauseBtn.style) pauseBtn.style.display = "none";
+      if (stepBtn && stepBtn.style) stepBtn.style.display = "none";
+    } else {
+      if (pauseBtn && pauseBtn.style) pauseBtn.style.display = "";
+      if (stepBtn && stepBtn.style) stepBtn.style.display = "";
+    }
+  } else {
+    if (consolidateBtn && consolidateBtn.style) consolidateBtn.style.display = "none";
+    if (syncBadge && syncBadge.style) syncBadge.style.display = "none";
+    if (pauseBtn && pauseBtn.style) pauseBtn.style.display = "";
+    if (stepBtn && stepBtn.style) stepBtn.style.display = "";
+  }
+
   if (roundEl) {
     if (table.status === "finished") roundEl.textContent = "ФИНИШ";
+    else if (isConsolidationBreak) roundEl.textContent = "ПЕРЕРЫВ 15 МИН";
     else if (isFinalLevel) roundEl.textContent = "ФИНАЛЬНЫЙ УРОВЕНЬ";
     else roundEl.textContent = currentLvl.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLvl.level}`;
   }
@@ -1193,9 +1493,17 @@ function renderDealerView() {
     }
   }
 
-  // Отображение таймера (если активен таймированный перерыв / Color-Up, показываем отсчет перерыва)
+  // Отображение таймера (если активен 15-мин перерыв на объединение, Color-Up или пауза)
   const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > Date.now());
-  if (isTimedPause) {
+  if (isConsolidationBreak) {
+    const bRem = Math.max(0, Math.ceil((table.breakEndsAt - Date.now()) / 1000));
+    const bMin = Math.floor(bRem / 60);
+    const bSec = bRem % 60;
+    if (digitsEl) {
+      digitsEl.textContent = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+      digitsEl.style.color = "#fbbf24";
+    }
+  } else if (isTimedPause) {
     const pRemaining = Math.max(0, Math.ceil((table.pauseEndsAt - Date.now()) / 1000));
     const pMin = Math.floor(pRemaining / 60);
     const pSec = pRemaining % 60;
@@ -1236,7 +1544,9 @@ function renderDealerView() {
     if (gameBtnStack) gameBtnStack.style.display = "flex";
     if (postGamePanel) postGamePanel.style.display = "none";
     if (statusEl) {
-      if (table.isColorUpActive && isTimedPause) {
+      if (isConsolidationBreak) {
+        statusEl.textContent = "☕ Перерыв 15 мин • Объединение столов";
+      } else if (table.isColorUpActive && isTimedPause) {
         statusEl.textContent = "☕ Color-Up • Размен фишек <100";
       } else {
         statusEl.textContent = isTimedPause ? "☕ Перерыв • Color-Up" : "⏸ На паузе";
@@ -1381,6 +1691,19 @@ if (typeof module !== "undefined" && module.exports) {
     openFinishModal,
     dismissFinishModal,
     confirmFinishGame,
-    initDataSource
+    initDataSource,
+    initPillSelectors,
+    registerLateEntry,
+    adjustSetupPlayers,
+    openConsolidationModal,
+    dismissConsolidationModal,
+    confirmConsolidationBreak,
+    startConsolidationBreak,
+    dissolveTable,
+    setSelectedFormat: (f) => { SELECTED_FORMAT = f; },
+    setSelectedStruct: (s) => { SELECTED_STRUCT = s; },
+    setIsMttMaster: (m) => { IS_MTT_MASTER = m; },
+    setMttSetupPlayers: (p) => { MTT_SETUP_PLAYERS = p; },
+    setDealerName: (name) => { DEALER_NAME = name; applyDealerIdentity(); }
   };
 }

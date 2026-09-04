@@ -104,6 +104,34 @@ const POKER_CONFIG = {
         { level: 10, sb: 1000, bb: 2000, ante: 2000, durationSec: 420, label: "1000 / 2000 (BBA 2000)", isBreak: false },
         { level: 11, sb: 1500, bb: 3000, ante: 3000, durationSec: 420, label: "1500 / 3000 (BBA 3000)", isBreak: false }
       ]
+    },
+    MTT_PRO_5000: {
+      id: "MTT_PRO_5000",
+      name: "5 000 стек / 10 мин (Атмосфера МТТ Pro)",
+      shortDesc: "3-часовой турнир, BBA с 6 уровня, Color-Up 2 мин после 150/300, перерывы на объединение столов",
+      stack: 5000,
+      colorUpAfterLevel: 5, // после 150/300
+      lateRegLevels: 5,
+      bbaStartLevel: 6,
+      levels: [
+        { level: 1,  sb: 25,    bb: 50,    ante: 0,     durationSec: 600, label: "25 / 50",                 isBreak: false },
+        { level: 2,  sb: 50,    bb: 100,   ante: 0,     durationSec: 600, label: "50 / 100",                isBreak: false },
+        { level: 3,  sb: 75,    bb: 150,   ante: 0,     durationSec: 600, label: "75 / 150",                isBreak: false },
+        { level: 4,  sb: 100,   bb: 200,   ante: 0,     durationSec: 600, label: "100 / 200",               isBreak: false },
+        { level: 5,  sb: 150,   bb: 300,   ante: 0,     durationSec: 600, label: "150 / 300",               isBreak: false },
+        { level: 6,  sb: 200,   bb: 400,   ante: 400,   durationSec: 600, label: "200 / 400 (BBA 400)",     isBreak: false },
+        { level: 7,  sb: 300,   bb: 600,   ante: 600,   durationSec: 600, label: "300 / 600 (BBA 600)",     isBreak: false },
+        { level: 8,  sb: 400,   bb: 800,   ante: 800,   durationSec: 600, label: "400 / 800 (BBA 800)",     isBreak: false },
+        { level: 9,  sb: 600,   bb: 1200,  ante: 1200,  durationSec: 600, label: "600 / 1200 (BBA 1200)",   isBreak: false },
+        { level: 10, sb: 800,   bb: 1600,  ante: 1600,  durationSec: 600, label: "800 / 1600 (BBA 1600)",   isBreak: false },
+        { level: 11, sb: 1000,  bb: 2000,  ante: 2000,  durationSec: 600, label: "1000 / 2000 (BBA 2000)", isBreak: false },
+        { level: 12, sb: 1500,  bb: 3000,  ante: 3000,  durationSec: 600, label: "1500 / 3000 (BBA 3000)", isBreak: false },
+        { level: 13, sb: 2000,  bb: 4000,  ante: 4000,  durationSec: 600, label: "2000 / 4000 (BBA 4000)", isBreak: false },
+        { level: 14, sb: 3000,  bb: 6000,  ante: 6000,  durationSec: 600, label: "3000 / 6000 (BBA 6000)", isBreak: false },
+        { level: 15, sb: 4000,  bb: 8000,  ante: 8000,  durationSec: 600, label: "4000 / 8000 (BBA 8000)", isBreak: false },
+        { level: 16, sb: 6000,  bb: 12000, ante: 12000, durationSec: 600, label: "6000 / 12000 (BBA 12000)", isBreak: false },
+        { level: 17, sb: 10000, bb: 20000, ante: 20000, durationSec: 600, label: "10000 / 20000 (BBA 20000)", isBreak: false }
+      ]
     }
   },
 

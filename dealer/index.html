@@ -108,6 +108,64 @@
             <span>Уровни</span>
           </button>
         </div>
+
+        <!-- Карточка 3: Атмосфера МТТ Pro -->
+        <div class="struct-card pill" data-struct="MTT_PRO_5000" data-info="3-часовой турнир • BBA с 6 ур. • 10 мин уровни" role="button" tabindex="0" id="struct-card-mtt">
+          <div class="struct-card-main">
+            <div class="struct-card-headline">
+              <span class="struct-card-stack">5 000 стек</span>
+              <span class="struct-card-dot">•</span>
+              <span class="struct-card-dur">10 мин</span>
+              <span class="struct-badge mtt-badge">MTT Pro</span>
+            </div>
+            <div class="struct-card-desc">3 часа • BBA с ур. 6</div>
+          </div>
+          <button type="button" class="btn-preview-struct" onclick="openStructurePreview('MTT_PRO_5000'); event.stopPropagation();" title="Посмотреть таблицу уровней">
+            <svg class="preview-btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke-linecap="round"/>
+            </svg>
+            <span>Уровни</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- МТТ опции настройки стола (роль стола и начальное число игроков) -->
+    <div class="mtt-setup-block" id="mtt-setup-block" style="display: none;">
+      <!-- Роль стола в турнире -->
+      <div class="selector-group" id="mtt-role-group">
+        <label class="selector-label">Роль стола в турнире</label>
+        <div class="mtt-role-pills" id="mtt-role-pills">
+          <button type="button" class="pill active" data-mtt-role="master" id="mtt-role-master">
+            <svg class="role-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+            </svg>
+            <span>Головной стол (Master)</span>
+          </button>
+          <button type="button" class="pill" data-mtt-role="satellite" id="mtt-role-satellite">
+            <svg class="role-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="10" cy="10" r="2.5"/>
+              <path d="M14.5 5.5a6.36 6.36 0 0 1 0 9m-9-9a6.36 6.36 0 0 0 0 9m12-12a10.6 10.6 0 0 1 0 15m-15-15a10.6 10.6 0 0 0 0 15" stroke-linecap="round"/>
+            </svg>
+            <span>Стол турнира (Сателлит)</span>
+          </button>
+        </div>
+        <div class="mtt-role-caption" id="mtt-role-caption">
+          Головной стол управляет общим таймером турнира и перерывами на объединение столов.
+        </div>
+      </div>
+
+      <!-- Начальное число игроков за столом -->
+      <div class="selector-group" id="mtt-initial-players-group">
+        <label class="selector-label">Стартовый состав за столом</label>
+        <div class="mtt-setup-players-row">
+          <div class="mtt-counter-wrap">
+            <button type="button" class="btn-stepper" onclick="adjustSetupPlayers(-1)" aria-label="Меньше игроков">−</button>
+            <span class="mtt-count-val" id="mtt-setup-players-val">9</span>
+            <button type="button" class="btn-stepper" onclick="adjustSetupPlayers(1)" aria-label="Больше игроков">+</button>
+          </div>
+          <span class="mtt-setup-hint">9-max стол (5 000 стек на каждого)</span>
+        </div>
       </div>
     </div>
 
@@ -155,7 +213,7 @@
       <div class="mtt-header-row">
         <div class="mtt-label-wrap">
           <span class="mtt-label">Игроков за столом</span>
-          <span class="mtt-sub-label">Управление составом</span>
+          <span class="mtt-sub-label" id="mtt-reg-sub-label">Поздняя регистрация открыта</span>
         </div>
         <div class="mtt-counter-wrap">
           <button type="button" class="btn-stepper" onclick="adjustPlayers(-1)" aria-label="Меньше игроков">−</button>
@@ -163,20 +221,55 @@
           <button type="button" class="btn-stepper" onclick="adjustPlayers(1)" aria-label="Больше игроков">+</button>
         </div>
       </div>
-      <button type="button" class="btn btn-elimination" id="btn-elimination" onclick="eliminatePlayer()">
+
+      <!-- Кнопки действий с игроками -->
+      <div class="mtt-actions-grid">
+        <button type="button" class="btn btn-elimination" id="btn-elimination" onclick="eliminatePlayer()">
+          <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="12" r="1"/>
+            <circle cx="15" cy="12" r="1"/>
+            <path d="M8 20v2h8v-2"/>
+            <path d="M12.5 17l-.5-1-.5 1h1z"/>
+            <path d="M16 20a4 4 0 0 0 4-4v-3a8 8 0 1 0-16 0v3a4 4 0 0 0 4 4z"/>
+          </svg>
+          <span>Аут игрока (−1)</span>
+        </button>
+
+        <button type="button" class="btn btn-late-reg" id="btn-late-reg" onclick="registerLateEntry()">
+          <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+          <span id="late-reg-btn-text">+ Игрок (Поздняя рега)</span>
+        </button>
+      </div>
+
+      <!-- Кнопка объединения столов для головного дилера -->
+      <button type="button" class="btn btn-consolidate" id="btn-consolidate" style="display: none;" onclick="openConsolidationModal()">
         <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="9" cy="12" r="1"/>
-          <circle cx="15" cy="12" r="1"/>
-          <path d="M8 20v2h8v-2"/>
-          <path d="M12.5 17l-.5-1-.5 1h1z"/>
-          <path d="M16 20a4 4 0 0 0 4-4v-3a8 8 0 1 0-16 0v3a4 4 0 0 0 4 4z"/>
+          <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+          <line x1="6" y1="1" x2="6" y2="4"/>
+          <line x1="10" y1="1" x2="10" y2="4"/>
+          <line x1="14" y1="1" x2="14" y2="4"/>
         </svg>
-        <span>Аут игрока (−1)</span>
+        <span>☕ Объединение столов (15 мин)</span>
       </button>
     </div>
 
     <!-- Кнопки управления в игре -->
     <div class="btn-stack" id="game-btn-stack">
+      <!-- Бейдж сателлитного стола (синхронизация с Master) -->
+      <div class="satellite-sync-badge" id="satellite-sync-badge" style="display: none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="2"/>
+          <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/>
+        </svg>
+        <span id="satellite-sync-text">Синхронизировано с головным столом</span>
+      </div>
+
       <div class="btn-row" id="running-btn-row">
         <button class="btn btn-pause" id="btn-pause">⏸ Пауза</button>
         <button class="btn btn-step" id="btn-step" title="Следующий уровень">⏩</button>
@@ -328,6 +421,53 @@
           </svg>
           <span>Пересажен</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка объединения и расформирования столов МТТ (Head Dealer) -->
+  <div class="modal-backdrop" id="dissolve-table-modal" style="display: none;" onclick="if(event.target === this) dismissConsolidationModal()">
+    <div class="modal-sheet dissolve-sheet">
+      <div class="modal-status-badge warning">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>Объединение столов</span>
+      </div>
+      <div class="modal-heading">Перерыв на объединение (15 мин)</div>
+      <div class="modal-caption" id="dissolve-modal-caption">
+        Турнир перейдёт в 15-минутный перерыв для рассадки участников. Выберите стол для расформирования:
+      </div>
+      
+      <div class="dissolve-summary-card">
+        <div class="dissolve-summary-item">
+          <span class="dissolve-summary-lbl">Всего участников:</span>
+          <span class="dissolve-summary-val" id="dissolve-total-players">25</span>
+        </div>
+        <div class="dissolve-summary-item">
+          <span class="dissolve-summary-lbl">Рекомендация:</span>
+          <span class="dissolve-summary-val highlight" id="dissolve-recommendation">Объединение 4 → 3 стола</span>
+        </div>
+      </div>
+
+      <div class="dissolve-tables-group">
+        <div class="field-label">Выберите расформируемый стол:</div>
+        <div class="dissolve-tables-list" id="dissolve-tables-list">
+          <!-- Заполняется динамически списком сателлитных столов -->
+        </div>
+      </div>
+
+      <div class="btn-stack modal-dissolve-actions">
+        <button type="button" class="btn btn-warning-confirm" id="btn-confirm-dissolve" onclick="confirmConsolidationBreak()">
+          <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+          </svg>
+          <span>Начать перерыв (15 мин)</span>
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="dismissConsolidationModal()">Отмена</button>
       </div>
     </div>
   </div>

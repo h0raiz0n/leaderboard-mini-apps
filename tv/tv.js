@@ -462,11 +462,14 @@ function getFormatLabel(formatKey) {
 }
 
 function getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTimedPause) {
+  if (table && table.breakReason === "consolidation") {
+    return "Перерыв 15 мин • Объединение столов";
+  }
   if (isTimedPause) {
-    if (table.isColorUpActive) return "Размен фишек <100";
+    if (table && table.isColorUpActive) return "Размен фишек <100";
     return "Перерыв";
   }
-  if (table.status === "paused") {
+  if (table && table.status === "paused") {
     return "Пауза";
   }
   if (isFinalLevel) {
@@ -475,14 +478,25 @@ function getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTim
 
   const levels = Array.isArray(structure) ? structure : [];
   let colorUpLevelIdx = -1;
-  for (let i = 0; i < levels.length; i++) {
-    if (levels[i].sb === 100 && levels[i].bb === 200) {
-      colorUpLevelIdx = i;
-      break;
+
+  // Для MTT_PRO_5000: color-up строго после 150/300 (уровень 5, safeIndex 4)
+  if (table && (table.structKey === "MTT_PRO_5000" || (table.format === "MTT" && levels.length >= 17))) {
+    for (let i = 0; i < levels.length; i++) {
+      if (levels[i].sb === 150 && levels[i].bb === 300) {
+        colorUpLevelIdx = i;
+        break;
+      }
+    }
+  } else {
+    for (let i = 0; i < levels.length; i++) {
+      if (levels[i].sb === 100 && levels[i].bb === 200) {
+        colorUpLevelIdx = i;
+        break;
+      }
     }
   }
 
-  if (colorUpLevelIdx !== -1 && !table.colorUpDone && safeIndex <= colorUpLevelIdx) {
+  if (colorUpLevelIdx !== -1 && (!table || !table.colorUpDone) && safeIndex <= colorUpLevelIdx) {
     const diff = colorUpLevelIdx - safeIndex;
     if (diff === 0) {
       return "Color-Up в конце уровня";
@@ -493,7 +507,7 @@ function getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTim
     }
   }
 
-  if (table.colorUpDone) {
+  if (table && table.colorUpDone) {
     return "Фишки <100 выведены";
   }
 
@@ -532,14 +546,21 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     const stack = 5000;
     const totalChips = (totalStarting || 9) * stack;
     const avgStack = totalPlayers > 0 ? Math.round(totalChips / totalPlayers) : stack;
-    const firstT = activeMttTables[0];
+    const firstT = activeMttTables.find(t => t.isMttMaster) || activeMttTables[0];
     const mttStructure = getTableStructure(firstT);
     const currentMttLvl = mttStructure[firstT ? (firstT.levelIndex || 0) : 0] || { bb: 50 };
     const currentBb = currentMttLvl.bb || 50;
     const avgStackBb = Math.round(avgStack / currentBb);
 
     let rebalanceBanner = "";
-    if (activeMttTables.length >= 2) {
+    const hasConsolidationBreak = activeMttTables.some(t => t.isBreakActive && t.breakReason === "consolidation" && t.breakEndsAt > Date.now());
+    if (hasConsolidationBreak) {
+      rebalanceBanner = `
+        <div class="mtt-break-ticker">
+          ☕ <b>ПЕРЕРЫВ 15 МИНУТ:</b> Объединение столов. Пересадка игроков.
+        </div>
+      `;
+    } else if (activeMttTables.length >= 2) {
       let maxT = activeMttTables[0];
       let minT = activeMttTables[0];
       activeMttTables.forEach(t => {
@@ -557,10 +578,10 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
       }
     }
 
-    if (totalPlayers <= 10 && activeMttTables.length > 1) {
+    if (!rebalanceBanner && totalPlayers <= 10 && activeMttTables.length > 1) {
       rebalanceBanner = `
         <div class="mtt-final-ticker">
-          🔥 <b>ФИНАЛЬНЫЙ СТОЛ СФОРМИРОВАН:</b> Объединение всех участников за столом ${activeMttTables[0].dealerName || "Стол 1"}!
+          🔥 <b>ФИНАЛЬНЫЙ СТОЛ СФОРМИРОВАН:</b> Объединение всех участников за столом ${firstT.dealerName || "Стол 1"}!
         </div>
       `;
     }
@@ -570,6 +591,11 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
         <div class="mtt-stat-box">
           <span class="mtt-stat-lbl">Осталось игроков</span>
           <span class="mtt-stat-num" id="mtt-val-players">${totalPlayers} <span class="mtt-stat-sub">/ ${totalStarting}</span></span>
+        </div>
+        <div class="mtt-bar-divider"></div>
+        <div class="mtt-stat-box">
+          <span class="mtt-stat-lbl">Банк фишек</span>
+          <span class="mtt-stat-num cyan" id="mtt-val-chips">${totalChips.toLocaleString("ru-RU")}</span>
         </div>
         <div class="mtt-bar-divider"></div>
         <div class="mtt-stat-box">
@@ -678,6 +704,26 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     const railWarningClass = (time.isAlert && !isTimedPause) ? " is-warning" : "";
     const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
 
+    let rebalanceFlagHtml = "";
+    if (activeMttTables.length >= 2 && table.format === "MTT") {
+      let maxCount = -1;
+      let minCount = 999;
+      activeMttTables.forEach(t => {
+        const c = t.playersCount !== undefined ? t.playersCount : 9;
+        if (c > maxCount) maxCount = c;
+        if (c < minCount) minCount = c;
+      });
+      const delta = maxCount - minCount;
+      const count = table.playersCount !== undefined ? table.playersCount : 9;
+      if (delta >= 2) {
+        if (count === maxCount) {
+          rebalanceFlagHtml = `<span class="table-rebalance-flag donor">Отдает игрока</span>`;
+        } else if (count === minCount) {
+          rebalanceFlagHtml = `<span class="table-rebalance-flag receiver">Принимает игрока</span>`;
+        }
+      }
+    }
+
     html += `
       <div class="${cardClass}" id="card-${table.id || key}">
         <!-- Шапка стола -->
@@ -698,8 +744,10 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
           </div>
           <div class="pill-group">
             ${table.format === "MTT" ? `<div class="players-pill">👥 ${table.playersCount || 9}</div>` : ""}
-            <span class="format-badge">${formatLabel}</span>
+            ${table.format === "MTT" ? (table.isMttMaster ? `<span class="mtt-role-pill master">Главный</span>` : `<span class="mtt-role-pill satellite">Сателлит</span>`) : ""}
+            <span class="format-badge${table.format === "MTT" ? " mtt-badge" : ""}">${formatLabel}</span>
             <div class="round-pill">${roundText}</div>
+            ${rebalanceFlagHtml}
           </div>
         </div>
         
@@ -828,11 +876,15 @@ function renderTables() {
     const structure = getTableStructure(table);
     const now = Date.now();
 
-    // Автоматический Color-Up после 100/200 и транзит уровней
+    // Автоматический Color-Up после 100/200 (или 150/300 для MTT) и транзит уровней
     if (table.status === "running" && table.levelEndsAt && now >= table.levelEndsAt) {
       const currentLevel = structure[table.levelIndex] || structure[0];
       
-      if (currentLevel.sb === 100 && currentLevel.bb === 200 && !table.colorUpDone) {
+      const isColorUpLevel = (table.structKey === "MTT_PRO_5000" || (table.format === "MTT" && structure.length >= 17))
+        ? (currentLevel.sb === 150 && currentLevel.bb === 300)
+        : (currentLevel.sb === 100 && currentLevel.bb === 200);
+
+      if (isColorUpLevel && !table.colorUpDone) {
         table.colorUpDone = true;
         table.isColorUpActive = true;
         table.status = "paused";
@@ -1005,7 +1057,7 @@ function renderTables() {
     const stack = 5000;
     const totalChips = (totalStarting || 9) * stack;
     const avgStack = totalPlayers > 0 ? Math.round(totalChips / totalPlayers) : stack;
-    const firstT = activeMttTables[0];
+    const firstT = activeMttTables.find(t => t.isMttMaster) || activeMttTables[0];
     const mttStructure = getTableStructure(firstT);
     const currentMttLvl = mttStructure[firstT ? (firstT.levelIndex || 0) : 0] || { bb: 50 };
     const currentBb = currentMttLvl.bb || 50;
@@ -1013,12 +1065,56 @@ function renderTables() {
 
     const mttPlayersEl = document.getElementById("mtt-val-players");
     if (mttPlayersEl) mttPlayersEl.innerHTML = `${totalPlayers} <span class="mtt-stat-sub">/ ${totalStarting}</span>`;
+
+    const mttChipsEl = document.getElementById("mtt-val-chips");
+    if (mttChipsEl) mttChipsEl.textContent = totalChips.toLocaleString("ru-RU");
     
     const mttAvgEl = document.getElementById("mtt-val-avg");
     if (mttAvgEl) mttAvgEl.innerHTML = `${avgStack.toLocaleString("ru-RU")} <span class="mtt-stat-sub">(${avgStackBb} BB)</span>`;
 
     const mttTablesEl = document.getElementById("mtt-val-tables");
     if (mttTablesEl) mttTablesEl.textContent = activeMttTables.length;
+
+    const bannerBox = document.getElementById("mtt-banner-box");
+    if (bannerBox) {
+      let bannerHtml = "";
+      const hasConsolidationBreak = activeMttTables.some(t => t.isBreakActive && t.breakReason === "consolidation" && t.breakEndsAt > Date.now());
+      if (hasConsolidationBreak) {
+        bannerHtml = `
+          <div class="mtt-break-ticker">
+            ☕ <b>ПЕРЕРЫВ 15 МИНУТ:</b> Объединение столов. Пересадка игроков.
+          </div>
+        `;
+      } else if (activeMttTables.length >= 2) {
+        let maxT = activeMttTables[0];
+        let minT = activeMttTables[0];
+        activeMttTables.forEach(t => {
+          const c = t.playersCount !== undefined ? t.playersCount : 9;
+          if (c > (maxT.playersCount !== undefined ? maxT.playersCount : 9)) maxT = t;
+          if (c < (minT.playersCount !== undefined ? minT.playersCount : 9)) minT = t;
+        });
+        const delta = (maxT.playersCount !== undefined ? maxT.playersCount : 9) - (minT.playersCount !== undefined ? minT.playersCount : 9);
+        if (delta >= 2) {
+          bannerHtml = `
+            <div class="mtt-rebalance-ticker">
+              ⚠️ <b>РЕБАЛАНС СТОЛОВ:</b> Пересадка игрока со стола ${maxT.dealerName || "Стол 1"} за стол ${minT.dealerName || "Стол 2"}
+            </div>
+          `;
+        }
+      }
+
+      if (!bannerHtml && totalPlayers <= 10 && activeMttTables.length > 1) {
+        bannerHtml = `
+          <div class="mtt-final-ticker">
+            🔥 <b>ФИНАЛЬНЫЙ СТОЛ СФОРМИРОВАН:</b> Объединение всех участников за столом ${firstT.dealerName || "Стол 1"}!
+          </div>
+        `;
+      }
+
+      if (bannerBox.innerHTML !== bannerHtml) {
+        bannerBox.innerHTML = bannerHtml;
+      }
+    }
   }
 }
 

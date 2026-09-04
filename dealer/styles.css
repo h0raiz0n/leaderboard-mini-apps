@@ -356,6 +356,82 @@ body {
   color: var(--gold-light);
 }
 
+.struct-badge.mtt-badge {
+  background: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+}
+
+/* МТТ блок настроек в панели параметров */
+.mtt-setup-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(168, 85, 247, 0.05);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.mtt-role-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mtt-role-pills .pill {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--line-subtle);
+  color: var(--ink-secondary);
+  padding: 10px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.mtt-role-pills .pill .role-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.mtt-role-pills .pill:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-primary);
+}
+
+.mtt-role-pills .pill.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.22) 0%, rgba(30, 48, 77, 0.8) 100%);
+  border-color: rgba(168, 85, 247, 0.6);
+  color: #f8fafc;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.mtt-role-caption {
+  font-size: 11px;
+  color: var(--ink-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.mtt-setup-players-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mtt-setup-hint {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
 .struct-card-desc {
   font-size: 11px;
   color: var(--ink-muted);
@@ -655,6 +731,92 @@ body {
   background: var(--crimson);
   color: #ffffff;
   transform: scale(0.98);
+}
+
+.mtt-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.btn-late-reg {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 11px 8px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.btn-late-reg:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.btn-late-reg:active {
+  background: var(--emerald);
+  color: #ffffff;
+  transform: scale(0.98);
+}
+
+.btn-late-reg.disabled,
+.btn-late-reg:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--ink-muted);
+}
+
+.btn-consolidate {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.16) 0%, rgba(217, 119, 6, 0.16) 100%);
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  color: var(--gold-light);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 12px 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 10px rgba(234, 179, 8, 0.15);
+}
+
+.btn-consolidate:hover {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.26) 0%, rgba(217, 119, 6, 0.26) 100%);
+  border-color: var(--gold-light);
+}
+
+.btn-consolidate:active {
+  transform: scale(0.98);
+}
+
+.satellite-sync-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
 }
 
 /* Кнопки действий (Tactile Push Physics) */
@@ -1129,6 +1291,133 @@ body {
 
 .btn-secondary:active {
   transform: scale(0.98);
+}
+
+/* Модалка объединения и расформирования столов МТТ */
+.modal-status-badge.warning {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.35);
+  color: var(--gold-light);
+}
+
+.dissolve-summary-card {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--line-subtle);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dissolve-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.dissolve-summary-lbl {
+  color: var(--ink-secondary);
+  font-weight: 600;
+}
+
+.dissolve-summary-val {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--ink-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.dissolve-summary-val.highlight {
+  color: var(--gold-light);
+  font-family: var(--font-sans);
+  font-weight: 800;
+}
+
+.dissolve-tables-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0;
+  text-align: left;
+}
+
+.dissolve-tables-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.dissolve-table-option {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--line-subtle);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dissolve-table-option:hover {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dissolve-table-option.selected {
+  border-color: var(--gold-light);
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.dissolve-table-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dissolve-table-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-warning-confirm {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  color: #070b12;
+  font-weight: 800;
+  font-size: 15px;
+  padding: 15px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+
+.btn-warning-confirm:active {
+  transform: scale(0.98);
+  background: #b45309;
+}
+
+.modal-dissolve-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  width: 100%;
 }
 
 /* PIN Авторизация (Keypad Style) */
