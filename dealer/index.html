@@ -13,12 +13,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   
-  <link rel="stylesheet" href="/dealer/styles.css?v=18.0">
-  <script src="/shared/poker-config.js?v=18.0"></script>
-  <script src="/dealer/dealer.js?v=18.0" defer></script>
+  <link rel="stylesheet" href="/dealer/styles.css?v=19.0">
+  <script src="/shared/poker-config.js?v=19.0"></script>
+  <script src="/dealer/dealer.js?v=19.0" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js?v=18.0').catch(function () {});
+      navigator.serviceWorker.register('/sw.js?v=19.0').catch(function () {});
     }
   </script>
 </head>
@@ -208,17 +208,24 @@
 
       <!-- Блок готовности для сателлитного стола -->
       <div class="satellite-setup-actions" id="satellite-setup-actions" style="display: none;">
+        <div class="satellite-host-banner" id="satellite-host-banner" style="display: none;">
+          <span class="satellite-host-icon">🏆</span>
+          <div class="satellite-host-text">
+            <span class="satellite-host-title" id="satellite-host-title">Ведущий собирает турнир МТТ</span>
+            <span class="satellite-host-sub">Подключите ваш стол для синхронной игры</span>
+          </div>
+        </div>
         <button type="button" class="btn btn-satellite-ready" id="btn-satellite-ready" onclick="setSatelliteReady()">
           <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
-          <span>Подключить стол (Готов к игре)</span>
+          <span id="btn-satellite-ready-label">➕ Подключить мой стол к турниру</span>
         </button>
         <div class="satellite-waiting-card" id="satellite-waiting-card" style="display: none;">
           <div class="waiting-spinner"></div>
-          <div class="waiting-title">Ожидание старта турнира</div>
-          <div class="waiting-desc">Головной стол запустит общий таймер для всех столов одновременно</div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelSatelliteReady()" style="margin-top: 10px;">Изменить состав</button>
+          <div class="waiting-title" id="satellite-waiting-title">Стол подключен (9 игр.)</div>
+          <div class="waiting-desc" id="satellite-waiting-desc">Ожидание общего старта от головного стола...</div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelSatelliteReady()" style="margin-top: 10px;">Отключиться / Изменить состав</button>
         </div>
       </div>
     </div>

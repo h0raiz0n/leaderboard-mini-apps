@@ -18,6 +18,7 @@ let LAST_RENDERED_SIGNATURE = "";
 let LAST_RENDERED_MODE = "";
 let LAST_TICK_SECONDS = {};
 let AUDIO_CTX = null;
+let CURRENT_MTT_SESSION = null;
 
 let LAST_FIREBASE_SYNC_TS = 0;
 let REST_POLL_INTERVAL = null;
@@ -316,6 +317,13 @@ function initDataSource() {
         updateNetPingDisplay(latency, "WS");
         renderTables();
       });
+
+      // Слушаем активную турнирную сессию МТТ
+      db.ref("atmosphere/mtt_session").on("value", (snapshot) => {
+        CURRENT_MTT_SESSION = snapshot.val() || null;
+        renderTables();
+      });
+
       console.log("⚡ ТВ подключен к Firebase Realtime DB (WebSocket)");
     } catch (err) {
       console.warn("Ошибка подключения к Firebase WebSocket:", err);
@@ -330,11 +338,21 @@ function initDataSource() {
         ACTIVE_TABLES = JSON.parse(e.newValue || "{}");
         renderTables();
       }
+      if (e.key === "atmosphere_mtt_session") {
+        try {
+          CURRENT_MTT_SESSION = JSON.parse(e.newValue || "null");
+          renderTables();
+        } catch (err) {}
+      }
     });
     
     const saved = localStorage.getItem("atmosphere_tables");
     if (saved) {
       ACTIVE_TABLES = JSON.parse(saved);
+    }
+    const savedSession = localStorage.getItem("atmosphere_mtt_session");
+    if (savedSession) {
+      try { CURRENT_MTT_SESSION = JSON.parse(savedSession); } catch (e) {}
     }
   }
 }
@@ -355,6 +373,12 @@ async function fetchTablesRest() {
         updateNetPingDisplay(latency, "REST");
         renderTables();
       }
+    }
+
+    const sessionRes = await fetch(`${dbUrl}/atmosphere/mtt_session.json`);
+    if (sessionRes.ok) {
+      CURRENT_MTT_SESSION = await sessionRes.json();
+      renderTables();
     }
   } catch (e) {}
 }
@@ -802,17 +826,18 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
 }
 
 // Генерация HTML экрана сбора столов МТТ (Lobby Assembly Board)
-function buildMttLobbyHtml(lobbyTables) {
+function buildMttLobbyHtml(lobbyTables, session) {
   let totalStarting = 0;
   lobbyTables.forEach(t => {
     totalStarting += (t.initialPlayers !== undefined ? t.initialPlayers : (t.playersCount !== undefined ? t.playersCount : 9));
   });
   const stack = 5000;
   const totalChips = totalStarting * stack;
+  const masterName = (session && session.masterName) ? session.masterName : (lobbyTables.find(t => t.isMttMaster)?.dealerName || "Головной ведущий");
 
   let tablesHtml = "";
   lobbyTables.forEach(t => {
-    const isMaster = Boolean(t.isMttMaster);
+    const isMaster = Boolean(t.isMttMaster || (session && t.id === session.masterId));
     const isReady = t.status === "ready" || isMaster;
     const count = t.playersCount !== undefined ? t.playersCount : 9;
     const dealerName = t.dealerName || (isMaster ? "Головной стол" : "Сателлит");
@@ -835,7 +860,7 @@ function buildMttLobbyHtml(lobbyTables) {
     <div class="mtt-lobby-screen">
       <div class="mtt-lobby-header-box">
         <div class="mtt-lobby-headline">АТМОСФЕРА МТТ PRO • СБОР СТОЛОВ</div>
-        <div class="mtt-lobby-subline">Регистрация участников и подключение столов ведущих</div>
+        <div class="mtt-lobby-subline">Головной стол: ${masterName} • Подключение столов ведущих в реальном времени</div>
       </div>
       <div class="mtt-lobby-stats-row">
         <div class="mtt-lobby-stat-item">
@@ -1267,6 +1292,48 @@ function renderTables() {
   if (typeof document === "undefined") return;
   const viewport = document.getElementById("tv-viewport");
   if (!viewport) return;
+
+  // 1. Проверка активной сессии МТТ на этапе сбора (Lobby Assembly Board)
+  const isMttSessionLobby = Boolean(CURRENT_MTT_SESSION && CURRENT_MTT_SESSION.sessionId && CURRENT_MTT_SESSION.status === "lobby");
+  if (isMttSessionLobby) {
+    const sessionId = CURRENT_MTT_SESSION.sessionId;
+    const lobbyMttTables = Object.values(ACTIVE_TABLES).filter(t => 
+      t && t.format === "MTT" && !t.dissolved && !isTableStale(t) &&
+      (t.mttSessionId === sessionId || t.id === CURRENT_MTT_SESSION.masterId) &&
+      (t.status === "lobby" || t.status === "ready")
+    );
+
+    if (viewport.classList && typeof viewport.classList.toggle === "function") {
+      viewport.classList.toggle("is-mtt-mode", true);
+    }
+    const lobbySignature = `LOBBY:${sessionId}:${lobbyMttTables.map(t => `${t.id || t.dealerName}:${t.status}:${t.playersCount}`).sort().join(",")}`;
+    if (LAST_RENDERED_MODE !== "mtt_lobby" || LAST_RENDERED_SIGNATURE !== lobbySignature) {
+      viewport.innerHTML = buildMttLobbyHtml(lobbyMttTables, CURRENT_MTT_SESSION);
+      LAST_RENDERED_MODE = "mtt_lobby";
+      LAST_RENDERED_SIGNATURE = lobbySignature;
+    }
+    return;
+  }
+
+  // 2. Проверка активной сессии МТТ в процессе игры (Cinema Deck)
+  const isMttSessionRunning = Boolean(CURRENT_MTT_SESSION && CURRENT_MTT_SESSION.sessionId && CURRENT_MTT_SESSION.status === "running");
+  if (isMttSessionRunning) {
+    const sessionId = CURRENT_MTT_SESSION.sessionId;
+    const sessionMttTables = Object.values(ACTIVE_TABLES).filter(t => 
+      t && t.format === "MTT" && !t.dissolved && !isTableStale(t) &&
+      (t.mttSessionId === sessionId || t.id === CURRENT_MTT_SESSION.masterId) &&
+      (t.status === "running" || t.status === "paused")
+    );
+
+    if (sessionMttTables.length > 0) {
+      if (viewport.classList && typeof viewport.classList.toggle === "function") {
+        viewport.classList.toggle("is-mtt-mode", true);
+      }
+      const mttKeys = sessionMttTables.map(t => t.id || t.dealerName);
+      renderMttCinemaMode(viewport, sessionMttTables, mttKeys);
+      return;
+    }
+  }
   
   const tableKeys = Object.keys(ACTIVE_TABLES).filter(k => {
     const t = ACTIVE_TABLES[k];
@@ -1282,7 +1349,7 @@ function renderTables() {
     viewport.dataset.tables = count === 0 ? "1" : String(Math.min(4, count));
   }
   
-  // 1. Состояние ожидания сбора столов МТТ (Lobby Assembly Board)
+  // 3. Состояние ожидания сбора столов МТТ без WebSocket-сессии (Fallback)
   const lobbyMttTables = Object.values(ACTIVE_TABLES).filter(t => 
     t && t.format === "MTT" && !t.dissolved && !isTableStale(t) && (t.status === "lobby" || t.status === "ready")
   );
@@ -1293,14 +1360,14 @@ function renderTables() {
     }
     const lobbySignature = `LOBBY:${lobbyMttTables.map(t => `${t.id || t.dealerName}:${t.status}:${t.playersCount}`).sort().join(",")}`;
     if (LAST_RENDERED_MODE !== "mtt_lobby" || LAST_RENDERED_SIGNATURE !== lobbySignature) {
-      viewport.innerHTML = buildMttLobbyHtml(lobbyMttTables);
+      viewport.innerHTML = buildMttLobbyHtml(lobbyMttTables, CURRENT_MTT_SESSION);
       LAST_RENDERED_MODE = "mtt_lobby";
       LAST_RENDERED_SIGNATURE = lobbySignature;
     }
     return;
   }
 
-  // 2. Состояние ожидания (Lounge Mode — Impeccable Club Styling)
+  // 4. Состояние ожидания (Lounge Mode — Impeccable Club Styling)
   if (count === 0) {
     if (viewport.classList && typeof viewport.classList.remove === "function") {
       viewport.classList.remove("is-mtt-mode");
@@ -1340,7 +1407,7 @@ function renderTables() {
     viewport.classList.toggle("is-mtt-mode", isMttMode);
   }
 
-  // 3. Если запущен МТТ — рендерим единый Cinema Deck
+  // 5. Если запущен МТТ — рендерим единый Cinema Deck
   if (isMttMode) {
     renderMttCinemaMode(viewport, activeMttTables, tableKeys);
     return;
@@ -1652,6 +1719,8 @@ if (typeof module !== "undefined" && module.exports) {
     buildMttCinemaDeckHtml,
     renderMttCinemaMode,
     patchMttCinemaDeck,
-    isTableStale
+    isTableStale,
+    setCurrentMttSession: (s) => { CURRENT_MTT_SESSION = s; },
+    getCurrentMttSession: () => CURRENT_MTT_SESSION
   };
 }

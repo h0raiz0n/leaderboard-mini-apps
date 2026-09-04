@@ -174,6 +174,17 @@ const POKER_CONFIG = {
     if (format === "MTT") return ["MTT_PRO_5000"];
     if (format === "Mystery") return ["SNG_DEEP_1500", "SNG_STANDARD"];
     return ["SNG_DEEP_1500", "SNG_STANDARD"];
+  },
+
+  // Путь к активной сессии МТТ в Firebase
+  MTT_SESSION_PATH: "atmosphere/mtt_session",
+
+  // Проверка принадлежности стола к текущей сессии МТТ
+  isTableInCurrentMttSession: function(table, currentSession) {
+    if (!table || !currentSession || !currentSession.sessionId) return false;
+    if (table.format !== "MTT") return false;
+    if (table.dissolved) return false;
+    return table.mttSessionId === currentSession.sessionId;
   }
 };
 

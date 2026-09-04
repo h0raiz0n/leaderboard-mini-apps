@@ -571,6 +571,39 @@ body {
   gap: 10px;
 }
 
+.satellite-host-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+}
+
+.satellite-host-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.satellite-host-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.satellite-host-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.satellite-host-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .btn-satellite-ready {
   background: linear-gradient(135deg, #059669 0%, #10b981 100%);
   color: #ffffff;
