@@ -170,23 +170,38 @@ body {
 
 .dealer-identity {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dealer-badge-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--gold);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+}
+
+.dealer-meta {
+  display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .dealer-label {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   text-transform: uppercase;
   color: var(--muted);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .dealer-name {
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 900;
   color: var(--ink);
   letter-spacing: 0.02em;
+  line-height: 1.1;
 }
 
 .pill-group {
@@ -311,13 +326,14 @@ body {
   margin-bottom: 12px;
 }
 
-/* Центральный таймер */
+/* Центральный таймер и лазерный Time Rail */
 .timer-block {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   margin: 10px 0;
+  width: 100%;
 }
 
 .timer-digits {
@@ -327,7 +343,39 @@ body {
   letter-spacing: -0.03em;
   line-height: 0.95;
   color: var(--ink);
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  text-shadow: 0 0 24px rgba(255, 255, 255, 0.12);
+}
+
+.time-rail-track {
+  width: 100%;
+  max-width: 480px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 10px 0 6px 0;
+  position: relative;
+}
+
+.time-rail-fill {
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #38bdf8 0%, #fbbf24 100%);
+  border-radius: 9999px;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
+  transition: transform 0.25s linear, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.time-rail-fill.is-warning {
+  background: #f59e0b;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+  animation: pulse-rail-warning 1s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-rail-warning {
+  0% { opacity: 0.75; }
+  100% { opacity: 1; filter: brightness(1.2); }
 }
 
 .timer-subtext {
@@ -336,68 +384,126 @@ body {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
-/* Блок блайндов */
-.blinds-grid {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 16px;
+/* Монолит блайндов (EPT Style) */
+.blinds-grid,
+.blinds-monolith {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   background: var(--bg-0);
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   padding: 16px 24px;
-  align-items: center;
-}
-
-.blinds-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .blinds-caption {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .blinds-main-row {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .blinds-number.current {
-  font-size: 44px;
+  font-size: 48px;
   font-weight: 900;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  text-shadow: 0 0 16px var(--gold-glow);
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 18px var(--gold-glow);
+  line-height: 1;
 }
 
 .ante-badge {
-  background: rgba(251, 191, 36, 0.18);
-  border: 1px solid rgba(251, 191, 36, 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(251, 191, 36, 0.10);
+  border: 1px solid rgba(251, 191, 36, 0.35);
   color: #fef08a;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 4px 14px;
+  border-radius: 9999px;
   font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.ante-badge::before {
+  content: "◆";
+  font-size: 0.7em;
+  opacity: 0.75;
+  margin-right: 6px;
+  color: var(--gold);
+}
+
+/* Нижний Floor Bar (Подвал карточки) */
+.card-floor-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 4px;
+  gap: 16px;
+}
+
+.floor-upcoming {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.floor-caption {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.08em;
 }
 
 .blinds-number.upcoming {
   color: #cbd5e1;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.floor-milestone {
+  display: flex;
+  align-items: center;
+}
+
+.floor-milestone-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 4px 12px;
+  border-radius: 6px;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
 
@@ -411,11 +517,16 @@ body {
 }
 
 .tv-viewport[data-tables="1"] .dealer-label {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .tv-viewport[data-tables="1"] .dealer-name {
   font-size: 38px;
+}
+
+.tv-viewport[data-tables="1"] .dealer-badge-icon {
+  width: 32px;
+  height: 32px;
 }
 
 .tv-viewport[data-tables="1"] .format-badge,
@@ -429,13 +540,20 @@ body {
   font-size: clamp(160px, 24vh, 230px);
 }
 
+.tv-viewport[data-tables="1"] .time-rail-track {
+  max-width: 650px;
+  height: 4px;
+  margin: 14px 0 8px 0;
+}
+
 .tv-viewport[data-tables="1"] .timer-subtext {
   font-size: 24px;
 }
 
-.tv-viewport[data-tables="1"] .blinds-grid {
+.tv-viewport[data-tables="1"] .blinds-grid,
+.tv-viewport[data-tables="1"] .blinds-monolith {
   padding: 24px 36px;
-  gap: 32px;
+  gap: 12px;
 }
 
 .tv-viewport[data-tables="1"] .blinds-caption {
@@ -447,12 +565,25 @@ body {
 }
 
 .tv-viewport[data-tables="1"] .ante-badge {
-  font-size: 30px;
-  padding: 8px 18px;
+  font-size: 28px;
+  padding: 8px 24px;
+}
+
+.tv-viewport[data-tables="1"] .card-floor-bar {
+  padding-top: 18px;
+}
+
+.tv-viewport[data-tables="1"] .floor-caption {
+  font-size: 16px;
 }
 
 .tv-viewport[data-tables="1"] .blinds-number.upcoming {
-  font-size: 48px;
+  font-size: 32px;
+}
+
+.tv-viewport[data-tables="1"] .floor-milestone-badge {
+  font-size: 16px;
+  padding: 6px 18px;
 }
 
 /* --- 2 СТОЛА (SPLIT SCREEN DUAL PILLARS) --- */
@@ -460,8 +591,17 @@ body {
   padding: 24px 32px;
 }
 
+.tv-viewport[data-tables="2"] .dealer-label {
+  font-size: 13px;
+}
+
 .tv-viewport[data-tables="2"] .dealer-name {
   font-size: 32px;
+}
+
+.tv-viewport[data-tables="2"] .dealer-badge-icon {
+  width: 28px;
+  height: 28px;
 }
 
 .tv-viewport[data-tables="2"] .format-badge,
@@ -475,13 +615,19 @@ body {
   font-size: clamp(110px, 17vh, 155px);
 }
 
+.tv-viewport[data-tables="2"] .time-rail-track {
+  max-width: 480px;
+  height: 3.5px;
+}
+
 .tv-viewport[data-tables="2"] .timer-subtext {
   font-size: 20px;
 }
 
-.tv-viewport[data-tables="2"] .blinds-grid {
+.tv-viewport[data-tables="2"] .blinds-grid,
+.tv-viewport[data-tables="2"] .blinds-monolith {
   padding: 20px 28px;
-  gap: 20px;
+  gap: 10px;
 }
 
 .tv-viewport[data-tables="2"] .blinds-caption {
@@ -494,41 +640,64 @@ body {
 
 .tv-viewport[data-tables="2"] .ante-badge {
   font-size: 22px;
-  padding: 6px 14px;
+  padding: 6px 16px;
+}
+
+.tv-viewport[data-tables="2"] .floor-caption {
+  font-size: 14px;
 }
 
 .tv-viewport[data-tables="2"] .blinds-number.upcoming {
-  font-size: 36px;
+  font-size: 24px;
+}
+
+.tv-viewport[data-tables="2"] .floor-milestone-badge {
+  font-size: 14px;
+  padding: 5px 14px;
 }
 
 /* --- 3 СТОЛА (TRIPLE ARENA) --- */
 .tv-viewport[data-tables="3"] .table-card {
-  padding: 18px 22px;
+  padding: 18px 20px;
+}
+
+.tv-viewport[data-tables="3"] .dealer-label {
+  font-size: 11px;
 }
 
 .tv-viewport[data-tables="3"] .dealer-name {
-  font-size: 26px;
+  font-size: 24px;
+}
+
+.tv-viewport[data-tables="3"] .dealer-badge-icon {
+  width: 22px;
+  height: 22px;
 }
 
 .tv-viewport[data-tables="3"] .format-badge,
 .tv-viewport[data-tables="3"] .round-pill,
 .tv-viewport[data-tables="3"] .players-pill {
-  font-size: 15px;
-  padding: 6px 16px;
+  font-size: 14px;
+  padding: 6px 14px;
 }
 
 .tv-viewport[data-tables="3"] .timer-digits {
   font-size: clamp(80px, 13vh, 115px);
 }
 
+.tv-viewport[data-tables="3"] .time-rail-track {
+  max-width: 360px;
+  height: 3px;
+}
+
 .tv-viewport[data-tables="3"] .timer-subtext {
   font-size: 15px;
 }
 
-.tv-viewport[data-tables="3"] .blinds-grid {
-  grid-template-columns: 1fr;
+.tv-viewport[data-tables="3"] .blinds-grid,
+.tv-viewport[data-tables="3"] .blinds-monolith {
   padding: 14px 18px;
-  gap: 10px;
+  gap: 6px;
 }
 
 .tv-viewport[data-tables="3"] .blinds-caption {
@@ -541,44 +710,85 @@ body {
 
 .tv-viewport[data-tables="3"] .ante-badge {
   font-size: 18px;
-  padding: 4px 10px;
+  padding: 4px 12px;
+}
+
+.tv-viewport[data-tables="3"] .card-floor-bar {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.tv-viewport[data-tables="3"] .floor-caption {
+  font-size: 12px;
 }
 
 .tv-viewport[data-tables="3"] .blinds-number.upcoming {
-  font-size: 30px;
+  font-size: 18px;
+}
+
+.tv-viewport[data-tables="3"] .floor-milestone-badge {
+  font-size: 12px;
+  padding: 4px 10px;
 }
 
 /* --- 4 СТОЛА (QUAD 2X2 ARENA) --- */
 .tv-viewport[data-tables="4"] .table-card {
-  padding: 16px 24px;
+  padding: 12px 18px;
+}
+
+.tv-viewport[data-tables="4"] .card-top {
+  padding-bottom: 8px;
+}
+
+.tv-viewport[data-tables="4"] .dealer-label {
+  font-size: 10px;
 }
 
 .tv-viewport[data-tables="4"] .dealer-name {
-  font-size: 24px;
+  font-size: 22px;
+}
+
+.tv-viewport[data-tables="4"] .dealer-badge-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .tv-viewport[data-tables="4"] .format-badge,
 .tv-viewport[data-tables="4"] .round-pill,
 .tv-viewport[data-tables="4"] .players-pill {
-  font-size: 14px;
-  padding: 5px 12px;
+  font-size: 13px;
+  padding: 4px 10px;
+}
+
+.tv-viewport[data-tables="4"] .timer-block {
+  margin: 4px 0;
 }
 
 .tv-viewport[data-tables="4"] .timer-digits {
-  font-size: clamp(68px, 11vh, 92px);
+  font-size: clamp(56px, 9vh, 76px);
+}
+
+.tv-viewport[data-tables="4"] .time-rail-track {
+  max-width: 280px;
+  height: 2.5px;
+  margin: 6px 0 4px 0;
 }
 
 .tv-viewport[data-tables="4"] .timer-subtext {
-  font-size: 14px;
+  font-size: 12px;
+  margin-top: 2px;
 }
 
-.tv-viewport[data-tables="4"] .blinds-grid {
-  padding: 12px 18px;
-  gap: 14px;
+.tv-viewport[data-tables="4"] .blinds-grid,
+.tv-viewport[data-tables="4"] .blinds-monolith {
+  padding: 8px 14px;
+  gap: 4px;
 }
 
 .tv-viewport[data-tables="4"] .blinds-caption {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .tv-viewport[data-tables="4"] .blinds-number.current {
@@ -586,12 +796,26 @@ body {
 }
 
 .tv-viewport[data-tables="4"] .ante-badge {
-  font-size: 16px;
-  padding: 4px 8px;
+  font-size: 15px;
+  padding: 2px 10px;
+}
+
+.tv-viewport[data-tables="4"] .card-floor-bar {
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+.tv-viewport[data-tables="4"] .floor-caption {
+  font-size: 11px;
 }
 
 .tv-viewport[data-tables="4"] .blinds-number.upcoming {
-  font-size: 26px;
+  font-size: 16px;
+}
+
+.tv-viewport[data-tables="4"] .floor-milestone-badge {
+  font-size: 11px;
+  padding: 3px 8px;
 }
 
 /* Состояния стола */
@@ -852,10 +1076,10 @@ body {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
   z-index: 1000;
   cursor: pointer;
-  animation: bounce-audio-prompt 2s infinite ease-in-out;
+  animation: pulse-audio-prompt 2.5s infinite ease-in-out;
 }
 
-@keyframes bounce-audio-prompt {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-4px); }
+@keyframes pulse-audio-prompt {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.95; }
+  50% { transform: translateX(-50%) scale(1.02); opacity: 1; }
 }

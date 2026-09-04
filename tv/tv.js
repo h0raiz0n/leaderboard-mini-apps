@@ -461,6 +461,45 @@ function getFormatLabel(formatKey) {
   return formatKey || "SnG";
 }
 
+function getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTimedPause) {
+  if (isTimedPause) {
+    if (table.isColorUpActive) return "Размен фишек <100";
+    return "Перерыв";
+  }
+  if (table.status === "paused") {
+    return "Пауза";
+  }
+  if (isFinalLevel) {
+    return "Блайнды зафиксированы";
+  }
+
+  const levels = Array.isArray(structure) ? structure : [];
+  let colorUpLevelIdx = -1;
+  for (let i = 0; i < levels.length; i++) {
+    if (levels[i].sb === 100 && levels[i].bb === 200) {
+      colorUpLevelIdx = i;
+      break;
+    }
+  }
+
+  if (colorUpLevelIdx !== -1 && !table.colorUpDone && safeIndex <= colorUpLevelIdx) {
+    const diff = colorUpLevelIdx - safeIndex;
+    if (diff === 0) {
+      return "Color-Up в конце уровня";
+    } else if (diff === 1) {
+      return "Color-Up через 1 ур.";
+    } else {
+      return `Color-Up через ${diff} ур.`;
+    }
+  }
+
+  if (table.colorUpDone) {
+    return "Фишки <100 выведены";
+  }
+
+  return "Турнир продолжается";
+}
+
 function syncTableAutoProgression(tableKey, table) {
   if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
     try {
@@ -607,17 +646,23 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     let displayFormattedTime = time.formatted;
     let cardClass = "table-card";
 
+    // Расчет прогресса для Time Rail
+    const duration = table.durationSec || 420;
+    let progressPercent = 100;
     if (isTimedPause) {
       const pRem = Math.max(0, Math.floor((table.pauseEndsAt - now) / 1000));
       const pMin = Math.floor(pRem / 60);
       const pSec = pRem % 60;
       displayFormattedTime = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
       cardClass += " state-break";
+      const pTotal = table.pauseTotalSec || 120;
+      progressPercent = Math.max(0, Math.min(100, (pRem / pTotal) * 100));
     } else {
       if (time.isAlert) cardClass += " state-alert";
       if (currentLevel.isBreak) cardClass += " state-break";
       if (table.status === "paused") cardClass += " state-paused";
       if (time.isOvertime) cardClass += " state-final-round";
+      progressPercent = Math.max(0, Math.min(100, (time.remaining / duration) * 100));
     }
 
     let subtext = "Идёт уровень";
@@ -629,14 +674,27 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
 
     const roundText = (table.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
+    const milestoneText = getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTimedPause);
+    const railWarningClass = (time.isAlert && !isTimedPause) ? " is-warning" : "";
+    const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
 
     html += `
       <div class="${cardClass}" id="card-${table.id || key}">
         <!-- Шапка стола -->
         <div class="card-top">
-          <div class="dealer-identity">
-            <span class="dealer-label">Стол ведущего</span>
-            <span class="dealer-name">${table.dealerName || "Ведущий"}</span>
+          <div class="dealer-identity dealer-brand-box">
+            <svg class="dealer-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+              <path d="M4 22h16"/>
+              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+            </svg>
+            <div class="dealer-meta">
+              <span class="dealer-label">ВЕДУЩИЙ</span>
+              <span class="dealer-name">${table.dealerName || "Ведущий"}</span>
+            </div>
           </div>
           <div class="pill-group">
             ${table.format === "MTT" ? `<div class="players-pill">👥 ${table.playersCount || 9}</div>` : ""}
@@ -645,24 +703,34 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
           </div>
         </div>
         
-        <!-- Центральный таймер -->
+        <!-- Центральный таймер и лазерный Time Rail -->
         <div class="timer-block">
           <div class="timer-digits">${displayFormattedTime}</div>
+          <div class="time-rail-track">
+            <div class="time-rail-fill${railWarningClass}" style="transform: scaleX(${(progressPercent / 100).toFixed(4)}); width: ${progressPercent.toFixed(1)}%;"></div>
+          </div>
           <div class="timer-subtext">${subtext}</div>
         </div>
         
-        <!-- Блайнды -->
-        <div class="blinds-grid">
-          <div class="blinds-item">
+        <!-- Монолит блайндов (EPT Style) -->
+        <div class="blinds-grid blinds-monolith">
+          <div class="blinds-item current-blinds-box">
             <span class="blinds-caption">Текущие блайнды</span>
             <div class="blinds-main-row">
               <span class="blinds-number current">${currentLevel.sb} / ${currentLevel.bb}</span>
-              ${currentLevel.ante > 0 ? `<span class="ante-badge">АНТЕ ${currentLevel.ante}</span>` : `<span class="ante-badge" style="display: none;"></span>`}
+              ${currentLevel.ante > 0 ? `<span class="ante-badge ante-strip">АНТЕ ${currentLevel.ante}</span>` : `<span class="ante-badge ante-strip" style="display: none;"></span>`}
             </div>
           </div>
-          <div class="blinds-item">
-            <span class="blinds-caption">Следующие</span>
-            <span class="blinds-number upcoming">${nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—"}</span>
+        </div>
+
+        <!-- Нижний Floor Bar -->
+        <div class="card-floor-bar">
+          <div class="floor-upcoming">
+            <span class="floor-caption">Следующие:</span>
+            <span class="blinds-number upcoming">${upcomingStr}</span>
+          </div>
+          <div class="floor-milestone">
+            <span class="floor-milestone-badge">${milestoneText}</span>
           </div>
         </div>
       </div>
@@ -846,6 +914,25 @@ function renderTables() {
         digitsEl.textContent = displayFormattedTime;
       }
 
+      // Патчинг Time Rail
+      const railFillEl = card.querySelector(".time-rail-fill");
+      if (railFillEl) {
+        const duration = table.durationSec || 420;
+        let progressPercent = 100;
+        if (isTimedPause) {
+          const pTotal = table.pauseTotalSec || 120;
+          const pRem = Math.max(0, Math.floor(((table.pauseEndsAt || now) - now) / 1000));
+          progressPercent = Math.max(0, Math.min(100, (pRem / pTotal) * 100));
+        } else if (table.status === "running" || table.status === "paused") {
+          progressPercent = Math.max(0, Math.min(100, (time.remaining / duration) * 100));
+        }
+        railFillEl.style.transform = `scaleX(${(progressPercent / 100).toFixed(4)})`;
+        railFillEl.style.width = `${progressPercent.toFixed(1)}%`;
+        if (railFillEl.classList && typeof railFillEl.classList.toggle === "function") {
+          railFillEl.classList.toggle("is-warning", Boolean(time.isAlert && !isTimedPause));
+        }
+      }
+
       const subtextEl = card.querySelector(".timer-subtext");
       if (subtextEl && subtextEl.textContent !== subtext) {
         subtextEl.textContent = subtext;
@@ -860,8 +947,11 @@ function renderTables() {
       const anteBadgeEl = card.querySelector(".ante-badge");
       if (anteBadgeEl) {
         if (currentLevel.ante > 0) {
-          anteBadgeEl.style.display = "inline-block";
-          anteBadgeEl.textContent = `АНТЕ ${currentLevel.ante}`;
+          anteBadgeEl.style.display = "inline-flex";
+          const anteStr = `АНТЕ ${currentLevel.ante}`;
+          if (anteBadgeEl.textContent !== anteStr) {
+            anteBadgeEl.textContent = anteStr;
+          }
         } else {
           anteBadgeEl.style.display = "none";
         }
@@ -871,6 +961,12 @@ function renderTables() {
       const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
       if (upcomingBlindsEl && upcomingBlindsEl.textContent !== upcomingStr) {
         upcomingBlindsEl.textContent = upcomingStr;
+      }
+
+      const milestoneText = getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTimedPause);
+      const milestoneBadgeEl = card.querySelector(".floor-milestone-badge");
+      if (milestoneBadgeEl && milestoneBadgeEl.textContent !== milestoneText) {
+        milestoneBadgeEl.textContent = milestoneText;
       }
 
       const roundPill = card.querySelector(".round-pill");
@@ -943,6 +1039,7 @@ if (typeof module !== "undefined" && module.exports) {
     playCountdownTick,
     unlockAudioContext,
     updateNetPingDisplay,
-    initTvHotkeys
+    initTvHotkeys,
+    getTournamentMilestone
   };
 }
