@@ -164,7 +164,37 @@
             <span class="mtt-count-val" id="mtt-setup-players-val">9</span>
             <button type="button" class="btn-stepper" onclick="adjustSetupPlayers(1)" aria-label="Больше игроков">+</button>
           </div>
-          <span class="mtt-setup-hint">9-max стол (5 000 стек на каждого)</span>
+          <span class="mtt-setup-hint">9-10 игроков на стол (5 000 стек)</span>
+        </div>
+      </div>
+
+      <!-- Лобби подключенных столов для головного ведущего -->
+      <div class="mtt-master-lobby" id="mtt-master-lobby" style="display: none;">
+        <div class="lobby-header">
+          <span class="lobby-title">Подключённые столы турнира</span>
+          <span class="lobby-badge" id="mtt-lobby-badge">Ожидание</span>
+        </div>
+        <div class="mtt-lobby-tables-list" id="mtt-lobby-tables-list">
+          <!-- Заполняется динамически -->
+        </div>
+        <div class="mtt-lobby-summary" id="mtt-lobby-summary">
+          Всего столов: 1 • Игроков: 9
+        </div>
+      </div>
+
+      <!-- Блок готовности для сателлитного стола -->
+      <div class="satellite-setup-actions" id="satellite-setup-actions" style="display: none;">
+        <button type="button" class="btn btn-satellite-ready" id="btn-satellite-ready" onclick="setSatelliteReady()">
+          <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Готов к игре</span>
+        </button>
+        <div class="satellite-waiting-card" id="satellite-waiting-card" style="display: none;">
+          <div class="waiting-spinner"></div>
+          <div class="waiting-title">Ожидание старта турнира</div>
+          <div class="waiting-desc">Головной стол запустит общий таймер для всех столов одновременно</div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelSatelliteReady()" style="margin-top: 10px;">Изменить состав</button>
         </div>
       </div>
     </div>
@@ -174,7 +204,7 @@
       <svg class="btn-action-icon" viewBox="0 0 20 20" fill="currentColor">
         <path d="M6.3 2.8A1.5 1.5 0 0 0 4 4.1v11.8a1.5 1.5 0 0 0 2.3 1.3l9.8-5.9a1.5 1.5 0 0 0 0-2.6L6.3 2.8z"/>
       </svg>
-      <span>Запустить турнир</span>
+      <span id="btn-start-label">Запустить турнир</span>
     </button>
   </section>
 
@@ -246,17 +276,26 @@
         </button>
       </div>
 
+      <!-- Всплывающий тост выбывания игрока -->
+      <div class="elimination-toast" id="elimination-toast" style="display: none;">
+        <span class="elimination-toast-icon">💀</span>
+        <span class="elimination-toast-msg" id="elimination-toast-msg">Игрок выбыл • За столом: 8</span>
+      </div>
+
       <!-- Кнопка объединения столов для головного дилера -->
-      <button type="button" class="btn btn-consolidate" id="btn-consolidate" style="display: none;" onclick="openConsolidationModal()">
-        <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-          <line x1="6" y1="1" x2="6" y2="4"/>
-          <line x1="10" y1="1" x2="10" y2="4"/>
-          <line x1="14" y1="1" x2="14" y2="4"/>
-        </svg>
-        <span>☕ Объединение столов (15 мин)</span>
-      </button>
+      <div class="consolidate-wrap" id="consolidate-wrap" style="display: none; width: 100%;">
+        <button type="button" class="btn btn-consolidate" id="btn-consolidate" onclick="openConsolidationModal()">
+          <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+            <line x1="6" y1="1" x2="6" y2="4"/>
+            <line x1="10" y1="1" x2="10" y2="4"/>
+            <line x1="14" y1="1" x2="14" y2="4"/>
+          </svg>
+          <span>☕ Объединение столов (15 мин)</span>
+        </button>
+        <div class="consolidate-subtext" id="consolidate-btn-subtext"></div>
+      </div>
     </div>
 
     <!-- Кнопки управления в игре -->

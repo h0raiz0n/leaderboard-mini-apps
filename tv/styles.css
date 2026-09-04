@@ -142,6 +142,59 @@ body {
   grid-template-rows: 1fr 1fr;
 }
 
+/* MTT режим: Flex-колонка с верхним HUD и адаптивной колодой столов */
+.tv-viewport.is-mtt-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px;
+}
+
+.tv-viewport.is-mtt-mode .mtt-top-bar {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.tv-viewport.is-mtt-mode #mtt-banner-box {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.tv-viewport.is-mtt-mode #mtt-banner-box:empty {
+  display: none;
+}
+
+/* Колода столов МТТ */
+.mtt-tables-deck {
+  flex: 1;
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+  width: 100%;
+}
+
+.mtt-tables-deck[data-deck-tables="1"] {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.mtt-tables-deck[data-deck-tables="2"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.mtt-tables-deck[data-deck-tables="3"] {
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.mtt-tables-deck[data-deck-tables="4"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
 /* Карточка стола ведущего */
 .table-card {
   background: var(--card);

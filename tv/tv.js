@@ -612,23 +612,27 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     `;
   }
 
-  let html = mttHeaderHtml;
+  const masterMttTable = activeMttTables.find(t => t.isMttMaster) || activeMttTables[0];
+  let cardsHtml = "";
   tableKeys.slice(0, 4).forEach(key => {
     const table = ACTIVE_TABLES[key];
-    const structure = getTableStructure(table);
+    const isThisTableMtt = Boolean(activeMttTables.length > 0 && table && table.format === "MTT");
+    const timingTable = isThisTableMtt ? (masterMttTable || table) : table;
+
+    const structure = getTableStructure(timingTable);
     const maxIdx = structure.length ? structure.length - 1 : 0;
-    const safeIndex = Math.min(Math.max(0, table.levelIndex || 0), maxIdx);
-    table.levelIndex = safeIndex;
+    const safeIndex = Math.min(Math.max(0, timingTable.levelIndex || 0), maxIdx);
+    timingTable.levelIndex = safeIndex;
     const isFinalLevel = (safeIndex >= maxIdx);
-    const time = calculateTableTime(table, isFinalLevel);
+    const time = calculateTableTime(timingTable, isFinalLevel);
     const currentLevel = structure[safeIndex] || structure[0];
     const nextLevel = isFinalLevel ? null : (structure[safeIndex + 1] || null);
     const formatLabel = getFormatLabel(table.format);
     const now = Date.now();
 
     // Состояние перерыва (ручного или послеигрового)
-    const isPostGame = Boolean(table.isPostGameBreak && table.nextGameAt);
-    const breakEndTime = (table.isBreakActive && table.breakEndsAt) ? table.breakEndsAt : (isPostGame ? table.nextGameAt : null);
+    const isPostGame = Boolean(timingTable.isPostGameBreak && timingTable.nextGameAt);
+    const breakEndTime = (timingTable.isBreakActive && timingTable.breakEndsAt) ? timingTable.breakEndsAt : (isPostGame ? timingTable.nextGameAt : null);
 
     if (breakEndTime) {
       const isOvertime = now >= breakEndTime;
@@ -640,7 +644,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
         const bSec = breakRemaining % 60;
         const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
 
-        html += `
+        cardsHtml += `
           <div class="table-card break-screen-card state-break" id="card-${table.id || key}">
             <div class="break-screen-title">☕ ПЕРЕРЫВ</div>
             <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
@@ -656,7 +660,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
         const oSec = overdueSec % 60;
         const oFormatted = `+${String(oMin).padStart(2, "0")}:${String(oSec).padStart(2, "0")}`;
 
-        html += `
+        cardsHtml += `
           <div class="table-card break-screen-card state-break state-overtime" id="card-${table.id || key}">
             <div class="break-screen-title" style="color: #f59e0b;">☕ ПЕРЕРЫВ ЗАДЕРЖИВАЕТСЯ</div>
             <div class="break-screen-dealer">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
@@ -668,39 +672,39 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
       }
     }
 
-    const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > now);
+    const isTimedPause = (timingTable.status === "paused" && timingTable.pauseEndsAt && timingTable.pauseEndsAt > now);
     let displayFormattedTime = time.formatted;
     let cardClass = "table-card";
 
     // Расчет прогресса для Time Rail
-    const duration = table.durationSec || 420;
+    const duration = timingTable.durationSec || 420;
     let progressPercent = 100;
     if (isTimedPause) {
-      const pRem = Math.max(0, Math.floor((table.pauseEndsAt - now) / 1000));
+      const pRem = Math.max(0, Math.floor((timingTable.pauseEndsAt - now) / 1000));
       const pMin = Math.floor(pRem / 60);
       const pSec = pRem % 60;
       displayFormattedTime = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
       cardClass += " state-break";
-      const pTotal = table.pauseTotalSec || 120;
+      const pTotal = timingTable.pauseTotalSec || 120;
       progressPercent = Math.max(0, Math.min(100, (pRem / pTotal) * 100));
     } else {
       if (time.isAlert) cardClass += " state-alert";
       if (currentLevel.isBreak) cardClass += " state-break";
-      if (table.status === "paused") cardClass += " state-paused";
+      if (timingTable.status === "paused") cardClass += " state-paused";
       if (time.isOvertime) cardClass += " state-final-round";
       progressPercent = Math.max(0, Math.min(100, (time.remaining / duration) * 100));
     }
 
     let subtext = "Идёт уровень";
-    if (table.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
-    else if (isTimedPause) subtext = (table.pauseTotalSec === 120 ? "☕ Перерыв • Размен фишек (Color-Up)" : `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`);
-    else if (table.status === "paused") subtext = "Пауза";
+    if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
+    else if (isTimedPause) subtext = (timingTable.pauseTotalSec === 120 ? "☕ Перерыв • Размен фишек (Color-Up)" : `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`);
+    else if (timingTable.status === "paused") subtext = "Пауза";
     else if (isFinalLevel) subtext = "Блайнды зафиксированы";
     else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
 
-    const roundText = (table.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
-    const milestoneText = getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTimedPause);
+    const roundText = (timingTable.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
+    const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);
     const railWarningClass = (time.isAlert && !isTimedPause) ? " is-warning" : "";
     const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
 
@@ -724,7 +728,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
       }
     }
 
-    html += `
+    cardsHtml += `
       <div class="${cardClass}" id="card-${table.id || key}">
         <!-- Шапка стола -->
         <div class="card-top">
@@ -785,7 +789,16 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     `;
   });
 
-  return html;
+  if (activeMttTables.length > 0) {
+    return `
+      ${mttHeaderHtml}
+      <div class="mtt-tables-deck" data-deck-tables="${Math.min(4, activeMttTables.length)}">
+        ${cardsHtml}
+      </div>
+    `;
+  }
+
+  return cardsHtml;
 }
 
 // =========================================================
@@ -816,6 +829,9 @@ function renderTables() {
   
   // 1. Состояние ожидания (Lounge Mode — Impeccable Club Styling)
   if (count === 0) {
+    if (viewport.classList && typeof viewport.classList.remove === "function") {
+      viewport.classList.remove("is-mtt-mode");
+    }
     if (LAST_RENDERED_MODE !== "lounge") {
       const now = new Date();
       const timeStr = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
@@ -845,6 +861,10 @@ function renderTables() {
   const isMttMode = activeMttTables.length > 0;
   const currentSignature = `${isMttMode ? "MTT" : "SNG"}:${tableKeys.slice(0, 4).sort().join(",")}`;
 
+  if (viewport.classList && typeof viewport.classList.toggle === "function") {
+    viewport.classList.toggle("is-mtt-mode", isMttMode);
+  }
+
   // Проверяем: можно ли выполнить чистый DOM-Patching существующих карточек
   let canPatchDom = (LAST_RENDERED_MODE === "tables" && LAST_RENDERED_SIGNATURE === currentSignature);
   if (canPatchDom) {
@@ -870,66 +890,75 @@ function renderTables() {
     LAST_RENDERED_MODE = "tables";
   }
 
+  const masterMttTable = activeMttTables.find(t => t.isMttMaster) || activeMttTables[0];
+
   // Обновление таймеров, автопрогрессии и звукового отсчета
   tableKeys.slice(0, 4).forEach(key => {
     const table = ACTIVE_TABLES[key];
-    const structure = getTableStructure(table);
+    const isThisTableMtt = Boolean(isMttMode && table && table.format === "MTT");
+    const timingTable = isThisTableMtt ? (masterMttTable || table) : table;
+    const isMttSatellite = Boolean(isThisTableMtt && !table.isMttMaster);
+    const structure = getTableStructure(timingTable);
     const now = Date.now();
 
     // Автоматический Color-Up после 100/200 (или 150/300 для MTT) и транзит уровней
-    if (table.status === "running" && table.levelEndsAt && now >= table.levelEndsAt) {
-      const currentLevel = structure[table.levelIndex] || structure[0];
+    // ВАЖНО: Сателлитные столы в режиме МТТ НЕ отправляют автопрогрессию в Firebase, чтобы исключить гонку и дрифт таймера!
+    if (!isMttSatellite && timingTable.status === "running" && timingTable.levelEndsAt && now >= timingTable.levelEndsAt) {
+      const currentLevel = structure[timingTable.levelIndex] || structure[0];
       
-      const isColorUpLevel = (table.structKey === "MTT_PRO_5000" || (table.format === "MTT" && structure.length >= 17))
+      const isColorUpLevel = (timingTable.structKey === "MTT_PRO_5000" || (timingTable.format === "MTT" && structure.length >= 17))
         ? (currentLevel.sb === 150 && currentLevel.bb === 300)
         : (currentLevel.sb === 100 && currentLevel.bb === 200);
 
-      if (isColorUpLevel && !table.colorUpDone) {
-        table.colorUpDone = true;
-        table.isColorUpActive = true;
-        table.status = "paused";
-        table.pauseEndsAt = now + (120 * 1000);
-        table.pauseTotalSec = 120;
+      if (isColorUpLevel && !timingTable.colorUpDone) {
+        timingTable.colorUpDone = true;
+        timingTable.isColorUpActive = true;
+        timingTable.status = "paused";
+        timingTable.pauseEndsAt = now + (120 * 1000);
+        timingTable.pauseTotalSec = 120;
         playTournamentChime();
-        syncTableAutoProgression(key, table);
-      } else if (table.levelIndex < structure.length - 1) {
-        table.levelIndex += 1;
-        const nextLvl = structure[table.levelIndex];
-        table.durationSec = nextLvl.durationSec;
-        table.remainingMs = nextLvl.durationSec * 1000;
-        table.levelEndsAt = now + table.remainingMs;
+        syncTableAutoProgression(key, timingTable);
+      } else if (timingTable.levelIndex < structure.length - 1) {
+        timingTable.levelIndex += 1;
+        const nextLvl = structure[timingTable.levelIndex];
+        timingTable.durationSec = nextLvl.durationSec;
+        timingTable.remainingMs = nextLvl.durationSec * 1000;
+        timingTable.levelEndsAt = now + timingTable.remainingMs;
         playTournamentChime();
-        syncTableAutoProgression(key, table);
+        syncTableAutoProgression(key, timingTable);
       }
     }
 
     // Завершение таймера Color-Up на ТВ
-    if (table.isColorUpActive && table.pauseEndsAt && now >= table.pauseEndsAt) {
-      table.isColorUpActive = false;
-      table.pauseEndsAt = null;
-      table.pauseTotalSec = null;
-      table.status = "running";
-      if (table.levelIndex < structure.length - 1) {
-        table.levelIndex += 1;
-        const nextLvl = structure[table.levelIndex];
-        table.durationSec = nextLvl.durationSec;
-        table.remainingMs = nextLvl.durationSec * 1000;
-        table.levelEndsAt = now + table.remainingMs;
+    if (!isMttSatellite && timingTable.isColorUpActive && timingTable.pauseEndsAt && now >= timingTable.pauseEndsAt) {
+      timingTable.isColorUpActive = false;
+      timingTable.pauseEndsAt = null;
+      timingTable.pauseTotalSec = null;
+      timingTable.status = "running";
+      if (timingTable.levelIndex < structure.length - 1) {
+        timingTable.levelIndex += 1;
+        const nextLvl = structure[timingTable.levelIndex];
+        timingTable.durationSec = nextLvl.durationSec;
+        timingTable.remainingMs = nextLvl.durationSec * 1000;
+        timingTable.levelEndsAt = now + timingTable.remainingMs;
         playTournamentChime();
-        syncTableAutoProgression(key, table);
+        syncTableAutoProgression(key, timingTable);
       }
     }
 
-    const isFinalLevel = (table.levelIndex >= structure.length - 1);
-    const time = calculateTableTime(table, isFinalLevel);
+    const isFinalLevel = (timingTable.levelIndex >= structure.length - 1);
+    const time = calculateTableTime(timingTable, isFinalLevel);
 
     // Звуковой 5-секундный отсчет
     let isCountdownPulsing = false;
-    if (table.status === "running" && time.remaining <= 5 && time.remaining >= 1 && !time.isOvertime) {
+    if (timingTable.status === "running" && time.remaining <= 5 && time.remaining >= 1 && !time.isOvertime) {
       isCountdownPulsing = true;
       if (LAST_TICK_SECONDS[key] !== time.remaining) {
         LAST_TICK_SECONDS[key] = time.remaining;
-        playCountdownTick(time.remaining);
+        // Чтобы не дублировать гонг и писк при нескольких столах MTT, проигрываем отсчет только один раз
+        if (!isMttSatellite) {
+          playCountdownTick(time.remaining);
+        }
       }
     } else if (time.remaining > 5 || time.remaining === 0) {
       LAST_TICK_SECONDS[key] = 0;
@@ -939,24 +968,24 @@ function renderTables() {
     const card = document.getElementById("card-" + (table.id || key));
     if (card && typeof card.querySelector === "function") {
       const maxIdx = structure.length ? structure.length - 1 : 0;
-      const safeIndex = Math.min(Math.max(0, table.levelIndex || 0), maxIdx);
+      const safeIndex = Math.min(Math.max(0, timingTable.levelIndex || 0), maxIdx);
       const isFinalLevel = (safeIndex >= maxIdx);
       const currentLevel = structure[safeIndex] || structure[0];
       const nextLevel = isFinalLevel ? null : (structure[safeIndex + 1] || null);
 
-      const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > now);
+      const isTimedPause = (timingTable.status === "paused" && timingTable.pauseEndsAt && timingTable.pauseEndsAt > now);
       let displayFormattedTime = time.formatted;
       if (isTimedPause) {
-        const pRem = Math.max(0, Math.floor((table.pauseEndsAt - now) / 1000));
+        const pRem = Math.max(0, Math.floor((timingTable.pauseEndsAt - now) / 1000));
         const pMin = Math.floor(pRem / 60);
         const pSec = pRem % 60;
         displayFormattedTime = `${String(pMin).padStart(2, "0")}:${String(pSec).padStart(2, "0")}`;
       }
 
       let subtext = "Идёт уровень";
-      if (table.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
-      else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(table.pauseTotalSec / 60)} мин)`;
-      else if (table.status === "paused") subtext = "Пауза";
+      if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
+      else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
+      else if (timingTable.status === "paused") subtext = "Пауза";
       else if (isFinalLevel) subtext = "Блайнды зафиксированы";
       else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
       else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
@@ -969,13 +998,13 @@ function renderTables() {
       // Патчинг Time Rail
       const railFillEl = card.querySelector(".time-rail-fill");
       if (railFillEl) {
-        const duration = table.durationSec || 420;
+        const duration = timingTable.durationSec || 420;
         let progressPercent = 100;
         if (isTimedPause) {
-          const pTotal = table.pauseTotalSec || 120;
-          const pRem = Math.max(0, Math.floor(((table.pauseEndsAt || now) - now) / 1000));
+          const pTotal = timingTable.pauseTotalSec || 120;
+          const pRem = Math.max(0, Math.floor(((timingTable.pauseEndsAt || now) - now) / 1000));
           progressPercent = Math.max(0, Math.min(100, (pRem / pTotal) * 100));
-        } else if (table.status === "running" || table.status === "paused") {
+        } else if (timingTable.status === "running" || timingTable.status === "paused") {
           progressPercent = Math.max(0, Math.min(100, (time.remaining / duration) * 100));
         }
         railFillEl.style.transform = `scaleX(${(progressPercent / 100).toFixed(4)})`;
@@ -1015,14 +1044,14 @@ function renderTables() {
         upcomingBlindsEl.textContent = upcomingStr;
       }
 
-      const milestoneText = getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTimedPause);
+      const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);
       const milestoneBadgeEl = card.querySelector(".floor-milestone-badge");
       if (milestoneBadgeEl && milestoneBadgeEl.textContent !== milestoneText) {
         milestoneBadgeEl.textContent = milestoneText;
       }
 
       const roundPill = card.querySelector(".round-pill");
-      const roundText = (table.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
+      const roundText = (timingTable.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
       if (roundPill && roundPill.textContent !== roundText) {
         roundPill.textContent = roundText;
       }
@@ -1038,7 +1067,7 @@ function renderTables() {
       if (card.classList && typeof card.classList.toggle === "function") {
         card.classList.toggle("state-alert", time.isAlert && !isTimedPause);
         card.classList.toggle("state-break", Boolean(isTimedPause || currentLevel.isBreak));
-        card.classList.toggle("state-paused", table.status === "paused" && !isTimedPause);
+        card.classList.toggle("state-paused", timingTable.status === "paused" && !isTimedPause);
         card.classList.toggle("state-final-round", time.isOvertime);
         card.classList.toggle("countdown-pulse", isCountdownPulsing);
       }

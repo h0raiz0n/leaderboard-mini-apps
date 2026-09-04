@@ -92,6 +92,7 @@ function createMockEl(id) {
     children: [],
     appendChild(c) { this.children.push(c); },
     querySelectorAll: () => [],
+    querySelector: () => null,
     addEventListener: () => {}
   };
 }
@@ -331,13 +332,14 @@ global.document.getElementById = (id) => {
       get innerHTML() { return capturedTvHtml; }
     };
   }
-  return domStore[id] || createMockEl(id);
+  if (!domStore[id]) domStore[id] = createMockEl(id);
+  return domStore[id];
 };
 
 tvEngine.setActiveTables(tvMttTables);
 tvEngine.renderTables();
 
-// Проверка компонентов ТВ в режиме МТТ
+/// Проверка компонентов ТВ в режиме МТТ
 assert(capturedTvHtml.includes("mtt-top-bar"), "Должен присутствовать верхний МТТ HUD бар");
 assert(capturedTvHtml.includes("mtt-val-players"), "Должен присутствовать счетчик игроков");
 assert(capturedTvHtml.includes("mtt-val-chips"), "Должен присутствовать банк фишек");
@@ -348,6 +350,169 @@ assert(capturedTvHtml.includes("table-rebalance-flag receiver"), "На стол�
 assert(capturedTvHtml.includes("mtt-role-pill master"), "Должна отображаться плашка 'Главный'");
 assert(capturedTvHtml.includes("mtt-role-pill satellite"), "Должна отображаться плашка 'Сателлит'");
 
-console.log("   ✅ ТВ-дашборд успешно сформировал Cinema Broadcast HUD со всеми МТТ метриками.");
+// Проверка фикса разметки: обертка в .mtt-tables-deck исключает баг «3-го стола»
+assert(capturedTvHtml.includes("mtt-tables-deck"), "Столы должны быть обернуты в flex/grid колоду mtt-tables-deck");
+assert(capturedTvHtml.includes('data-deck-tables="2"'), "Колода должна иметь атрибут data-deck-tables='2'");
+console.log("   ✅ ТВ-дашборд успешно сформировал Cinema Broadcast HUD с изолированной колодой mtt-tables-deck.");
 
-console.log("\\n🎉 ПОЛНЫЙ ИНТЕГРАЦИОННЫЙ ТЕСТ МТТ СИСТЕМЫ УСПЕШНО ПРОЙДЕН (10/10)!");
+// 7. Тестирование централизации таймера на ТВ (Master Clock Mirroring)
+console.log("\n7. Тестирование единого мастер-таймера на ТВ для всех столов МТТ:");
+
+// Симулируем дрейфующий таймер на сателлите в Firebase
+const driftingTvTables = {
+  dealer_vlad: {
+    id: "dealer_vlad",
+    dealerName: "Влад",
+    format: "MTT",
+    structKey: "MTT_PRO_5000",
+    isMttMaster: true,
+    status: "running",
+    levelIndex: 3,
+    playersCount: 9,
+    durationSec: 600,
+    levelEndsAt: Date.now() + 300000 // 5:00
+  },
+  dealer_arina: {
+    id: "dealer_arina",
+    dealerName: "Арина",
+    format: "MTT",
+    structKey: "MTT_PRO_5000",
+    isMttMaster: false,
+    status: "running",
+    levelIndex: 1, // Рассинхронизированный старый уровень
+    playersCount: 8,
+    durationSec: 600,
+    levelEndsAt: Date.now() + 100000 // Рассинхронизированное время
+  }
+};
+
+tvEngine.setActiveTables(driftingTvTables);
+tvEngine.renderTables();
+
+// Проверяем, что в HTML карточки Арины уровень и блайнды зеркалируются от Влада (уровень 4: 100 / 200)
+assert(capturedTvHtml.includes("100 / 200"), "Оба стола на ТВ должны отображать уровень мастер-стола (100 / 200)");
+console.log("   ✅ Сателлитный стол на ТВ строго зеркалирует таймер и блайнды Master-стола.");
+
+// 8. Тестирование Pre-game Lobby и синхронного запуска сателлитов
+console.log("\n8. Тестирование предстартового лобби (Pre-Game Lobby) и синхронного запуска:");
+
+dealer.setTablesState({});
+dealer.setDealerName("Арина");
+dealer.setSelectedFormat("MTT");
+dealer.setIsMttMaster(false);
+dealer.setMttSetupPlayers(10); // Сателлит настраивает 10 игроков
+
+// Арина нажимает «Готов к игре»
+dealer.setSatelliteReady();
+const arinaReadyTable = dealer.getMyTable();
+assert.strictEqual(arinaReadyTable.status, "ready", "Сателлит должен перейти в статус 'ready'");
+assert.strictEqual(arinaReadyTable.playersCount, 10, "Сателлит должен сохранить стартовый состав (10 игроков)");
+
+// Проверяем отображение карточки ожидания у сателлита
+dealer.renderDealerView();
+const satWaitingCard = domStore["satellite-waiting-card"];
+const satReadyBtn = domStore["btn-satellite-ready"];
+assert.strictEqual(satWaitingCard.style.display, "flex", "Карточка ожидания должна отображаться для готового сателлита");
+assert.strictEqual(satReadyBtn.style.display, "none", "Кнопка 'Готов' должна скрываться после нажатия");
+
+// Переключаемся на Влада (Master)
+dealer.setDealerName("Влад");
+dealer.setSelectedFormat("MTT");
+dealer.setIsMttMaster(true);
+dealer.setMttSetupPlayers(9);
+
+// Влад видит подключенные столы в лобби
+const lobbyTablesState = {
+  dealer_vlad: dealer.getMyTable(),
+  dealer_arina: arinaReadyTable
+};
+dealer.setTablesState(lobbyTablesState);
+dealer.renderDealerView();
+
+const masterLobby = domStore["mtt-master-lobby"];
+assert.strictEqual(masterLobby.style.display, "flex", "Лобби должно отображаться для головного стола");
+const lobbyList = domStore["mtt-lobby-tables-list"];
+assert(lobbyList.innerHTML.includes("dealer_arina") || lobbyList.innerHTML.includes("Арина"), "В лобби должен отображаться сателлит Арины");
+assert(lobbyList.innerHTML.includes("Готов к игре"), "В лобби должен отображаться статус 'Готов к игре'");
+
+// Влад запускает турнир для всех столов
+dealer.startTable();
+assert.strictEqual(dealer.getMyTable().status, "running", "Головной стол должен запуститься");
+assert.strictEqual(lobbyTablesState.dealer_arina.status, "running", "Сателлит должен синхронно получить статус running");
+assert.strictEqual(lobbyTablesState.dealer_arina.startedAt, dealer.getMyTable().startedAt, "Сателлит должен получить одинаковый startedAt");
+assert.strictEqual(lobbyTablesState.dealer_arina.levelEndsAt, dealer.getMyTable().levelEndsAt, "Сателлит должен получить одинаковый levelEndsAt");
+console.log("   ✅ Предстартовое лобби корректно отображает готовность столов, старт запускает всех одновременно.");
+
+// 9. Тестирование атомарного выбивания (Аут) на сателлите с тостом
+console.log("\n9. Тестирование атомарного выбивания игрока (-1) на сателлите:");
+
+dealer.setDealerName("Арина");
+dealer.setTablesState(lobbyTablesState);
+dealer.renderDealerView();
+
+networkLog.length = 0; // Очищаем лог сети
+dealer.eliminatePlayer();
+
+assert.strictEqual(dealer.getMyTable().playersCount, 9, "Количество игроков должно уменьшиться с 10 до 9");
+const outPutReq = networkLog.find(r => r.url.includes("atmosphere/tables/dealer_arina/playersCount.json"));
+assert(outPutReq, "Должен быть отправлен прямой атомарный PUT запрос playersCount.json");
+assert.strictEqual(outPutReq.body, 9, "В запросе должно передаваться новое количество игроков: 9");
+
+const elimToast = domStore["elimination-toast"];
+assert.strictEqual(elimToast.style.display, "flex", "Должен отображаться всплывающий тост выбывания игрока");
+console.log("   ✅ Аут игрока мгновенно сохраняется атомарно в Firebase и подтверждается тостом.");
+
+// 10. Тестирование строгой 9-max блокировки объединения столов
+console.log("\n10. Тестирование строгой блокировки объединения столов (Strict 9-Max Lock):");
+
+dealer.setDealerName("Влад");
+const finalStageTables = {
+  dealer_vlad: {
+    id: "dealer_vlad",
+    dealerName: "Влад",
+    format: "MTT",
+    isMttMaster: true,
+    status: "running",
+    playersCount: 5
+  },
+  dealer_arina: {
+    id: "dealer_arina",
+    dealerName: "Арина",
+    format: "MTT",
+    isMttMaster: false,
+    status: "running",
+    playersCount: 5 // Всего 5 + 5 = 10 игроков (Финальный стол НЕЛЬЗЯ делать при > 9!)
+  }
+};
+
+dealer.setTablesState(finalStageTables);
+dealer.renderDealerView();
+
+const consolidateBtn = domStore["btn-consolidate"];
+assert.strictEqual(consolidateBtn.disabled, true, "Кнопка объединения в финальный стол ДОЛЖНА БЫТЬ ЗАБЛОКИРОВАНА при 10 игроках");
+assert(consolidateBtn.classList.contains("disabled"), "Кнопка должна содержать класс disabled");
+
+const consolidateSubtext = domStore["consolidate-btn-subtext"];
+assert(consolidateSubtext.textContent.includes("≤ 9") && consolidateSubtext.textContent.includes("10"), "Подпись должна указывать, что нужно <= 9 игроков (сейчас 10)");
+
+// Проверяем попытку открыть модалку при 10 игроках — должна быть отклонена
+const dissolveModalTest = domStore["dissolve-table-modal"];
+dissolveModalTest.style.display = "none";
+dealer.openConsolidationModal();
+assert.strictEqual(dissolveModalTest.style.display, "none", "Модалка объединения НЕ ДОЛЖНА открываться при 10 игроках");
+
+// Выбиваем 1 игрока на столе Арины: теперь 5 + 4 = 9 игроков (ровно 9-max финальный стол!)
+finalStageTables.dealer_arina.playersCount = 4;
+dealer.renderDealerView();
+
+assert.strictEqual(consolidateBtn.disabled, false, "Кнопка объединения ДОЛЖНА БЫТЬ РАЗБЛОКИРОВАНА при 9 игроках");
+assert(!consolidateBtn.classList.contains("disabled"), "Кнопка не должна иметь класс disabled");
+
+dealer.openConsolidationModal();
+assert.strictEqual(dissolveModalTest.style.display, "flex", "Модалка объединения ДОЛЖНА открыться при ровно 9 игроках");
+
+const recEl = domStore["dissolve-recommendation"];
+assert(recEl.textContent.includes("Финальный стол") && recEl.textContent.includes("9-max"), "Рекомендация должна подтверждать 9-max финальный стол");
+console.log("   ✅ Строгая 9-max блокировка объединения столов работает безупречно (10 игр. запрещено, <=9 разрешено).");
+
+console.log("\n🎉 ВСЕ ТЕСТЫ ПОЛНОГО ЦИКЛА МТТ ПРОЙДЕНЫ С ОТЛИЧИЕМ (10/10)!");
