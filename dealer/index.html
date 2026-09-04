@@ -262,6 +262,38 @@
     </div>
   </main>
 
+  <!-- Модалка подтверждения завершения игры -->
+  <div class="modal-backdrop" id="finish-confirm-modal" style="display: none;" onclick="if(event.target === this) dismissFinishModal()">
+    <div class="modal-sheet finish-sheet">
+      <div class="modal-status-badge danger">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>Подтверждение</span>
+      </div>
+      <div class="modal-heading">Завершить турнир?</div>
+      <div class="modal-caption">
+        Текущий раунд и таймер будут остановлены. Стол перейдёт в режим внесения результатов в Google Form.
+      </div>
+      <div class="finish-summary-card">
+        <div class="finish-summary-label">Текущее состояние:</div>
+        <div class="finish-summary-val" id="finish-summary-text">Уровень 1 • 25 / 50</div>
+      </div>
+      <div class="btn-stack modal-finish-actions">
+        <button type="button" class="btn btn-danger-confirm" id="btn-confirm-finish" onclick="confirmFinishGame()">
+          <svg class="btn-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+            <line x1="4" y1="22" x2="4" y2="15"/>
+          </svg>
+          <span>Да, завершить игру</span>
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="dismissFinishModal()">Продолжить турнир</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Модалка ребаланса столов МТТ -->
   <div class="modal-backdrop" id="rebalance-modal">
     <div class="modal-sheet rebalance-sheet">

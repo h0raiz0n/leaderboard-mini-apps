@@ -320,7 +320,7 @@ function initButtonListeners() {
   document.getElementById("btn-pause")?.addEventListener("click", togglePause);
   document.getElementById("btn-step")?.addEventListener("click", handleStepClick);
   document.getElementById("btn-reset")?.addEventListener("click", resetTable);
-  document.getElementById("btn-finish")?.addEventListener("click", finishGame);
+  document.getElementById("btn-finish")?.addEventListener("click", openFinishModal);
 }
 
 let LAST_FIREBASE_SYNC_TS = 0;
@@ -806,6 +806,7 @@ function nextLevel() {
 function resetTable() {
   triggerHaptic("heavy");
   dismissStepToast();
+  dismissFinishModal();
   const table = getMyTable();
   table.status = "idle";
   table.levelIndex = 0;
@@ -824,8 +825,41 @@ function resetTable() {
   renderDealerView();
 }
 
+// Защищенное подтверждение завершения игры (Protected Focus Sheet)
+function openFinishModal() {
+  triggerHaptic("heavy");
+  const modal = document.getElementById("finish-confirm-modal");
+  if (!modal) {
+    finishGame();
+    return;
+  }
+
+  const summaryEl = document.getElementById("finish-summary-text");
+  if (summaryEl) {
+    const table = getMyTable();
+    const structure = getActiveStructure(table.structKey || SELECTED_STRUCT);
+    const levels = (structure && structure.levels) ? structure.levels : [];
+    const currentLvl = levels[table.levelIndex] || { level: 1, sb: 25, bb: 50 };
+    summaryEl.textContent = `Уровень ${currentLvl.level || (table.levelIndex + 1)} • ${currentLvl.sb} / ${currentLvl.bb}`;
+  }
+
+  modal.style.display = "flex";
+}
+
+function dismissFinishModal() {
+  triggerHaptic("light");
+  const modal = document.getElementById("finish-confirm-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function confirmFinishGame() {
+  dismissFinishModal();
+  finishGame();
+}
+
 // 5. Завершение игры -> переход в режим Post-Game
 function finishGame() {
+  dismissFinishModal();
   triggerHaptic("success");
   const table = getMyTable();
   table.status = "finished";
@@ -867,6 +901,7 @@ function stopPostGameBreak() {
 function startNewGameFromPostGame() {
   triggerHaptic("medium");
   dismissStepToast();
+  dismissFinishModal();
   const table = getMyTable();
   table.status = "idle";
   table.levelIndex = 0;
@@ -1343,6 +1378,9 @@ if (typeof module !== "undefined" && module.exports) {
     showStepToast,
     dismissStepToast,
     confirmNextLevel,
+    openFinishModal,
+    dismissFinishModal,
+    confirmFinishGame,
     initDataSource
   };
 }
