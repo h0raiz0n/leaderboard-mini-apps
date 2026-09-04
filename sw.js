@@ -1,12 +1,33 @@
-/* Service Worker для мини-приложения «Атмосфера».
-   Кэширует HTML, шрифт и данные API — повторные открытия мгновенны.
-   При обновлении index.html — меняйте версию CACHE. */
-const CACHE = 'atmos-v9';
+/* Service Worker для экосистемы «Атмосфера» (ТВ, Пульт ведущего, Лидерборд).
+   Кэширует HTML, CSS, JS, шрифты и данные API для мгновенного старта (0ms cold start).
+   Динамические шины Firebase Realtime Database и Telegram исключены из кэша (Network-Only). */
+
+const CACHE = 'atmos-v10';
 const API_PREFIX = 'https://script.google.com/macros/s/';
 const API_TTL = 120000; // 2 минуты
 
-self.addEventListener('install', function () {
-  self.skipWaiting();
+const PRECACHE_URLS = [
+  '/',
+  '/index.html',
+  '/tv',
+  '/tv/index.html',
+  '/tv/styles.css',
+  '/tv/tv.js',
+  '/dealer',
+  '/dealer/index.html',
+  '/dealer/styles.css',
+  '/dealer/dealer.js',
+  '/shared/poker-config.js'
+];
+
+self.addEventListener('install', function (e) {
+  e.waitUntil(
+    caches.open(CACHE).then(function (cache) {
+      return cache.addAll(PRECACHE_URLS).catch(function () {});
+    }).then(function () {
+      return self.skipWaiting();
+    })
+  );
 });
 
 self.addEventListener('activate', function (e) {
@@ -21,6 +42,13 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
   var url = req.url;
+
+  // Исключаем динамические запросы Firebase Realtime Database и Telegram API (всегда Network-Only)
+  if (url.indexOf('firebasedatabase.app') > -1 || url.indexOf('api.telegram.org') > -1 || url.indexOf('gstatic.com/firebasejs') > -1) {
+    return;
+  }
+
+  // Запросы к Google Apps Script API
   if (url.indexOf(API_PREFIX) === 0) {
     if (url.indexOf('_t=') > -1) {
       e.respondWith(refreshApi(req, null));
@@ -29,21 +57,28 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(cachedApi(req));
     return;
   }
-  if (url.indexOf(self.location.origin) === 0) {
-    e.respondWith(cachedStatic(req));
+
+  // Статические ассеты (HTML, CSS, JS, шрифты): Stale-While-Revalidate для 0ms отдачи
+  if (url.indexOf(self.location.origin) === 0 || url.indexOf('fonts.googleapis.com') > -1 || url.indexOf('fonts.gstatic.com') > -1) {
+    e.respondWith(staleWhileRevalidate(req));
   }
 });
 
-async function cachedStatic(req) {
+// Стратегия Stale-While-Revalidate: мгновенный возврат из кэша с фоновым обновлением
+async function staleWhileRevalidate(req) {
   var cache = await caches.open(CACHE);
-  try {
-    var res = await fetch(req);
-    if (res && res.ok) cache.put(req, res.clone());
+  var hit = await cache.match(req);
+
+  var fetchPromise = fetch(req).then(function (res) {
+    if (res && res.ok) {
+      cache.put(req, res.clone());
+    }
     return res;
-  } catch (err) {
-    var hit = await cache.match(req);
+  }).catch(function () {
     return hit || new Response('', { status: 502 });
-  }
+  });
+
+  return hit || fetchPromise;
 }
 
 async function cachedApi(req) {
@@ -81,4 +116,3 @@ async function refreshApi(req, cache) {
     });
   }
 }
-

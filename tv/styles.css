@@ -94,12 +94,13 @@ body {
   border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 10px var(--green);
+  will-change: transform, opacity;
   animation: pulse-live 2s infinite ease-in-out;
 }
 
 @keyframes pulse-live {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+  0%, 100% { opacity: 1; transform: scale3d(1, 1, 1); }
+  50% { opacity: 0.4; transform: scale3d(0.85, 0.85, 1); }
 }
 
 .header-clock {
@@ -154,6 +155,8 @@ body {
   position: relative;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
   height: 100%;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Заголовок стола */
@@ -596,6 +599,7 @@ body {
 .table-card.state-alert {
   border-color: var(--amber);
   background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--card) 100%);
+  will-change: border-color, box-shadow;
   animation: pulse-alert 2s infinite ease-in-out;
 }
 
@@ -616,6 +620,7 @@ body {
 .table-card.state-overtime {
   border-color: var(--red);
   background: linear-gradient(180deg, rgba(239, 68, 68, 0.09) 0%, var(--card) 100%);
+  will-change: border-color, box-shadow;
   animation: pulse-overtime 1.5s infinite ease-in-out;
 }
 
@@ -730,6 +735,7 @@ body {
   position: relative;
   background: radial-gradient(circle at 50% 45%, rgba(251, 191, 36, 0.08) 0%, rgba(10, 15, 29, 0.95) 65%);
   border-radius: var(--radius-card);
+  transform: translateZ(0);
 }
 
 .lounge-suits {
@@ -738,12 +744,13 @@ body {
   gap: 28px;
   font-size: 48px;
   margin-bottom: 2px;
+  will-change: transform;
   animation: float-suits 4s ease-in-out infinite alternate;
 }
 
 @keyframes float-suits {
-  0% { transform: translateY(0px); opacity: 0.85; }
-  100% { transform: translateY(-6px); opacity: 1; }
+  0% { transform: translate3d(0, 0px, 0); opacity: 0.85; }
+  100% { transform: translate3d(0, -6px, 0); opacity: 1; }
 }
 
 .suit {

@@ -13,6 +13,11 @@
   
   <script src="/shared/poker-config.js"></script>
   <script src="/tv/tv.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    }
+  </script>
 </head>
 <body>
   <!-- Верхняя панель -->

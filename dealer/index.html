@@ -12,6 +12,11 @@
   <link rel="stylesheet" href="/dealer/styles.css">
   <script src="/shared/poker-config.js"></script>
   <script src="/dealer/dealer.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    }
+  </script>
 </head>
 <body>
   <!-- Шапка ведущего -->

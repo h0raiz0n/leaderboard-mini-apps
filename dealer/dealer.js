@@ -348,7 +348,29 @@ function initDataSource() {
         const arrivalTime = Date.now();
         const latency = LAST_FIREBASE_SYNC_TS > 0 ? Math.min(80, Math.max(8, arrivalTime - LAST_FIREBASE_SYNC_TS)) : 16;
         LAST_FIREBASE_SYNC_TS = arrivalTime;
-        TABLES_STATE = snapshot.val() || {};
+        const remoteState = snapshot.val() || {};
+
+        // In-Flight Optimistic State Guard:
+        // Если у текущего ведущего есть локальные изменения в процессе отправки, сохраняем оптимистичный стол
+        const isPendingLocalSync = (typeof localStorage !== "undefined" && 
+          (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || localStorage.getItem("atmosphere_pending_sync") === "true"));
+
+        let localSavedTable = null;
+        if (isPendingLocalSync && typeof localStorage !== "undefined") {
+          try {
+            const parsed = JSON.parse(localStorage.getItem("atmosphere_tables") || "{}");
+            localSavedTable = parsed[DEALER_ID] || null;
+          } catch (e) {}
+        }
+
+        const optimisticLocalTable = TABLES_STATE[DEALER_ID] || localSavedTable;
+
+        if (isPendingLocalSync && optimisticLocalTable) {
+          TABLES_STATE = Object.assign({}, remoteState, { [DEALER_ID]: optimisticLocalTable });
+        } else {
+          TABLES_STATE = remoteState;
+        }
+
         updateDealerPingDisplay(latency);
         renderDealerView();
       });
@@ -363,7 +385,25 @@ function initDataSource() {
   if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
     window.addEventListener("storage", (e) => {
       if (e.key === "atmosphere_tables") {
-        TABLES_STATE = JSON.parse(e.newValue || "{}");
+        const remoteState = JSON.parse(e.newValue || "{}");
+        const isPendingLocalSync = (typeof localStorage !== "undefined" && 
+          (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || localStorage.getItem("atmosphere_pending_sync") === "true"));
+
+        let localSavedTable = null;
+        if (isPendingLocalSync && typeof localStorage !== "undefined") {
+          try {
+            const parsed = JSON.parse(localStorage.getItem("atmosphere_tables") || "{}");
+            localSavedTable = parsed[DEALER_ID] || null;
+          } catch (e) {}
+        }
+
+        const optimisticLocalTable = TABLES_STATE[DEALER_ID] || localSavedTable;
+
+        if (isPendingLocalSync && optimisticLocalTable) {
+          TABLES_STATE = Object.assign({}, remoteState, { [DEALER_ID]: optimisticLocalTable });
+        } else {
+          TABLES_STATE = remoteState;
+        }
         renderDealerView();
       }
     });
@@ -1302,6 +1342,7 @@ if (typeof module !== "undefined" && module.exports) {
     handleStepClick,
     showStepToast,
     dismissStepToast,
-    confirmNextLevel
+    confirmNextLevel,
+    initDataSource
   };
 }

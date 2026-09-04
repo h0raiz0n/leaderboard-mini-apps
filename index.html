@@ -1854,7 +1854,7 @@
   // Service Worker: кэширует HTML, шрифт и данные API — повторные открытия
   // Mini App происходят мгновенно, даже без сети.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
   }
 
   try {
