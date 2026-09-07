@@ -1046,25 +1046,83 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
 
 const DEFAULT_LEADERBOARD_BUNDLE = {
   current: [
-    { name: "Александр М.", points: 1420, tier: "Shark Tier" },
-    { name: "Сергей К.", points: 1280, tier: "Gold Tier" },
-    { name: "Дмитрий В.", points: 1150, tier: "Gold Tier" }
+    { name: "Александр565", points: 112, tier: "🦈 SHARK" },
+    { name: "Илья666", points: 78, tier: "🦈 SHARK" },
+    { name: "Паша213", points: 72, tier: "🦈 SHARK" }
   ],
   all: [
-    { name: "Владимир Т.", points: 8450, tier: "Legend Tier" },
-    { name: "Александр М.", points: 7920, tier: "Legend Tier" },
-    { name: "Артем Д.", points: 6810, tier: "Diamond Tier" }
+    { name: "Александр565", points: 625, games: 81, itm: 80, tier: "Legend Tier" },
+    { name: "Молодой Блондин", points: 533, games: 76, itm: 76, tier: "Diamond Tier" },
+    { name: "strnsk", points: 405, games: 61, itm: 61, tier: "Diamond Tier" }
   ],
-  hallOfFame: [
-    { name: "Александр М.", tournament: "DeepStack Turbo", pts: "1 место" },
-    { name: "Сергей К.", tournament: "Saturday Night Main", pts: "1 место" },
-    { name: "Дмитрий В.", tournament: "Bounty Hunter", pts: "1 место" }
+  hof: [
+    { name: "Наталья212", format: "SnG", dealer: "Паша", date: "05.09", points: 10, place: 1 },
+    { name: "Полина818", format: "SnG", dealer: "Маша", date: "05.09", points: 10, place: 1 },
+    { name: "Илья666", format: "SnG", dealer: "Всеволод", date: "05.09", points: 10, place: 1 }
   ]
 };
 
 let LEADERBOARD_CACHE = DEFAULT_LEADERBOARD_BUNDLE;
 let CURRENT_HUB_SLIDE_INDEX = 0;
 let HUB_ROTATION_INTERVAL = null;
+
+function normalizeCurrentPlayer(r, idx) {
+  if (Array.isArray(r)) {
+    return {
+      pos: r[0] || (idx + 1),
+      trend: r[1] || "",
+      name: String(r[2] || "").trim(),
+      points: Number(r[3]) || 0,
+      tier: String(r[4] || "").trim() || "🦈 SHARK"
+    };
+  }
+  return {
+    pos: r.pos || r.position || (idx + 1),
+    trend: r.trend || "",
+    name: String(r.name || r.player || r.realName || "").trim(),
+    points: Number(r.points || r.totalPoints) || 0,
+    tier: String(r.tier || r.rank || "").trim() || "🦈 SHARK"
+  };
+}
+
+function normalizeAllPlayer(r, idx) {
+  if (Array.isArray(r)) {
+    return {
+      pos: r[0] || (idx + 1),
+      name: String(r[2] || "").trim(),
+      points: Number(r[3]) || 0,
+      games: Number(r[4]) || 0,
+      itm: Number(r[5]) || 0
+    };
+  }
+  return {
+    pos: r.position || r.pos || (idx + 1),
+    name: String(r.player || r.realName || r.name || "").trim(),
+    points: Number(r.totalPoints || r.points) || 0,
+    games: Number(r.games) || 0,
+    itm: Number(r.itm) || 0
+  };
+}
+
+function normalizeHofWinner(it) {
+  let dateStr = "";
+  if (it.date) {
+    const parts = String(it.date).split("-");
+    if (parts.length === 3) {
+      dateStr = `${parts[2]}.${parts[1]}`;
+    } else {
+      dateStr = String(it.date);
+    }
+  }
+  return {
+    name: String(it.player || it.winner || it.realName || it.name || "").trim(),
+    format: String(it.format || "SnG").trim(),
+    dealer: String(it.dealer || "").trim(),
+    date: dateStr,
+    points: Number(it.points) || 0,
+    place: Number(it.place) || 1
+  };
+}
 
 async function fetchLeaderboardBundle() {
   if (typeof fetch === "undefined") return;
@@ -1074,10 +1132,22 @@ async function fetchLeaderboardBundle() {
     const data = await res.json();
     if (!data) return;
 
+    const rawCurrent = Array.isArray(data.current) ? data.current : (data.current?.players || []);
+    const normalizedCurrent = rawCurrent.map(normalizeCurrentPlayer).filter(p => p.name);
+
+    const rawAll = Array.isArray(data.all) ? data.all : (data.all?.players || []);
+    const normalizedAll = rawAll.map(normalizeAllPlayer).filter(p => p.name);
+
+    const rawHof = Array.isArray(data.hof) ? data.hof : (Array.isArray(data.hallOfFame) ? data.hallOfFame : []);
+    const normalizedHof = rawHof
+      .filter(it => it && (Number(it.place) === 1 || String(it.event || "").includes("1 место")))
+      .map(normalizeHofWinner)
+      .filter(w => w.name);
+
     const bundle = {
-      current: Array.isArray(data.current) ? data.current : (data.current?.players || DEFAULT_LEADERBOARD_BUNDLE.current),
-      all: Array.isArray(data.all) ? data.all : (data.all?.players || DEFAULT_LEADERBOARD_BUNDLE.all),
-      hallOfFame: Array.isArray(data.hallOfFame) ? data.hallOfFame : (data.recent || DEFAULT_LEADERBOARD_BUNDLE.hallOfFame)
+      current: normalizedCurrent.length ? normalizedCurrent : DEFAULT_LEADERBOARD_BUNDLE.current,
+      all: normalizedAll.length ? normalizedAll : DEFAULT_LEADERBOARD_BUNDLE.all,
+      hof: normalizedHof.length ? normalizedHof : DEFAULT_LEADERBOARD_BUNDLE.hof
     };
     LEADERBOARD_CACHE = bundle;
     if (typeof localStorage !== "undefined") {
@@ -1099,13 +1169,13 @@ function getClubHubSlideHtml(slideIdx) {
   const data = LEADERBOARD_CACHE || DEFAULT_LEADERBOARD_BUNDLE;
   const currentList = (data.current && data.current.length) ? data.current : DEFAULT_LEADERBOARD_BUNDLE.current;
   const allList = (data.all && data.all.length) ? data.all : DEFAULT_LEADERBOARD_BUNDLE.all;
-  const hofList = (data.hallOfFame && data.hallOfFame.length) ? data.hallOfFame : DEFAULT_LEADERBOARD_BUNDLE.hallOfFame;
+  const hofList = (data.hof && data.hof.length) ? data.hof : (data.hallOfFame || DEFAULT_LEADERBOARD_BUNDLE.hof);
 
   if (slideIdx === 1) {
-    // Слайд 2: 🌟 ТОП ЗА ВСЁ ВРЕМЯ
-    const l1 = allList[0] || { name: "Владимир Т.", points: 8450, tier: "Legend Tier" };
-    const l2 = allList[1] || { name: "Александр М.", points: 7920 };
-    const l3 = allList[2] || { name: "Артем Д.", points: 6810 };
+    // Слайд 2: 🌟 ТОП ЗА ВСЁ ВРЕМЯ (Реальные данные, без футера)
+    const l1 = allList[0] || { name: "Александр565", points: 625, games: 81, itm: 80 };
+    const l2 = allList[1] || { name: "Молодой Блондин", points: 533, games: 76, itm: 76 };
+    const l3 = allList[2] || { name: "strnsk", points: 405, games: 61, itm: 61 };
     return `
       <div class="club-hub-head">
         <span class="club-hub-tag">АТМОСФЕРА LIVE</span>
@@ -1117,56 +1187,51 @@ function getClubHubSlideHtml(slideIdx) {
           <div class="hub-leader-info">
             <span class="hub-leader-rank">ЛЕГЕНДА КЛУБА</span>
             <span class="hub-leader-name">${l1.name}</span>
-            <span class="hub-leader-pts"><b>${Number(l1.points || 0).toLocaleString("ru-RU")}</b> pts • ${l1.tier || "Legend Tier"}</span>
+            <span class="hub-leader-pts"><b>${Number(l1.points || 0).toLocaleString("ru-RU")}</b> pts • ${l1.games} игр (ITM ${l1.itm})</span>
           </div>
         </div>
         <div class="hub-top-list">
-          <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">${l2.name}</span><span class="hub-pts">${Number(l2.points || 0).toLocaleString("ru-RU")} pts</span></div>
-          <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">${l3.name}</span><span class="hub-pts">${Number(l3.points || 0).toLocaleString("ru-RU")} pts</span></div>
+          <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">${l2.name}</span><span class="hub-pts">${Number(l2.points || 0).toLocaleString("ru-RU")} pts • ${l2.games} игр</span></div>
+          <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">${l3.name}</span><span class="hub-pts">${Number(l3.points || 0).toLocaleString("ru-RU")} pts • ${l3.games} игр</span></div>
         </div>
-      </div>
-      <div class="club-hub-foot">
-        <span class="hub-foot-badge">♠ ♥ РЕЙТИНГ АТМОСФЕРЫ ♦ ♣</span>
-        <span class="hub-foot-text">Обновляется автоматически после каждой игры</span>
       </div>
     `;
   }
 
   if (slideIdx === 2) {
-    // Слайд 3: 🔥 ПОСЛЕДНИЕ ПОБЕДИТЕЛИ
-    const h1 = hofList[0] || { name: "Александр М.", tournament: "DeepStack Turbo", pts: "1 место" };
-    const h2 = hofList[1] || { name: "Сергей К.", tournament: "Saturday Night Main" };
-    const h3 = hofList[2] || { name: "Дмитрий В.", tournament: "Bounty Hunter" };
+    // Слайд 3: 🔥 ПОСЛЕДНИЕ ПОБЕДИТЕЛИ (Реальные данные из hof, без футера)
+    const h1 = hofList[0] || { name: "Наталья212", format: "SnG", dealer: "Паша", date: "05.09" };
+    const h2 = hofList[1] || { name: "Полина818", format: "SnG", dealer: "Маша", date: "05.09" };
+    const h3 = hofList[2] || { name: "Илья666", format: "SnG", dealer: "Всеволод", date: "05.09" };
+    const h2Details = `${h2.format}${h2.dealer ? ` (вед. ${h2.dealer}` : ""}${h2.date ? `, ${h2.date})` : (h2.dealer ? ")" : "")}`;
+    const h3Details = `${h3.format}${h3.dealer ? ` (вед. ${h3.dealer}` : ""}${h3.date ? `, ${h3.date})` : (h3.dealer ? ")" : "")}`;
+
     return `
       <div class="club-hub-head">
         <span class="club-hub-tag">АТМОСФЕРА LIVE</span>
-        <span class="club-hub-title">🔥 ЗАЛ СЛАВЫ КЛУБА</span>
+        <span class="club-hub-title">🔥 ПОСЛЕДНИЕ ПОБЕДИТЕЛИ</span>
       </div>
       <div class="club-hub-body">
         <div class="hub-leader-feature">
           <div class="hub-leader-avatar">🏆</div>
           <div class="hub-leader-info">
-            <span class="hub-leader-rank">ПОБЕДИТЕЛЬ ТУРНИРА</span>
-            <span class="hub-leader-name">${h1.name || h1.winner}</span>
-            <span class="hub-leader-pts"><b>1 МЕСТО</b> • ${h1.tournament || h1.format || "Турнир"}</span>
+            <span class="hub-leader-rank">ЗАЛ СЛАВЫ КЛУБА • ПОБЕДИТЕЛЬ ТУРНИРА</span>
+            <span class="hub-leader-name">${h1.name}</span>
+            <span class="hub-leader-pts"><b>1 МЕСТО</b> • ${h1.format}${h1.dealer ? ` (вед. ${h1.dealer})` : ""}${h1.date ? ` • ${h1.date}` : ""}</span>
           </div>
         </div>
         <div class="hub-top-list">
-          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h2.name || h2.winner}</span><span class="hub-pts">${h2.tournament || h2.format || "Турнир"}</span></div>
-          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h3.name || h3.winner}</span><span class="hub-pts">${h3.tournament || h3.format || "Турнир"}</span></div>
+          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h2.name}</span><span class="hub-pts">${h2Details}</span></div>
+          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h3.name}</span><span class="hub-pts">${h3Details}</span></div>
         </div>
-      </div>
-      <div class="club-hub-foot">
-        <span class="hub-foot-badge">♠ ♥ ТРИУМФАТОРЫ СТОЛОВ ♦ ♣</span>
-        <span class="hub-foot-text">Поздравляем победителей турниров!</span>
       </div>
     `;
   }
 
-  // Слайд 0 (по умолчанию): 🏆 ТОП МЕСЯЦА
-  const m1 = currentList[0] || { name: "Александр М.", points: 1420, tier: "Shark Tier" };
-  const m2 = currentList[1] || { name: "Сергей К.", points: 1280 };
-  const m3 = currentList[2] || { name: "Дмитрий В.", points: 1150 };
+  // Слайд 0 (по умолчанию): 🏆 ТОП МЕСЯЦА (Реальные данные, без футера)
+  const m1 = currentList[0] || { name: "Александр565", points: 112, tier: "🦈 SHARK" };
+  const m2 = currentList[1] || { name: "Илья666", points: 78 };
+  const m3 = currentList[2] || { name: "Паша213", points: 72 };
   return `
     <div class="club-hub-head">
       <span class="club-hub-tag">АТМОСФЕРА LIVE</span>
@@ -1178,17 +1243,13 @@ function getClubHubSlideHtml(slideIdx) {
         <div class="hub-leader-info">
           <span class="hub-leader-rank">ТОП-1 КЛУБА</span>
           <span class="hub-leader-name">${m1.name}</span>
-          <span class="hub-leader-pts"><b>${Number(m1.points || 0).toLocaleString("ru-RU")}</b> pts • ${m1.tier || "Shark Tier"}</span>
+          <span class="hub-leader-pts"><b>${Number(m1.points || 0).toLocaleString("ru-RU")}</b> pts${m1.tier ? ` • ${m1.tier}` : ""}</span>
         </div>
       </div>
       <div class="hub-top-list">
         <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">${m2.name}</span><span class="hub-pts">${Number(m2.points || 0).toLocaleString("ru-RU")} pts</span></div>
         <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">${m3.name}</span><span class="hub-pts">${Number(m3.points || 0).toLocaleString("ru-RU")} pts</span></div>
       </div>
-    </div>
-    <div class="club-hub-foot">
-      <span class="hub-foot-badge">♠ ♥ СЛЕДУЮЩИЙ ТУРНИР ♦ ♣</span>
-      <span class="hub-foot-text">Сегодня 21:00 • DeepStack Turbo</span>
     </div>
   `;
 }

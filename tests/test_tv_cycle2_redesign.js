@@ -69,18 +69,24 @@ assert(typeof tv.rotateClubHubSlide === "function", "tv.rotateClubHubSlide до�
 const slide0 = tv.getClubHubSlideHtml(0);
 assert(slide0.includes("ТОП МЕСЯЦА"), "Слайд 0 должен содержать ТОП МЕСЯЦА");
 assert(slide0.includes("ТОП-1 КЛУБА"), "Слайд 0 должен содержать ТОП-1 КЛУБА");
+assert(slide0.includes("Александр565"), "Слайд 0 должен содержать реальное имя Топ-1 игрока (Александр565)");
+assert(!slide0.includes("club-hub-foot"), "Слайд 0 не должен содержать футера");
 
 // Слайд 1: ТОП ЗА ВСЁ ВРЕМЯ
 const slide1 = tv.getClubHubSlideHtml(1);
 assert(slide1.includes("ТОП ЗА ВСЁ ВРЕМЯ"), "Слайд 1 должен содержать ТОП ЗА ВСЁ ВРЕМЯ");
 assert(slide1.includes("ЛЕГЕНДА КЛУБА"), "Слайд 1 должен содержать ЛЕГЕНДА КЛУБА");
+assert(slide1.includes("Молодой Блондин"), "Слайд 1 должен содержать реальное имя Топ-2 игрока (Молодой Блондин)");
+assert(!slide1.includes("club-hub-foot"), "Слайд 1 не должен содержать футера");
 
 // Слайд 2: ПОСЛЕДНИЕ ПОБЕДИТЕЛИ
 const slide2 = tv.getClubHubSlideHtml(2);
 assert(slide2.includes("ЗАЛ СЛАВЫ КЛУБА"), "Слайд 2 должен содержать ЗАЛ СЛАВЫ КЛУБА");
 assert(slide2.includes("ПОБЕДИТЕЛЬ ТУРНИРА"), "Слайд 2 должен содержать ПОБЕДИТЕЛЬ ТУРНИРА");
+assert(slide2.includes("Наталья212"), "Слайд 2 должен содержать реальное имя победителя из hof (Наталья212)");
+assert(!slide2.includes("club-hub-foot"), "Слайд 2 не должен содержать футера");
 
-console.log("   ✅ Все 3 слайда (Топ месяца, Топ за все время, Зал славы) корректно генерируются.");
+console.log("   ✅ Все 3 слайда генерируют реальные имена без undefined и без лишних футеров.");
 
 // ==========================================
 // 6. ПРОВЕРКА SMART TV ANTI-SLEEP ENGINE
