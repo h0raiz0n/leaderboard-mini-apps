@@ -13,7 +13,7 @@ console.log("1. Проверка отсутствия формулировки '
 const filesToCheck = [
   "tv/tv.js",
   "dealer/dealer.js",
-  "DealerBot.js",
+  "legacy/DealerBot.js",
   "shared/poker-config.js",
   "dealer/index.html",
   "tv/index.html"

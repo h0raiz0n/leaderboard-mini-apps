@@ -37,7 +37,7 @@ global.UrlFetchApp = {
   }
 };
 
-const dealerBot = require("../DealerBot.js");
+const dealerBot = require("../legacy/DealerBot.js");
 
 console.log("♠️ Тестирование дедупликации, защиты от штормов и скорости...\n");
 

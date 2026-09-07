@@ -200,33 +200,33 @@ runningTable.levelIndex = 0;
 const toastEl = getMockElement("confirm-step-toast");
 toastEl.style.display = "none";
 
-// 1-й клик по кнопке "⏩"
-dealer.handleStepClick();
+// 1. Вызов тоста подтверждения
+dealer.showStepToast();
 assert.strictEqual(toastEl.style.display, "block", "Тост подтверждения должен отобразиться (display: block)");
 assert.strictEqual(runningTable.levelIndex, 0, "Уровень НЕ должен переключиться до подтверждения");
 
-// Повторный клик по кнопке "⏩" подтверждает переход
-dealer.handleStepClick();
-assert.strictEqual(runningTable.levelIndex, 1, "Повторный клик по btn-step должен подтвердить переход на уровень 1");
+// 2. Подтверждение перехода через confirmNextLevel()
+dealer.confirmNextLevel();
+assert.strictEqual(runningTable.levelIndex, 1, "confirmNextLevel должен подтвердить переход на уровень 1");
 assert.strictEqual(toastEl.style.display, "none", "После подтверждения тост должен скрыться");
 
-// Проверка отмены через dismissStepToast
-dealer.handleStepClick();
+// 3. Проверка отмены через dismissStepToast
+dealer.showStepToast();
 assert.strictEqual(toastEl.style.display, "block", "Тост снова открылся");
 dealer.dismissStepToast();
 assert.strictEqual(toastEl.style.display, "none", "Тост скрылся после отмены");
 assert.strictEqual(runningTable.levelIndex, 1, "Уровень остался неизменным (1)");
 
-// Проверка явного клика по кнопке подтверждения "⏩ Да" в тосте
-dealer.handleStepClick();
+// 4. Проверка явного клика по кнопке подтверждения "⏩ Да" в тосте
+dealer.showStepToast();
 assert.strictEqual(toastEl.style.display, "block");
 dealer.confirmNextLevel();
 assert.strictEqual(runningTable.levelIndex, 2, "Клик по кнопке тоста переключил уровень на 2");
 assert.strictEqual(toastEl.style.display, "none", "Тост скрылся");
 
-// Проверка на финальном уровне: тост не должен открываться
+// 5. Проверка на финальном уровне: тост не должен открываться
 runningTable.levelIndex = 12; // Финал
-dealer.handleStepClick();
+dealer.showStepToast();
 assert.strictEqual(toastEl.style.display, "none", "На финальном уровне тост не должен открываться");
 
 console.log("   ✅ Механика Confirm Toast для шага уровня работает идеально.");

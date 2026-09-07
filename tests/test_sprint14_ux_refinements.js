@@ -22,7 +22,7 @@ assert(dealerHtml.includes("Классика • Без анте"), "Пульт 
 assert(dealerHtml.includes("Pro • С анте (BBA)"), "Пульт должен содержать компактный подзаголовок Pro");
 assert(dealerHtml.includes("id=\"latency-tag\""), "Пульт должен содержать latency-tag в шапке");
 assert(!dealerHtml.includes("btn-colorup"), "В пульте не должно быть ручной кнопки btn-colorup");
-assert(dealerHtml.includes("btn-skip-colorup"), "В пульте должна остаться контекстная кнопка btn-skip-colorup");
+assert(!dealerHtml.includes("btn-skip-colorup"), "В пульте больше нет кнопки btn-skip-colorup (убрано по запросу дилеров)");
 console.log("   ✅ Компактные плашки и панель действий в dealer/index.html проверены.");
 
 // 3. Проверка стилей ТВ: равная геометрия бейджей формата и уровня

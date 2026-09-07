@@ -70,9 +70,8 @@ const POKER_CONFIG = {
     SNG_DEEP_1500: {
       id: "SNG_DEEP_1500",
       name: "1 500 стек / 10 мин (Классика)",
-      shortDesc: "Базовая структура без анте, Color-Up после 50/100",
+      shortDesc: "Базовая структура без анте",
       stack: 1500,
-      colorUpAfterLevel: 4, // после 50/100
       levels: [
         { level: 1,  sb: 5,    bb: 10,   ante: 0,    durationSec: 600, label: "5 / 10",                  isBreak: false },
         { level: 2,  sb: 10,   bb: 25,   ante: 0,    durationSec: 600, label: "10 / 25",                 isBreak: false },
@@ -88,9 +87,8 @@ const POKER_CONFIG = {
     SNG_STANDARD: {
       id: "SNG_STANDARD",
       name: "5 000 стек / 7 мин (Атмосфера Pro с BBA)",
-      shortDesc: "Big Blind Ante с 6 уровня, Color-Up после 150/300",
+      shortDesc: "Big Blind Ante с 6 уровня",
       stack: 5000,
-      colorUpAfterLevel: 5, // после 150/300
       levels: [
         { level: 1,  sb: 25,   bb: 50,   ante: 0,    durationSec: 420, label: "25 / 50",                 isBreak: false },
         { level: 2,  sb: 50,   bb: 100,  ante: 0,    durationSec: 420, label: "50 / 100",                isBreak: false },
@@ -108,9 +106,8 @@ const POKER_CONFIG = {
     MTT_PRO_5000: {
       id: "MTT_PRO_5000",
       name: "5 000 стек / 10 мин (Атмосфера МТТ Pro)",
-      shortDesc: "3-часовой турнир, BBA с 6 уровня, Color-Up 2 мин после 150/300, перерывы на объединение столов",
+      shortDesc: "3-часовой турнир, BBA с 6 уровня, перерывы на объединение столов",
       stack: 5000,
-      colorUpAfterLevel: 5, // после 150/300
       lateRegLevels: 5,
       bbaStartLevel: 6,
       levels: [
@@ -140,9 +137,6 @@ const POKER_CONFIG = {
     DATE: "entry.1615126251",
     DEALER: "entry.1887911518"
   },
-
-  // Master PIN для авторизации ведущих в браузере (вне Telegram)
-  MASTER_DEALER_PIN: "7777",
 
   // Базовый URL шины Firebase Realtime Database
   FIREBASE_DB_URL: "https://atmosphere-poker-default-rtdb.europe-west1.firebasedatabase.app",

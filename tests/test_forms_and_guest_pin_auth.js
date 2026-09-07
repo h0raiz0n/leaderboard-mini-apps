@@ -1,11 +1,11 @@
 /**
- * UNIT TEST: Google Forms Routing & Guest PIN Authentication
+ * UNIT TEST: Google Forms Routing & Whitelist Security
  * Антикафе «Атмосфера»
  */
 
 const assert = require("assert");
 
-console.log("📝 Тестирование маршрутизации Google Forms и входа гостевых ведущих по PIN...\n");
+console.log("📝 Тестирование маршрутизации Google Forms и защиты белого списка...\n");
 
 // Моки окружения
 global.window = {
@@ -40,9 +40,9 @@ global.sessionStorage = {
 const dom = {
   "pin-auth-modal": { style: { display: "none" } },
   "pin-modal-caption": { textContent: "" },
-  "dealer-pin-input": { value: "7777", focus: () => {} },
+  "dealer-pin-input": { value: "", focus: () => {} },
   "pin-error-msg": { style: { display: "none" } },
-  "dealer-name-select": { value: "Гостевой ведущий", innerHTML: "", appendChild: () => {} },
+  "dealer-name-select": { value: "Другое", innerHTML: "", appendChild: () => {} },
   "dealer-badge": { textContent: "" },
   "identity-name": { textContent: "" },
   "setup-panel": { style: { display: "" } },
@@ -52,7 +52,8 @@ const dom = {
 global.document = {
   getElementById: (id) => dom[id] || null,
   createElement: () => ({ value: "", textContent: "", selected: false }),
-  addEventListener: () => {}
+  addEventListener: () => {},
+  body: { innerHTML: "" }
 };
 
 const dealerEngine = require("../dealer/dealer.js");
@@ -83,20 +84,14 @@ const mysteryUrl = dealerEngine.generatePreFilledFormUrl();
 assert(mysteryUrl.includes("1FAIpQLScFJXRH7bgb2W2aCOeSAKYfL-m4odE14HM5a2eWGz8to4QIlA"), "Формат Mystery должен вести на форму Mystery Bounty");
 console.log("   ✅ Формат Mystery Bounty: ссылка ведет строго на форму Mystery.");
 
-// 2. Тест авторизации гостевого ведущего / без юзернейма по Master PIN
-console.log("\n2. Тест авторизации гостя / пользователя без юзернейма по Master PIN:");
+// 2. Тест: Неавторизованный пользователь не получает доступ
+console.log("\n2. Тест блокировки пользователя вне белого списка:");
+const pinResult = dealerEngine.submitDealerPin();
+assert.strictEqual(pinResult, false, "Вход по PIN должен быть выведен из эксплуатации и возвращать false");
+console.log("   ✅ Вход по PIN выведен из эксплуатации, доступ строго по белому списку.");
 
-// Запуск ввода PIN для дилера не из белого списка
-dom["dealer-name-select"].value = "Другое";
-dealerEngine.submitDealerPin();
-
-assert.strictEqual(global.sessionStorage.getItem("atmosphere_pin_auth"), "true", "Сессия PIN должна быть установлена");
-assert.strictEqual(global.sessionStorage.getItem("atmosphere_dealer_name"), "Другое", "Имя ведущего не из белого списка должно быть 'Другое'");
-assert.strictEqual(dom["dealer-badge"].textContent, "Другое", "Бейдж должен отображать 'Другое'");
-console.log("   ✅ Ведущий не из белого списка корректно получает имя 'Другое'.");
-
-// 3. Тест ответа Telegram-бота для неизвестного пользователя (выдача кнопки PIN)
-console.log("\n3. Тест выдачи кнопки PIN-входа в Telegram-боте:");
+// 3. Тест ответа Telegram-бота для неизвестного пользователя (отсутствие кнопки PIN и утечки пароля)
+console.log("\n3. Тест ответа Telegram-бота для неизвестного пользователя:");
 
 const botHandler = require("../api/dealer-bot.js");
 let botResponse = null;
@@ -107,7 +102,7 @@ const mockRes = {
   })
 };
 
-async function testBotPinOffer() {
+async function testBotAccessDenied() {
   await botHandler({
     method: "POST",
     body: {
@@ -120,10 +115,11 @@ async function testBotPinOffer() {
     }
   }, mockRes);
 
-  assert.strictEqual(botResponse.pin_offered, true, "Бот должен предложить вход по PIN неизвестному пользователю");
-  console.log("   ✅ Telegram-бот отправляет кнопку входа по PIN пользователям без юзернейма.");
+  assert.strictEqual(botResponse.pin_offered, false, "Бот НЕ должен предлагать вход по PIN");
+  assert.strictEqual(botResponse.authorized, false, "Пользователь не должен быть авторизован");
+  console.log("   ✅ Telegram-бот корректно блокирует доступ и не сообщает секретный PIN.");
 }
 
-testBotPinOffer().then(() => {
-  console.log("\n🎉 ВСЕ ТЕСТЫ GOOGLE FORMS И ГОСТЕВОЙ АВТОРИЗАЦИИ УСПЕШНО ПРОЙДЕНЫ!");
+testBotAccessDenied().then(() => {
+  console.log("\n🎉 ВСЕ ТЕСТЫ GOOGLE FORMS И БЕЗОПАСНОСТИ УСПЕШНО ПРОЙДЕНЫ!");
 });

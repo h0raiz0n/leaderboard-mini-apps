@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "atmosphere": {
+      ".read": false,
+      ".write": false,
+      "tables": {
+        ".read": true,
+        "$tableId": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['status', 'levelIndex']) && newData.child('status').val().matches(/^(idle|ready|lobby|running|paused|finished)$/)"
+        }
+      },
+      "mtt_session": {
+        ".read": true,
+        ".write": true
+      },
+      "dealers_registry": {
+        ".read": true,
+        ".write": false
+      },
+      "leaderboard_sync": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}

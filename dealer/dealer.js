@@ -3,6 +3,13 @@
  * Антикафе «Атмосфера» — Direct-to-Firebase Realtime Architecture
  */
 
+// Автоматическая сетевая изоляция при запуске в среде Node.js (тестовые раннеры)
+if (typeof window === "undefined" && typeof require === "function") {
+  try {
+    require("../tests/network_guard.js");
+  } catch (e) {}
+}
+
 let DEALER_NAME = "Ведущий";
 let DEALER_ID = "dealer_vlad";
 let SELECTED_FORMAT = "SnG";
@@ -13,6 +20,12 @@ let MTT_SETUP_PLAYERS = 9;
 let DISSOLVE_TARGET_TABLE_KEY = null;
 let TABLES_STATE = {};
 let CURRENT_MTT_SESSION = null;
+let SERVER_TIME_OFFSET = 0;
+
+function getSyncedNow() {
+  return Date.now() + SERVER_TIME_OFFSET;
+}
+
 
 if (typeof document !== "undefined" && document.addEventListener) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -198,68 +211,18 @@ async function fetchDynamicDealersRegistryAndRetry(uname, uid) {
     console.error("fetchDynamicDealersRegistryAndRetry error:", err);
   }
 
-  // Если пользователя нет в базе — мягко открываем ввод Master PIN
-  showPinModal("Ваш Telegram-аккаунт не найден в белом списке. Введите Master PIN (7777), чтобы войти как приглашённый ведущий:");
+  // Если пользователя нет в белом списке — строго блокируем доступ
+  showAccessDenied(uname || uid);
 }
 
 function showPinModal(customMessage) {
-  const modal = document.getElementById("pin-auth-modal");
-  const caption = document.getElementById("pin-modal-caption");
-  if (caption && customMessage) {
-    caption.textContent = customMessage;
-  }
-  if (modal) {
-    modal.style.display = "flex";
-    const input = document.getElementById("dealer-pin-input");
-    if (input) {
-      input.value = "";
-      setTimeout(() => {
-        if (input && typeof input.focus === "function") input.focus();
-      }, 200);
-      input.onkeydown = (e) => {
-        if (e.key === "Enter") submitDealerPin();
-      };
-    }
-  }
+  // Устаревший метод: вход по PIN выведен из эксплуатации в пользу белого списка
+  showAccessDenied();
 }
 
 function submitDealerPin() {
-  const input = document.getElementById("dealer-pin-input");
-  const errorMsg = document.getElementById("pin-error-msg");
-  const selectEl = document.getElementById("dealer-name-select");
-  const enteredPin = input ? input.value.trim() : "";
-  const expectedPin = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.MASTER_DEALER_PIN) 
-    ? POKER_CONFIG.MASTER_DEALER_PIN 
-    : "7777";
-
-  if (enteredPin === expectedPin) {
-    const selectedName = selectEl ? selectEl.value : "Другое";
-    DEALER_NAME = selectedName || "Другое";
-
-    if (typeof sessionStorage !== "undefined") {
-      sessionStorage.setItem("atmosphere_pin_auth", "true");
-      sessionStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
-    }
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("atmosphere_dealer_name", DEALER_NAME);
-    }
-
-    const modal = document.getElementById("pin-auth-modal");
-    if (modal) modal.style.display = "none";
-    if (errorMsg) errorMsg.style.display = "none";
-    
-    applyDealerIdentity();
-    initDataSource();
-    renderDealerView();
-    triggerHaptic("success");
-  } else {
-    if (errorMsg) errorMsg.style.display = "block";
-    triggerHaptic("heavy");
-    if (input) {
-      input.value = "";
-      input.focus();
-    }
-  }
+  // Устаревший метод: вход по PIN выведен из эксплуатации
+  return false;
 }
 
 function showAccessDenied(identifier) {
@@ -271,11 +234,9 @@ function showAccessDenied(identifier) {
       <p style="font-size: 15px; color: #94a3b8; line-height: 1.6; max-width: 320px;">
         Ваш Telegram-аккаунт (<b>@${identifier || "неизвестный"}</b>) не найден в списке ведущих антикафе «Атмосфера».
       </p>
-      <div style="margin-top: 24px;">
-        <button type="button" class="btn btn-form-action" style="padding: 12px 24px; border-radius: 12px; font-size: 14px;" onclick="location.reload()">
-          🔑 Ввести PIN-код ведущего
-        </button>
-      </div>
+      <p style="font-size: 13px; color: #64748b; margin-top: 12px; line-height: 1.5; max-width: 300px;">
+        Для получения доступа обратитесь к администратору клуба, чтобы внести ваш Telegram в реестр ведущих.
+      </p>
     </div>
   `;
 }
@@ -514,6 +475,12 @@ function initDataSource() {
         });
       }
       const db = firebase.database();
+
+      // Синхронизация времени с сервером Firebase
+      db.ref(".info/serverTimeOffset").on("value", (snap) => {
+        SERVER_TIME_OFFSET = snap.val() || 0;
+      });
+
       db.ref("atmosphere/tables").on("value", (snapshot) => {
         const arrivalTime = Date.now();
         const latency = LAST_FIREBASE_SYNC_TS > 0 ? Math.min(80, Math.max(8, arrivalTime - LAST_FIREBASE_SYNC_TS)) : 16;
@@ -521,9 +488,20 @@ function initDataSource() {
         const remoteState = snapshot.val() || {};
 
         // In-Flight Optimistic State Guard:
-        // Если у текущего ведущего есть локальные изменения в процессе отправки, сохраняем оптимистичный стол
-        const isPendingLocalSync = (typeof localStorage !== "undefined" && 
-          (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || localStorage.getItem("atmosphere_pending_sync") === "true"));
+        let isPendingLocalSync = false;
+        if (typeof localStorage !== "undefined") {
+          const pendingTs = parseInt(localStorage.getItem("atmosphere_pending_sync_ts_" + DEALER_ID) || "0", 10);
+          const now = Date.now();
+          if (pendingTs && (now - pendingTs > 30000)) {
+            // Флаг висит дольше 30 секунд — сбрасываем устаревший pending sync
+            localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
+            localStorage.removeItem("atmosphere_pending_sync");
+            localStorage.removeItem("atmosphere_pending_sync_ts_" + DEALER_ID);
+          } else {
+            isPendingLocalSync = (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || 
+                                  localStorage.getItem("atmosphere_pending_sync") === "true");
+          }
+        }
 
         let localSavedTable = null;
         if (isPendingLocalSync && typeof localStorage !== "undefined") {
@@ -534,8 +512,19 @@ function initDataSource() {
         }
 
         const optimisticLocalTable = TABLES_STATE[DEALER_ID] || localSavedTable;
+        const remoteMyTable = remoteState[DEALER_ID];
 
-        if (isPendingLocalSync && optimisticLocalTable) {
+        // Monotonic Level Protection:
+        // Если сервер ушел вперед по уровням (ТВ автоматически переключил раунд, пока телефон спал),
+        // локальное устаревшее состояние сбрасывается и безоговорочно принимается состояние сервера!
+        if (remoteMyTable && optimisticLocalTable && (remoteMyTable.levelIndex || 0) > (optimisticLocalTable.levelIndex || 0)) {
+          if (typeof localStorage !== "undefined") {
+            localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
+            localStorage.removeItem("atmosphere_pending_sync");
+            localStorage.removeItem("atmosphere_pending_sync_ts_" + DEALER_ID);
+          }
+          TABLES_STATE = remoteState;
+        } else if (isPendingLocalSync && optimisticLocalTable) {
           TABLES_STATE = Object.assign({}, remoteState, { [DEALER_ID]: optimisticLocalTable });
         } else {
           TABLES_STATE = remoteState;
@@ -615,9 +604,34 @@ async function fetchTablesRest() {
       const latency = Date.now() - start;
       const data = await res.json();
       if (data) {
-        const isPendingLocalSync = (typeof localStorage !== "undefined" && 
-          (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || localStorage.getItem("atmosphere_pending_sync") === "true"));
-        if (!isPendingLocalSync) {
+        let isPendingLocalSync = false;
+        if (typeof localStorage !== "undefined") {
+          const pendingTs = parseInt(localStorage.getItem("atmosphere_pending_sync_ts_" + DEALER_ID) || "0", 10);
+          const now = Date.now();
+          if (pendingTs && (now - pendingTs > 30000)) {
+            localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
+            localStorage.removeItem("atmosphere_pending_sync");
+            localStorage.removeItem("atmosphere_pending_sync_ts_" + DEALER_ID);
+          } else {
+            isPendingLocalSync = (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || 
+                                  localStorage.getItem("atmosphere_pending_sync") === "true");
+          }
+        }
+
+        const remoteMyTable = data[DEALER_ID];
+        const localMyTable = TABLES_STATE[DEALER_ID];
+
+        // Monotonic Level Protection:
+        // Если сервер ушел вперед по уровням (ТВ автоматически переключил раунд, пока телефон спал),
+        // сбрасываем локальный отложенный sync и принимаем данные сервера!
+        if (remoteMyTable && localMyTable && (remoteMyTable.levelIndex || 0) > (localMyTable.levelIndex || 0)) {
+          if (typeof localStorage !== "undefined") {
+            localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
+            localStorage.removeItem("atmosphere_pending_sync");
+            localStorage.removeItem("atmosphere_pending_sync_ts_" + DEALER_ID);
+          }
+          TABLES_STATE = data;
+        } else if (!isPendingLocalSync) {
           TABLES_STATE = data;
         } else {
           TABLES_STATE = Object.assign({}, data, { [DEALER_ID]: TABLES_STATE[DEALER_ID] });
@@ -639,10 +653,10 @@ async function fetchTablesRest() {
 function startRestPollingFallback() {
   if (REST_POLL_INTERVAL) return;
   REST_POLL_INTERVAL = setInterval(() => {
-    if (Date.now() - LAST_FIREBASE_SYNC_TS > 3000) {
+    if (Date.now() - LAST_FIREBASE_SYNC_TS > 8000) {
       fetchTablesRest();
     }
-  }, 2500);
+  }, 4000);
   if (REST_POLL_INTERVAL && typeof REST_POLL_INTERVAL.unref === "function") {
     REST_POLL_INTERVAL.unref();
   }
@@ -662,6 +676,7 @@ function saveState() {
       localStorage.setItem("atmosphere_tables", JSON.stringify(localTables));
       localStorage.setItem("atmosphere_pending_sync", "true");
       localStorage.setItem("atmosphere_pending_sync_" + DEALER_ID, "true");
+      localStorage.setItem("atmosphere_pending_sync_ts_" + DEALER_ID, String(Date.now()));
     } catch (e) {}
   }
 
@@ -682,6 +697,7 @@ function flushPendingSync() {
         if (typeof localStorage !== "undefined") {
           localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
           localStorage.removeItem("atmosphere_pending_sync");
+          localStorage.removeItem("atmosphere_pending_sync_ts_" + DEALER_ID);
         }
         return true;
       })
@@ -707,6 +723,7 @@ function flushPendingSync() {
         if (typeof localStorage !== "undefined") {
           localStorage.removeItem("atmosphere_pending_sync_" + DEALER_ID);
           localStorage.removeItem("atmosphere_pending_sync");
+          localStorage.removeItem("atmosphere_pending_sync_ts_" + DEALER_ID);
         }
         return true;
       } else {
@@ -749,7 +766,7 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
 function isTableStale(table) {
   if (!table) return true;
   if (table.dissolved) return true;
-  const now = Date.now();
+  const now = getSyncedNow();
   const TWO_HOURS_MS = 2 * 3600 * 1000;
 
   // Активные перерывы никогда не считаются устаревшими
@@ -844,7 +861,6 @@ function openStructurePreview(structKey) {
 
   if (tbodyEl && Array.isArray(structure.levels)) {
     let html = "";
-    const colorUpLevel = structure.colorUpAfterLevel || (CURRENT_PREVIEW_STRUCT === "SNG_DEEP_1500" ? 4 : 5);
 
     structure.levels.forEach((lvl, idx) => {
       const anteHtml = lvl.ante > 0 ? `<span class="badge-bba">BBA ${lvl.ante}</span>` : `<span style="color: var(--muted); opacity: 0.5;">—</span>`;
@@ -858,15 +874,6 @@ function openStructurePreview(structKey) {
           <td>${durMin} мин</td>
         </tr>
       `;
-
-      if (lvl.level === colorUpLevel) {
-        const removedChips = CURRENT_PREVIEW_STRUCT === "SNG_DEEP_1500" ? "убираются номиналы 5, 10, 25, 50" : "убираются номиналы 25, 50";
-        html += `
-          <tr class="row-colorup">
-            <td colspan="4">☕ COLOR-UP (2 мин) • Размен мелких фишек (${removedChips})</td>
-          </tr>
-        `;
-      }
     });
     tbodyEl.innerHTML = html;
   }
@@ -923,7 +930,7 @@ function startTable() {
   table.structKey = SELECTED_STRUCT;
   table.status = "running";
   table.levelIndex = 0;
-  table.startedAt = Date.now();
+  table.startedAt = getSyncedNow();
   table.durationSec = structure.levels[0].durationSec;
   table.remainingMs = table.durationSec * 1000;
   table.levelEndsAt = table.startedAt + table.remainingMs;
@@ -939,7 +946,7 @@ function startTable() {
   table.isPostGameBreak = false;
   table.nextGameAt = null;
   table.postGameBreakMinutes = null;
-  table.createdAt = Date.now();
+  table.createdAt = getSyncedNow();
 
   if (table.format === "MTT") {
     table.isMttMaster = (typeof IS_MTT_MASTER !== "undefined") ? IS_MTT_MASTER : true;
@@ -1282,7 +1289,7 @@ function cancelSatelliteReady() {
 function togglePause() {
   triggerHaptic("medium");
   const table = getMyTable();
-  const now = Date.now();
+  const now = getSyncedNow();
 
   if (table.status === "running") {
     table.status = "paused";
@@ -1330,11 +1337,11 @@ function togglePause() {
   renderDealerView();
 }
 
-// 2.1. Запуск быстрой таймированной паузы (Color-Up / Перерыв)
+// 2.1. Запуск быстрой таймированной паузы (Перерыв)
 function startTimedPause(seconds = 120) {
   triggerHaptic("heavy");
   const table = getMyTable();
-  const now = Date.now();
+  const now = getSyncedNow();
   if (table.status === "running") {
     let remainingMs = 0;
     if (table.levelEndsAt) {
@@ -1365,7 +1372,9 @@ function startTimedPause(seconds = 120) {
   renderDealerView();
 }
 
-// 3. Следующий раунд с подтверждением через тост
+// 3. Следующий раунд с поддержкой быстрого перехода с возможностью отмены (Undo)
+let PREV_LEVEL_STATE = null;
+let UNDO_LEVEL_TIMER = null;
 let STEP_TOAST_TIMER = null;
 
 function handleStepClick() {
@@ -1378,20 +1387,190 @@ function handleStepClick() {
     return;
   }
 
-  const toast = document.getElementById("confirm-step-toast");
-  if (!toast) {
-    nextLevel();
+  stepLevelWithUndo();
+}
+
+function stepLevelWithUndo() {
+  const table = getMyTable();
+  if (!table) return;
+  const structure = getActiveStructure(table.structKey || SELECTED_STRUCT);
+  const levels = (structure && structure.levels) ? structure.levels : [];
+  const maxIdx = levels.length ? levels.length - 1 : 0;
+
+  if (table.levelIndex >= maxIdx) {
     return;
   }
 
-  if (toast.style.display !== "none") {
-    confirmNextLevel();
+  // Сохраняем состояние для отмены (Undo)
+  PREV_LEVEL_STATE = {
+    levelIndex: table.levelIndex,
+    durationSec: table.durationSec,
+    remainingMs: table.remainingMs,
+    elapsedBeforePause: table.elapsedBeforePause,
+    startedAt: table.startedAt,
+    levelEndsAt: table.levelEndsAt,
+    status: table.status
+  };
+
+  // Мгновенный переход на следующий уровень
+  table.levelIndex += 1;
+  const nextLvl = levels[table.levelIndex];
+  table.durationSec = nextLvl.durationSec;
+  table.remainingMs = nextLvl.durationSec * 1000;
+  table.elapsedBeforePause = 0;
+  const now = getSyncedNow();
+  table.startedAt = now;
+  if (table.status === "running") {
+    table.levelEndsAt = now + table.remainingMs;
   } else {
-    showStepToast();
+    table.levelEndsAt = null;
   }
+
+  triggerHaptic("medium");
+  saveState();
+
+  if (table.format === "MTT" && table.isMttMaster) {
+    broadcastMttMasterState({
+      levelIndex: table.levelIndex,
+      durationSec: table.durationSec,
+      remainingMs: table.remainingMs,
+      elapsedBeforePause: 0,
+      startedAt: table.startedAt,
+      levelEndsAt: table.levelEndsAt
+    });
+  }
+
+  renderDealerView();
+  showUndoLevelSnackbar(table.levelIndex + 1);
+}
+
+function showUndoLevelSnackbar(displayLevelNum) {
+  const snackbar = document.getElementById("undo-level-snackbar");
+  if (!snackbar) return;
+
+  if (UNDO_LEVEL_TIMER) {
+    clearTimeout(UNDO_LEVEL_TIMER);
+    UNDO_LEVEL_TIMER = null;
+  }
+
+  const msgEl = document.getElementById("undo-snackbar-msg");
+  if (msgEl) {
+    msgEl.textContent = `Уровень ${displayLevelNum} активирован`;
+  }
+
+  snackbar.style.display = "flex";
+  if (snackbar.classList) snackbar.classList.add("visible");
+
+  let countdownSec = 3;
+  const btnUndo = document.getElementById("btn-undo-level");
+  if (btnUndo) {
+    btnUndo.textContent = `↩️ Отменить (${countdownSec}с)`;
+  }
+
+  const intervalId = setInterval(() => {
+    countdownSec -= 1;
+    if (countdownSec > 0 && btnUndo) {
+      btnUndo.textContent = `↩️ Отменить (${countdownSec}с)`;
+    } else {
+      clearInterval(intervalId);
+    }
+  }, 1000);
+
+  UNDO_LEVEL_TIMER = setTimeout(() => {
+    clearInterval(intervalId);
+    dismissUndoSnackbar();
+    PREV_LEVEL_STATE = null;
+  }, 3200);
+}
+
+function dismissUndoSnackbar() {
+  const snackbar = document.getElementById("undo-level-snackbar");
+  if (!snackbar) return;
+  if (UNDO_LEVEL_TIMER) {
+    clearTimeout(UNDO_LEVEL_TIMER);
+    UNDO_LEVEL_TIMER = null;
+  }
+  if (snackbar.classList) snackbar.classList.remove("visible");
+  snackbar.style.display = "none";
+}
+
+function undoStepLevel() {
+  if (!PREV_LEVEL_STATE) {
+    dismissUndoSnackbar();
+    return;
+  }
+
+  const table = getMyTable();
+  if (!table) return;
+
+  table.levelIndex = PREV_LEVEL_STATE.levelIndex;
+  table.durationSec = PREV_LEVEL_STATE.durationSec;
+  table.remainingMs = PREV_LEVEL_STATE.remainingMs;
+  table.elapsedBeforePause = PREV_LEVEL_STATE.elapsedBeforePause;
+  table.startedAt = PREV_LEVEL_STATE.startedAt;
+  table.levelEndsAt = PREV_LEVEL_STATE.levelEndsAt;
+  table.status = PREV_LEVEL_STATE.status;
+
+  PREV_LEVEL_STATE = null;
+  dismissUndoSnackbar();
+
+  triggerHaptic("heavy");
+  saveState();
+
+  if (table.format === "MTT" && table.isMttMaster) {
+    broadcastMttMasterState({
+      levelIndex: table.levelIndex,
+      durationSec: table.durationSec,
+      remainingMs: table.remainingMs,
+      elapsedBeforePause: table.elapsedBeforePause,
+      startedAt: table.startedAt,
+      levelEndsAt: table.levelEndsAt
+    });
+  }
+
+  renderDealerView();
+}
+
+function adjustLevelTime(deltaSeconds) {
+  const table = getMyTable();
+  if (!table || table.status === "idle") return;
+  const deltaMs = deltaSeconds * 1000;
+  const now = getSyncedNow();
+
+  if (table.status === "running") {
+    if (table.levelEndsAt) {
+      table.levelEndsAt = Math.max(now + 5000, table.levelEndsAt + deltaMs);
+      table.remainingMs = Math.max(5000, table.levelEndsAt - now);
+    }
+  } else if (table.status === "paused") {
+    const currentRem = (table.remainingMs !== undefined && table.remainingMs !== null)
+      ? table.remainingMs
+      : ((table.durationSec || 420) * 1000);
+    table.remainingMs = Math.max(5000, currentRem + deltaMs);
+  }
+
+  triggerHaptic("light");
+  saveState();
+
+  if (table.format === "MTT" && table.isMttMaster) {
+    broadcastMttMasterState({
+      remainingMs: table.remainingMs,
+      levelEndsAt: table.levelEndsAt
+    });
+  }
+
+  renderDealerView();
 }
 
 function showStepToast() {
+  const table = getMyTable();
+  const structure = getActiveStructure(table.structKey || SELECTED_STRUCT);
+  const levels = (structure && structure.levels) ? structure.levels : [];
+  const maxIdx = levels.length ? levels.length - 1 : 0;
+  if (table.levelIndex >= maxIdx) {
+    return;
+  }
+
   triggerHaptic("light");
   const toast = document.getElementById("confirm-step-toast");
   if (!toast) return;
@@ -1437,8 +1616,9 @@ function nextLevel() {
     table.durationSec = levels[table.levelIndex].durationSec;
     table.remainingMs = table.durationSec * 1000;
     table.elapsedBeforePause = 0;
-    table.startedAt = Date.now();
-    table.levelEndsAt = Date.now() + (table.durationSec * 1000);
+    const now = getSyncedNow();
+    table.startedAt = now;
+    table.levelEndsAt = now + (table.durationSec * 1000);
     saveState();
     if (table.format === "MTT" && table.isMttMaster) {
       broadcastMttMasterState({
@@ -1458,6 +1638,7 @@ function nextLevel() {
 function resetTable() {
   triggerHaptic("heavy");
   dismissStepToast();
+  dismissUndoSnackbar();
   dismissFinishModal();
   const table = getMyTable();
   const wasMttMaster = Boolean(table.format === "MTT" && table.isMttMaster);
@@ -1551,6 +1732,8 @@ function confirmFinishGame() {
 // 5. Завершение игры -> переход в режим Post-Game
 function finishGame() {
   dismissFinishModal();
+  dismissStepToast();
+  dismissUndoSnackbar();
   triggerHaptic("success");
   const table = getMyTable();
   table.status = "finished";
@@ -1910,7 +2093,7 @@ function confirmConsolidationBreak() {
 function startConsolidationBreak(dissolveTableKey, breakDurationSec = 900) {
   triggerHaptic("heavy");
   const masterTable = getMyTable();
-  const now = Date.now();
+  const now = getSyncedNow();
   const breakEndsAt = now + (breakDurationSec * 1000);
 
   masterTable.isBreakActive = true;
@@ -1976,35 +2159,10 @@ function checkAutoLevelProgression() {
   // Сателлитные столы в режиме МТТ не прогрессируют таймер независимо
   if (table.format === "MTT" && !table.isMttMaster) return;
 
-  const now = Date.now();
+  const now = getSyncedNow();
   if (now >= table.levelEndsAt) {
     const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
     const levels = (struct && struct.levels) ? struct.levels : [];
-    const currentLvl = levels[table.levelIndex || 0];
-
-    // Автоматический Color-Up (после 150/300 для MTT Pro, после 100/200 для SnG Pro)
-    const isColorUpLevel = (struct && struct.colorUpAfterLevel && (table.levelIndex + 1) === struct.colorUpAfterLevel)
-      || (struct && struct.id !== "MTT_PRO_5000" && currentLvl && currentLvl.sb === 100 && currentLvl.bb === 200);
-
-    if (isColorUpLevel && !table.colorUpDone) {
-      table.colorUpDone = true;
-      table.isColorUpActive = true;
-      table.status = "paused";
-      table.pauseEndsAt = now + (120 * 1000);
-      table.pauseTotalSec = 120;
-      saveState();
-      if (table.format === "MTT" && table.isMttMaster) {
-        broadcastMttMasterState({
-          colorUpDone: true,
-          isColorUpActive: true,
-          status: "paused",
-          pauseEndsAt: table.pauseEndsAt,
-          pauseTotalSec: table.pauseTotalSec
-        });
-      }
-      triggerHaptic("heavy");
-      return;
-    }
 
     const maxIdx = levels.length ? levels.length - 1 : 0;
     if (table.levelIndex < maxIdx) {
@@ -2035,38 +2193,13 @@ function checkAutoLevelProgression() {
   }
 }
 
-// Пропуск перерыва Color-Up дилером
+// Заглушка обратной совместимости (Color-Up убран по запросу дилеров)
 function skipColorUp() {
   triggerHaptic("medium");
   const table = getMyTable();
   table.isColorUpActive = false;
-  table.pauseEndsAt = null;
-  table.pauseTotalSec = null;
-  table.status = "running";
-  const struct = getActiveStructure(table.structKey || SELECTED_STRUCT);
-  const levels = (struct && struct.levels) ? struct.levels : [];
-  if (table.levelIndex < levels.length - 1) {
-    table.levelIndex += 1;
-    const nextLvl = levels[table.levelIndex];
-    table.durationSec = nextLvl.durationSec;
-    table.remainingMs = nextLvl.durationSec * 1000;
-    table.levelEndsAt = Date.now() + table.remainingMs;
-    table.elapsedBeforePause = 0;
-  }
+  table.colorUpDone = false;
   saveState();
-  if (table.format === "MTT" && table.isMttMaster) {
-    broadcastMttMasterState({
-      isColorUpActive: false,
-      pauseEndsAt: null,
-      pauseTotalSec: null,
-      status: "running",
-      levelIndex: table.levelIndex,
-      durationSec: table.durationSec,
-      remainingMs: table.remainingMs,
-      levelEndsAt: table.levelEndsAt,
-      elapsedBeforePause: 0
-    });
-  }
   renderDealerView();
 }
 
@@ -2271,7 +2404,8 @@ function renderDealerView() {
   const syncBadge = document.getElementById("satellite-sync-badge");
   const syncText = document.getElementById("satellite-sync-text");
 
-  const isConsolidationBreak = Boolean(table.isBreakActive && table.breakEndsAt && table.breakEndsAt > Date.now());
+  const now = getSyncedNow();
+  const isConsolidationBreak = Boolean(table.isBreakActive && table.breakEndsAt && table.breakEndsAt > now);
 
   if (mttBox && mttBox.style) {
     const isMtt = (table.format === "MTT" || SELECTED_FORMAT === "MTT");
@@ -2407,10 +2541,10 @@ function renderDealerView() {
   let totalElapsed = table.elapsedBeforePause || 0;
   if (table.status === "running") {
     if (table.levelEndsAt) {
-      remaining = Math.max(0, Math.ceil((table.levelEndsAt - Date.now()) / 1000));
+      remaining = Math.max(0, Math.ceil((table.levelEndsAt - now) / 1000));
       totalElapsed = Math.max(0, table.durationSec - remaining);
     } else if (table.startedAt) {
-      const elapsedNow = Math.floor((Date.now() - table.startedAt) / 1000);
+      const elapsedNow = Math.floor((now - table.startedAt) / 1000);
       totalElapsed += elapsedNow;
       remaining = Math.max(0, table.durationSec - totalElapsed);
     }
@@ -2423,10 +2557,10 @@ function renderDealerView() {
     }
   }
 
-  // Отображение таймера (если активен 15-мин перерыв на объединение, Color-Up или пауза)
-  const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > Date.now());
+  // Отображение таймера (если активен 15-мин перерыв на объединение или пауза)
+  const isTimedPause = (table.status === "paused" && table.pauseEndsAt && table.pauseEndsAt > now);
   if (isConsolidationBreak) {
-    const bRem = Math.max(0, Math.ceil((table.breakEndsAt - Date.now()) / 1000));
+    const bRem = Math.max(0, Math.ceil((table.breakEndsAt - now) / 1000));
     const bMin = Math.floor(bRem / 60);
     const bSec = bRem % 60;
     if (digitsEl) {
@@ -2434,7 +2568,7 @@ function renderDealerView() {
       digitsEl.style.color = "#fbbf24";
     }
   } else if (isTimedPause) {
-    const pRemaining = Math.max(0, Math.ceil((table.pauseEndsAt - Date.now()) / 1000));
+    const pRemaining = Math.max(0, Math.ceil((table.pauseEndsAt - now) / 1000));
     const pMin = Math.floor(pRemaining / 60);
     const pSec = pRemaining % 60;
     if (digitsEl) {
@@ -2476,17 +2610,13 @@ function renderDealerView() {
     if (statusEl) {
       if (isConsolidationBreak) {
         statusEl.textContent = "☕ Перерыв 15 мин • Объединение столов";
-      } else if (table.isColorUpActive && isTimedPause) {
-        statusEl.textContent = "☕ Color-Up • Размен фишек <100";
       } else {
-        statusEl.textContent = isTimedPause ? "☕ Перерыв • Color-Up" : "⏸ На паузе";
+        statusEl.textContent = isTimedPause ? "☕ Перерыв" : "⏸ На паузе";
       }
     }
     if (runningRow) runningRow.style.display = "grid";
     if (colorUpBtn) colorUpBtn.style.display = "none";
-    if (skipColorUpBtn) {
-      skipColorUpBtn.style.display = (table.isColorUpActive && isTimedPause) ? "flex" : "none";
-    }
+    if (skipColorUpBtn) skipColorUpBtn.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "▶️ Продолжить";
     if (finishBtn) finishBtn.style.display = "flex";
 
@@ -2501,7 +2631,6 @@ function renderDealerView() {
 
     // Обработка перерыва после игры (с поддержкой овертайма +MM:SS до 1 часа)
     if (table.isPostGameBreak && table.nextGameAt) {
-      const now = Date.now();
       const isOvertime = now >= table.nextGameAt;
       const isStaleOvertime = (now - table.nextGameAt >= 3600 * 1000); // 1 час задержки
 
@@ -2638,19 +2767,32 @@ function renderDealerView() {
 }
 
 // Автоматическое восстановление состояния при разблокировке телефона или возврате во вкладку
+async function syncWithServerOnWakeup() {
+  try {
+    await fetchTablesRest();
+  } catch (e) {}
+  renderDealerView();
+}
+const loadState = syncWithServerOnWakeup;
+
 if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      loadState();
-      renderDealerView();
+      syncWithServerOnWakeup();
     }
   });
 }
 if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
   window.addEventListener("focus", () => {
-    loadState();
-    renderDealerView();
+    syncWithServerOnWakeup();
   });
+}
+
+if (typeof window !== "undefined") {
+  window.undoStepLevel = undoStepLevel;
+  window.adjustLevelTime = adjustLevelTime;
+  window.stepLevelWithUndo = stepLevelWithUndo;
+  window.dismissUndoSnackbar = dismissUndoSnackbar;
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -2661,6 +2803,12 @@ if (typeof module !== "undefined" && module.exports) {
     togglePause,
     startTimedPause,
     nextLevel,
+    stepLevelWithUndo,
+    undoStepLevel,
+    showUndoLevelSnackbar,
+    dismissUndoSnackbar,
+    adjustLevelTime,
+    getPrevLevelState: () => PREV_LEVEL_STATE,
     resetTable,
     finishGame,
     startPostGameBreak,
@@ -2717,12 +2865,19 @@ if (typeof module !== "undefined" && module.exports) {
     renderMttMasterLobby,
     cleanupStaleTablesInFirebase,
     showAppToast,
+    syncWithServerOnWakeup,
+    loadState,
+    getSyncedNow,
+    getServerTimeOffset: () => SERVER_TIME_OFFSET,
+    setServerTimeOffset: (offset) => { SERVER_TIME_OFFSET = offset; },
     getCurrentMttSession: () => CURRENT_MTT_SESSION,
     setCurrentMttSession: (s) => { CURRENT_MTT_SESSION = s; },
     setSelectedFormat: (f) => { SELECTED_FORMAT = f; },
     setSelectedStruct: (s) => { SELECTED_STRUCT = s; },
     setIsMttMaster: (m) => { IS_MTT_MASTER = m; },
     setMttSetupPlayers: (p) => { MTT_SETUP_PLAYERS = p; },
-    setDealerName: (name) => { DEALER_NAME = name; applyDealerIdentity(); }
+    setDealerName: (name) => { DEALER_NAME = name; applyDealerIdentity(); },
+    getLastFirebaseSyncTs: () => LAST_FIREBASE_SYNC_TS,
+    setLastFirebaseSyncTs: (ts) => { LAST_FIREBASE_SYNC_TS = ts; }
   };
 }

@@ -36,7 +36,7 @@ global.UrlFetchApp = {
   }
 };
 
-const bot = require("../DealerBot.js");
+const bot = require("../legacy/DealerBot.js");
 
 console.log("🔕 Тестирование тишины бота и фильтрации спам-апдейтов...\n");
 

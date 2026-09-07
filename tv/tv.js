@@ -22,6 +22,14 @@ let CURRENT_MTT_SESSION = null;
 
 let LAST_FIREBASE_SYNC_TS = 0;
 let REST_POLL_INTERVAL = null;
+let SERVER_TIME_OFFSET = 0;
+
+let SIMULATION_MODE = false;
+let LIVE_BACKUP_TABLES = null;
+
+function getSyncedNow() {
+  return Date.now() + SERVER_TIME_OFFSET;
+}
 
 if (typeof document !== "undefined" && document.addEventListener) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -119,6 +127,16 @@ function playCountdownTick(second) {
     osc.connect(gain);
     gain.connect(ctx.destination);
 
+    const cleanup = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (e) {}
+    };
+
+    osc.onended = cleanup;
+    setTimeout(cleanup, 150);
+
     osc.start(now);
     osc.stop(now + 0.075);
   } catch (e) {}
@@ -150,6 +168,18 @@ function playTournamentChime() {
     osc2.connect(gain);
     gain.connect(ctx.destination);
 
+    const cleanup = () => {
+      try {
+        osc1.disconnect();
+        osc2.disconnect();
+        gain.disconnect();
+      } catch (e) {}
+    };
+
+    osc1.onended = cleanup;
+    osc2.onended = cleanup;
+    setTimeout(cleanup, 1000);
+
     osc1.start(now);
     osc2.start(now);
     osc1.stop(now + 0.85);
@@ -178,6 +208,12 @@ function initTvHotkeys() {
         return;
       }
 
+      // 1.1. Переключение панели симулятора столов (Dev Mode: клавиши S или ~)
+      if ((e.key === "s" || e.key === "S" || e.key === "~" || e.key === "`" || e.key === "ё" || e.key === "Ё") && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        toggleTvSimulator();
+        return;
+      }
+
       // Поиск активного стола на экране
       const activeKeys = Object.keys(ACTIVE_TABLES).filter(k => {
         const t = ACTIVE_TABLES[k];
@@ -191,7 +227,7 @@ function initTvHotkeys() {
       // 2. Пробел: Пауза / Возобновление
       if (e.code === "Space" || e.key === " ") {
         e.preventDefault();
-        const now = Date.now();
+        const now = getSyncedNow();
         if (table.status === "running") {
           table.status = "paused";
           table.remainingMs = table.levelEndsAt ? Math.max(0, table.levelEndsAt - now) : ((table.durationSec || 420) * 1000);
@@ -216,7 +252,7 @@ function initTvHotkeys() {
           const nextLvl = structure[table.levelIndex];
           table.durationSec = nextLvl.durationSec;
           table.remainingMs = nextLvl.durationSec * 1000;
-          table.levelEndsAt = Date.now() + table.remainingMs;
+          table.levelEndsAt = getSyncedNow() + table.remainingMs;
           playTournamentChime();
           syncTableAutoProgression(targetKey, table);
           renderTables();
@@ -309,19 +345,31 @@ function initDataSource() {
         });
       }
       const db = firebase.database();
+
+      // Синхронизация времени с сервером Firebase
+      db.ref(".info/serverTimeOffset").on("value", (snap) => {
+        SERVER_TIME_OFFSET = snap.val() || 0;
+      });
+
       db.ref("atmosphere/tables").on("value", (snapshot) => {
         const arrivalTime = Date.now();
         const latency = LAST_FIREBASE_SYNC_TS > 0 ? Math.min(60, Math.max(8, arrivalTime - LAST_FIREBASE_SYNC_TS)) : 12;
         LAST_FIREBASE_SYNC_TS = arrivalTime;
-        ACTIVE_TABLES = snapshot.val() || {};
+        if (SIMULATION_MODE) {
+          LIVE_BACKUP_TABLES = snapshot.val() || {};
+        } else {
+          ACTIVE_TABLES = snapshot.val() || {};
+          renderTables();
+        }
         updateNetPingDisplay(latency, "WS");
-        renderTables();
       });
 
       // Слушаем активную турнирную сессию МТТ
       db.ref("atmosphere/mtt_session").on("value", (snapshot) => {
         CURRENT_MTT_SESSION = snapshot.val() || null;
-        renderTables();
+        if (!SIMULATION_MODE) {
+          renderTables();
+        }
       });
 
       console.log("⚡ ТВ подключен к Firebase Realtime DB (WebSocket)");
@@ -335,24 +383,56 @@ function initDataSource() {
   if (typeof window !== "undefined") {
     window.addEventListener("storage", (e) => {
       if (e.key === "atmosphere_tables") {
-        ACTIVE_TABLES = JSON.parse(e.newValue || "{}");
-        renderTables();
+        if (SIMULATION_MODE) {
+          LIVE_BACKUP_TABLES = JSON.parse(e.newValue || "{}");
+        } else {
+          ACTIVE_TABLES = JSON.parse(e.newValue || "{}");
+          renderTables();
+        }
       }
       if (e.key === "atmosphere_mtt_session") {
         try {
           CURRENT_MTT_SESSION = JSON.parse(e.newValue || "null");
-          renderTables();
+          if (!SIMULATION_MODE) {
+            renderTables();
+          }
         } catch (err) {}
       }
     });
     
     const saved = localStorage.getItem("atmosphere_tables");
     if (saved) {
-      ACTIVE_TABLES = JSON.parse(saved);
+      if (SIMULATION_MODE) {
+        LIVE_BACKUP_TABLES = JSON.parse(saved);
+      } else {
+        ACTIVE_TABLES = JSON.parse(saved);
+      }
     }
     const savedSession = localStorage.getItem("atmosphere_mtt_session");
     if (savedSession) {
       try { CURRENT_MTT_SESSION = JSON.parse(savedSession); } catch (e) {}
+    }
+
+    // Проверка параметров URL (?mock=1..4 или ?mock=break)
+    if (window.location && window.location.search) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has("mock")) {
+          const mockVal = urlParams.get("mock");
+          const tb = document.getElementById("tv-sim-toolbar");
+          if (tb) tb.style.display = "flex";
+          const btn = document.getElementById("tv-sim-toggle-btn");
+          if (btn) btn.classList.add("active");
+          if (mockVal === "break") {
+            setSimulatedBreak();
+          } else {
+            const count = parseInt(mockVal, 10);
+            if (!isNaN(count) && count >= 1 && count <= 4) {
+              setSimulatedTables(count);
+            }
+          }
+        }
+      } catch (e) {}
     }
   }
 }
@@ -368,17 +448,23 @@ async function fetchTablesRest() {
       const latency = Date.now() - start;
       const data = await res.json();
       if (data) {
-        ACTIVE_TABLES = data;
+        if (SIMULATION_MODE) {
+          LIVE_BACKUP_TABLES = data;
+        } else {
+          ACTIVE_TABLES = data;
+          renderTables();
+        }
         LAST_FIREBASE_SYNC_TS = Date.now();
         updateNetPingDisplay(latency, "REST");
-        renderTables();
       }
     }
 
     const sessionRes = await fetch(`${dbUrl}/atmosphere/mtt_session.json`);
     if (sessionRes.ok) {
       CURRENT_MTT_SESSION = await sessionRes.json();
-      renderTables();
+      if (!SIMULATION_MODE) {
+        renderTables();
+      }
     }
   } catch (e) {}
 }
@@ -386,10 +472,10 @@ async function fetchTablesRest() {
 function startRestPollingFallback() {
   if (REST_POLL_INTERVAL) return;
   REST_POLL_INTERVAL = setInterval(() => {
-    if (Date.now() - LAST_FIREBASE_SYNC_TS > 3000) {
+    if (Date.now() - LAST_FIREBASE_SYNC_TS > 8000) {
       fetchTablesRest();
     }
-  }, 1500);
+  }, 4000);
   if (REST_POLL_INTERVAL && typeof REST_POLL_INTERVAL.unref === "function") {
     REST_POLL_INTERVAL.unref();
   }
@@ -416,7 +502,7 @@ function getTableStructure(table) {
 
 // Расчёт времени стола
 function calculateTableTime(table, isFinalLevel = false) {
-  const now = Date.now();
+  const now = getSyncedNow();
   const duration = table.durationSec || 420;
   let elapsed = table.elapsedBeforePause || 0;
   let isOvertime = false;
@@ -490,7 +576,6 @@ function getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTim
     return "Перерыв 15 мин • Объединение столов";
   }
   if (isTimedPause) {
-    if (table && table.isColorUpActive) return "Размен фишек <100";
     return "Перерыв";
   }
   if (table && table.status === "paused") {
@@ -499,46 +584,11 @@ function getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTim
   if (isFinalLevel) {
     return "Блайнды зафиксированы";
   }
-
-  const levels = Array.isArray(structure) ? structure : [];
-  let colorUpLevelIdx = -1;
-
-  // Для MTT_PRO_5000: color-up строго после 150/300 (уровень 5, safeIndex 4)
-  if (table && (table.structKey === "MTT_PRO_5000" || (table.format === "MTT" && levels.length >= 17))) {
-    for (let i = 0; i < levels.length; i++) {
-      if (levels[i].sb === 150 && levels[i].bb === 300) {
-        colorUpLevelIdx = i;
-        break;
-      }
-    }
-  } else {
-    for (let i = 0; i < levels.length; i++) {
-      if (levels[i].sb === 100 && levels[i].bb === 200) {
-        colorUpLevelIdx = i;
-        break;
-      }
-    }
-  }
-
-  if (colorUpLevelIdx !== -1 && (!table || !table.colorUpDone) && safeIndex <= colorUpLevelIdx) {
-    const diff = colorUpLevelIdx - safeIndex;
-    if (diff === 0) {
-      return "Color-Up в конце уровня";
-    } else if (diff === 1) {
-      return "Color-Up через 1 ур.";
-    } else {
-      return `Color-Up через ${diff} ур.`;
-    }
-  }
-
-  if (table && table.colorUpDone) {
-    return "Фишки <100 выведены";
-  }
-
   return "Турнир продолжается";
 }
 
 function syncTableAutoProgression(tableKey, table) {
+  if (SIMULATION_MODE) return;
   if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
     try {
       firebase.database().ref("atmosphere/tables/" + encodeURIComponent(tableKey)).update({
@@ -806,14 +856,13 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     }
 
     let subtext = "Идёт уровень";
-    if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
-    else if (isTimedPause) subtext = (timingTable.pauseTotalSec === 120 ? "☕ Перерыв • Размен фишек (Color-Up)" : `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`);
+    if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
     else if (timingTable.status === "paused") subtext = "Пауза";
     else if (isFinalLevel) subtext = "Блайнды зафиксированы";
     else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
     else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
 
-    const roundText = (timingTable.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
+    const roundText = isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`));
     const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);
     const railWarningClass = (time.isAlert && !isTimedPause) ? " is-warning" : "";
     const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
@@ -1055,13 +1104,12 @@ function buildMttCinemaDeckHtml(timingTable, activeMttTables) {
 
   let subtext = "Идёт уровень";
   if (isConsolidationBreak) subtext = "☕ Перерыв 15 минут • Объединение столов";
-  else if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
   else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
   else if (timingTable.status === "paused") subtext = "Пауза";
   else if (isFinalLevel) subtext = "Блайнды зафиксированы";
   else if (time.isAlert) subtext = "Смена блайндов через 30 сек";
 
-  const roundText = isConsolidationBreak ? "ПЕРЕРЫВ 15 МИН" : (timingTable.isColorUpActive && isTimedPause ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : `УРОВЕНЬ ${currentLvl.level}`)));
+  const roundText = isConsolidationBreak ? "ПЕРЕРЫВ 15 МИН" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : `УРОВЕНЬ ${currentLvl.level}`));
   const nextBlindsStr = nextLvl ? `${nextLvl.sb.toLocaleString("ru-RU")} / ${nextLvl.bb.toLocaleString("ru-RU")}${nextLvl.ante > 0 ? ` (АНТЕ ${nextLvl.ante.toLocaleString("ru-RU")})` : ""}` : "—";
   const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);
 
@@ -1249,7 +1297,6 @@ function patchMttCinemaDeck(deckEl, timingTable, activeMttTables, time, currentL
 
   let subtext = "Идёт уровень";
   if (isConsolidationBreak) subtext = "☕ Перерыв 15 минут • Объединение столов";
-  else if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
   else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
   else if (timingTable.status === "paused") subtext = "Пауза";
   else if (isFinalLevel) subtext = "Блайнды зафиксированы";
@@ -1258,7 +1305,7 @@ function patchMttCinemaDeck(deckEl, timingTable, activeMttTables, time, currentL
   const subtextEl = document.getElementById("mtt-deck-subtext");
   if (subtextEl && subtextEl.textContent !== subtext) subtextEl.textContent = subtext;
 
-  const roundText = isConsolidationBreak ? "ПЕРЕРЫВ 15 МИН" : (timingTable.isColorUpActive && isTimedPause ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : `УРОВЕНЬ ${currentLvl.level}`)));
+  const roundText = isConsolidationBreak ? "ПЕРЕРЫВ 15 МИН" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : `УРОВЕНЬ ${currentLvl.level}`));
   const roundEl = document.getElementById("mtt-deck-round");
   if (roundEl && roundEl.textContent !== roundText) roundEl.textContent = roundText;
 
@@ -1294,37 +1341,10 @@ function patchMttCinemaDeck(deckEl, timingTable, activeMttTables, time, currentL
 function renderMttCinemaMode(viewport, activeMttTables, tableKeys) {
   const masterMttTable = activeMttTables.find(t => t.isMttMaster) || activeMttTables[0];
   const structure = getTableStructure(masterMttTable);
-  const now = Date.now();
+  const now = getSyncedNow();
 
-  // 1. Автопрогрессия уровней и Color-Up
+  // 1. Автопрогрессия уровней (ТВ как автономный исполнитель в зале)
   if (masterMttTable.status === "running" && masterMttTable.levelEndsAt && now >= masterMttTable.levelEndsAt) {
-    const currentLevel = structure[masterMttTable.levelIndex] || structure[0];
-    const isColorUpLevel = (currentLevel.sb === 150 && currentLevel.bb === 300);
-
-    if (isColorUpLevel && !masterMttTable.colorUpDone) {
-      masterMttTable.colorUpDone = true;
-      masterMttTable.isColorUpActive = true;
-      masterMttTable.status = "paused";
-      masterMttTable.pauseEndsAt = now + (120 * 1000);
-      masterMttTable.pauseTotalSec = 120;
-      playTournamentChime();
-      syncTableAutoProgression(masterMttTable.id || "master", masterMttTable);
-    } else if (masterMttTable.levelIndex < structure.length - 1) {
-      masterMttTable.levelIndex += 1;
-      const nextLvl = structure[masterMttTable.levelIndex];
-      masterMttTable.durationSec = nextLvl.durationSec;
-      masterMttTable.remainingMs = nextLvl.durationSec * 1000;
-      masterMttTable.levelEndsAt = now + masterMttTable.remainingMs;
-      playTournamentChime();
-      syncTableAutoProgression(masterMttTable.id || "master", masterMttTable);
-    }
-  }
-
-  if (masterMttTable.isColorUpActive && masterMttTable.pauseEndsAt && now >= masterMttTable.pauseEndsAt) {
-    masterMttTable.isColorUpActive = false;
-    masterMttTable.pauseEndsAt = null;
-    masterMttTable.pauseTotalSec = null;
-    masterMttTable.status = "running";
     if (masterMttTable.levelIndex < structure.length - 1) {
       masterMttTable.levelIndex += 1;
       const nextLvl = structure[masterMttTable.levelIndex];
@@ -1421,12 +1441,13 @@ function renderTables() {
     }
   }
   
+  const now = getSyncedNow();
   const tableKeys = Object.keys(ACTIVE_TABLES).filter(k => {
     const t = ACTIVE_TABLES[k];
     if (!t || isTableStale(t)) return false;
     if (t.status === "running" || t.status === "paused") return true;
-    if (t.isBreakActive && t.breakEndsAt && (t.breakEndsAt > Date.now())) return true;
-    if (t.isPostGameBreak && t.nextGameAt && (Date.now() - t.nextGameAt < 3600 * 1000)) return true;
+    if (t.isBreakActive && t.breakEndsAt && (t.breakEndsAt > now)) return true;
+    if (t.isPostGameBreak && t.nextGameAt && (now - t.nextGameAt < 3600 * 1000)) return true;
     return false;
   });
 
@@ -1500,18 +1521,24 @@ function renderTables() {
   }
 
   // 4. Обычный режим SnG / Mystery (мульти-карточное табло)
-  const currentSignature = `SNG:${tableKeys.slice(0, 4).sort().join(",")}`;
+  const currentSignature = `SNG:${tableKeys.slice(0, 4).sort().map(key => {
+    const t = ACTIVE_TABLES[key];
+    if (!t) return key;
+    const isPostGame = Boolean(t.isPostGameBreak && t.nextGameAt);
+    const breakEndTime = (t.isBreakActive && t.breakEndsAt) ? t.breakEndsAt : (isPostGame ? t.nextGameAt : null);
+    if (breakEndTime) {
+      if (now < breakEndTime) return `${key}:break`;
+      if (isPostGame && (now - breakEndTime < 3600 * 1000)) return `${key}:overtime`;
+    }
+    return `${key}:game`;
+  }).join(",")}`;
+
   let canPatchDom = (LAST_RENDERED_MODE === "tables" && LAST_RENDERED_SIGNATURE === currentSignature);
   if (canPatchDom) {
     for (const key of tableKeys.slice(0, 4)) {
       const table = ACTIVE_TABLES[key];
       const card = document.getElementById("card-" + (table.id || key));
       if (!card || typeof card.querySelector !== "function") {
-        canPatchDom = false;
-        break;
-      }
-      const isBreakScreen = (table.isBreakActive && table.breakEndsAt > Date.now()) || (table.isPostGameBreak && table.nextGameAt && (Date.now() - table.nextGameAt < 3600 * 1000));
-      if (isBreakScreen) {
         canPatchDom = false;
         break;
       }
@@ -1534,42 +1561,11 @@ function renderTables() {
     const timingTable = isThisTableMtt ? (masterMttTable || table) : table;
     const isMttSatellite = Boolean(isThisTableMtt && !table.isMttMaster);
     const structure = getTableStructure(timingTable);
-    const now = Date.now();
+    const now = getSyncedNow();
 
-    // Автоматический Color-Up после 100/200 (или 150/300 для MTT) и транзит уровней
+    // Автопрогрессия уровней на ТВ
     // ВАЖНО: Сателлитные столы в режиме МТТ НЕ отправляют автопрогрессию в Firebase, чтобы исключить гонку и дрифт таймера!
     if (!isMttSatellite && timingTable.status === "running" && timingTable.levelEndsAt && now >= timingTable.levelEndsAt) {
-      const currentLevel = structure[timingTable.levelIndex] || structure[0];
-      
-      const isColorUpLevel = (timingTable.structKey === "MTT_PRO_5000" || (timingTable.format === "MTT" && structure.length >= 17))
-        ? (currentLevel.sb === 150 && currentLevel.bb === 300)
-        : (currentLevel.sb === 100 && currentLevel.bb === 200);
-
-      if (isColorUpLevel && !timingTable.colorUpDone) {
-        timingTable.colorUpDone = true;
-        timingTable.isColorUpActive = true;
-        timingTable.status = "paused";
-        timingTable.pauseEndsAt = now + (120 * 1000);
-        timingTable.pauseTotalSec = 120;
-        playTournamentChime();
-        syncTableAutoProgression(key, timingTable);
-      } else if (timingTable.levelIndex < structure.length - 1) {
-        timingTable.levelIndex += 1;
-        const nextLvl = structure[timingTable.levelIndex];
-        timingTable.durationSec = nextLvl.durationSec;
-        timingTable.remainingMs = nextLvl.durationSec * 1000;
-        timingTable.levelEndsAt = now + timingTable.remainingMs;
-        playTournamentChime();
-        syncTableAutoProgression(key, timingTable);
-      }
-    }
-
-    // Завершение таймера Color-Up на ТВ
-    if (!isMttSatellite && timingTable.isColorUpActive && timingTable.pauseEndsAt && now >= timingTable.pauseEndsAt) {
-      timingTable.isColorUpActive = false;
-      timingTable.pauseEndsAt = null;
-      timingTable.pauseTotalSec = null;
-      timingTable.status = "running";
       if (timingTable.levelIndex < structure.length - 1) {
         timingTable.levelIndex += 1;
         const nextLvl = structure[timingTable.levelIndex];
@@ -1602,6 +1598,54 @@ function renderTables() {
     // Если карточка существует в DOM и поддерживает querySelector -> точечно патчим её
     const card = document.getElementById("card-" + (table.id || key));
     if (card && typeof card.querySelector === "function") {
+      const isPostGame = Boolean(timingTable.isPostGameBreak && timingTable.nextGameAt);
+      const breakEndTime = (timingTable.isBreakActive && timingTable.breakEndsAt) ? timingTable.breakEndsAt : (isPostGame ? timingTable.nextGameAt : null);
+
+      // Точечный патчинг карточки перерыва без пересоздания DOM (Elimination of DOM storm)
+      if (breakEndTime) {
+        const isOvertime = now >= breakEndTime;
+        const isWithinOneHour = (now - breakEndTime < 3600 * 1000);
+
+        if (!isOvertime) {
+          const breakRemaining = Math.max(0, Math.floor((breakEndTime - now) / 1000));
+          const bMin = Math.floor(breakRemaining / 60);
+          const bSec = breakRemaining % 60;
+          const bFormatted = `${String(bMin).padStart(2, "0")}:${String(bSec).padStart(2, "0")}`;
+          const breakTotalSec = (timingTable.breakDurationSec || (isPostGame ? Math.round((breakEndTime - (timingTable.finishedAt || (breakEndTime - 600000))) / 1000) : 600)) || 600;
+          const progressPercent = Math.max(0, Math.min(100, (breakRemaining / breakTotalSec) * 100));
+
+          const digitsEl = card.querySelector(".timer-digits");
+          if (digitsEl && digitsEl.textContent !== bFormatted) {
+            digitsEl.textContent = bFormatted;
+          }
+          const railFillEl = card.querySelector(".time-rail-fill");
+          if (railFillEl) {
+            railFillEl.style.transform = `scaleX(${(progressPercent / 100).toFixed(4)})`;
+            railFillEl.style.width = `${progressPercent.toFixed(1)}%`;
+          }
+          return;
+        } else if (isPostGame && isWithinOneHour) {
+          const overdueSec = Math.floor((now - breakEndTime) / 1000);
+          const oMin = Math.floor(overdueSec / 60);
+          const oSec = overdueSec % 60;
+          const oFormatted = `+${String(oMin).padStart(2, "0")}:${String(oSec).padStart(2, "0")}`;
+
+          const digitsEl = card.querySelector(".timer-digits");
+          if (digitsEl && digitsEl.textContent !== oFormatted) {
+            digitsEl.textContent = oFormatted;
+          }
+          const subtextEl = card.querySelector(".timer-subtext");
+          const subtextStr = `Задержка старта: +${oMin} мин`;
+          if (subtextEl && subtextEl.textContent !== subtextStr) {
+            subtextEl.textContent = subtextStr;
+          }
+          const statusVal = card.querySelector(".break-status-val");
+          if (statusVal && statusVal.textContent !== subtextStr) {
+            statusVal.textContent = subtextStr;
+          }
+          return;
+        }
+      }
       const maxIdx = structure.length ? structure.length - 1 : 0;
       const safeIndex = Math.min(Math.max(0, timingTable.levelIndex || 0), maxIdx);
       const isFinalLevel = (safeIndex >= maxIdx);
@@ -1618,8 +1662,7 @@ function renderTables() {
       }
 
       let subtext = "Идёт уровень";
-      if (timingTable.isColorUpActive && isTimedPause) subtext = "☕ Color-Up • Размен мелких фишек <100 (2 мин)";
-      else if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
+      if (isTimedPause) subtext = `☕ Перерыв (${Math.round(timingTable.pauseTotalSec / 60)} мин)`;
       else if (timingTable.status === "paused") subtext = "Пауза";
       else if (isFinalLevel) subtext = "Блайнды зафиксированы";
       else if (currentLevel.isBreak) subtext = "Перерыв 5 минут";
@@ -1686,7 +1729,7 @@ function renderTables() {
       }
 
       const roundPill = card.querySelector(".round-pill");
-      const roundText = (timingTable.isColorUpActive && isTimedPause) ? "COLOR-UP" : (isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`)));
+      const roundText = isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`));
       if (roundPill && roundPill.textContent !== roundText) {
         roundPill.textContent = roundText;
       }
@@ -1782,6 +1825,199 @@ function renderTables() {
   }
 }
 
+// ==========================================
+// СИМУЛЯТОР СТОЛОВ (DEV & DEMO TOOLBAR)
+// ==========================================
+
+function toggleTvSimulator() {
+  if (typeof document === "undefined") return;
+  const toolbar = document.getElementById("tv-sim-toolbar");
+  const toggleBtn = document.getElementById("tv-sim-toggle-btn");
+  if (!toolbar) return;
+  const isHidden = (toolbar.style.display === "none" || !toolbar.style.display);
+  toolbar.style.display = isHidden ? "flex" : "none";
+  if (toggleBtn && toggleBtn.classList) {
+    if (isHidden) toggleBtn.classList.add("active");
+    else toggleBtn.classList.remove("active");
+  }
+}
+
+function updateSimButtonState(activeSelector) {
+  if (typeof document === "undefined") return;
+  const btns = document.querySelectorAll(".sim-toolbar-actions .sim-btn");
+  btns.forEach(b => {
+    if (b.classList) b.classList.remove("active");
+  });
+  if (activeSelector) {
+    const activeBtn = document.querySelector(`.sim-toolbar-actions ${activeSelector}`);
+    if (activeBtn && activeBtn.classList) activeBtn.classList.add("active");
+  }
+}
+
+function setSimulatedTables(count) {
+  SIMULATION_MODE = true;
+  if (LIVE_BACKUP_TABLES === null) {
+    LIVE_BACKUP_TABLES = JSON.parse(JSON.stringify(ACTIVE_TABLES || {}));
+  }
+
+  const mockConfigs = [
+    {
+      id: "table_1",
+      dealerName: "Алексей",
+      format: "SnG",
+      structKey: "SNG_STANDARD",
+      levelIndex: 2, // 50 / 100
+      durationSec: 420,
+      remainingMs: 275000,
+      status: "running"
+    },
+    {
+      id: "table_2",
+      dealerName: "Михаил",
+      format: "SnG",
+      structKey: "SNG_STANDARD",
+      levelIndex: 4, // 100 / 200, ante 25
+      durationSec: 420,
+      remainingMs: 145000,
+      status: "running"
+    },
+    {
+      id: "table_3",
+      dealerName: "Дмитрий",
+      format: "Mystery",
+      structKey: "SNG_DEEP_1500",
+      levelIndex: 6, // 200 / 400, ante 50
+      durationSec: 420,
+      remainingMs: 310000,
+      status: "running"
+    },
+    {
+      id: "table_4",
+      dealerName: "Сергей",
+      format: "SnG",
+      structKey: "SNG_DEEP_1500",
+      levelIndex: 1, // 25 / 50
+      durationSec: 420,
+      remainingMs: 390000,
+      status: "running"
+    }
+  ];
+
+  const now = getSyncedNow();
+  const mockTables = {};
+  const safeCount = Math.max(1, Math.min(4, count));
+  for (let i = 0; i < safeCount; i++) {
+    const cfg = mockConfigs[i];
+    mockTables[cfg.id] = {
+      ...cfg,
+      startedAt: now - ((cfg.durationSec * 1000) - cfg.remainingMs),
+      levelEndsAt: now + cfg.remainingMs
+    };
+  }
+
+  ACTIVE_TABLES = mockTables;
+  LAST_RENDERED_SIGNATURE = "";
+  updateSimButtonState(`[data-sim="${safeCount}"]`);
+  renderTables();
+}
+
+function setSimulatedBreak() {
+  SIMULATION_MODE = true;
+  if (LIVE_BACKUP_TABLES === null) {
+    LIVE_BACKUP_TABLES = JSON.parse(JSON.stringify(ACTIVE_TABLES || {}));
+  }
+
+  const now = getSyncedNow();
+  const breakDurationSec = 600; // 10 минут
+  const remainingMs = 465000; // 7 минут 45 секунд
+  ACTIVE_TABLES = {
+    sim_break_1: {
+      id: "sim_break_1",
+      dealerName: "Алексей",
+      format: "SnG",
+      structKey: "SNG_STANDARD",
+      levelIndex: 3,
+      status: "running",
+      isBreakActive: true,
+      breakDurationSec: breakDurationSec,
+      breakEndsAt: now + remainingMs
+    },
+    sim_break_2: {
+      id: "sim_break_2",
+      dealerName: "Михаил",
+      format: "Mystery",
+      structKey: "SNG_STANDARD",
+      levelIndex: 4,
+      status: "running",
+      isBreakActive: true,
+      breakDurationSec: breakDurationSec,
+      breakEndsAt: now + remainingMs
+    }
+  };
+
+  LAST_RENDERED_SIGNATURE = "";
+  updateSimButtonState(".sim-break");
+  renderTables();
+}
+
+function setSimulatedAlert() {
+  SIMULATION_MODE = true;
+  if (LIVE_BACKUP_TABLES === null) {
+    LIVE_BACKUP_TABLES = JSON.parse(JSON.stringify(ACTIVE_TABLES || {}));
+  }
+
+  const now = getSyncedNow();
+  const remainingMs = 24000; // 24 секунды
+  ACTIVE_TABLES = {
+    sim_alert_1: {
+      id: "sim_alert_1",
+      dealerName: "Алексей",
+      format: "SnG",
+      structKey: "SNG_STANDARD",
+      levelIndex: 3,
+      durationSec: 420,
+      remainingMs: remainingMs,
+      startedAt: now - (420000 - remainingMs),
+      levelEndsAt: now + remainingMs,
+      status: "running"
+    },
+    sim_alert_2: {
+      id: "sim_alert_2",
+      dealerName: "Михаил",
+      format: "SnG",
+      structKey: "SNG_STANDARD",
+      levelIndex: 5,
+      durationSec: 420,
+      remainingMs: remainingMs,
+      startedAt: now - (420000 - remainingMs),
+      levelEndsAt: now + remainingMs,
+      status: "running"
+    }
+  };
+
+  LAST_RENDERED_SIGNATURE = "";
+  updateSimButtonState(".sim-alert");
+  renderTables();
+}
+
+function resetToLiveFirebase() {
+  SIMULATION_MODE = false;
+  ACTIVE_TABLES = LIVE_BACKUP_TABLES || {};
+  LIVE_BACKUP_TABLES = null;
+  LAST_RENDERED_SIGNATURE = "";
+  updateSimButtonState(null);
+  renderTables();
+}
+
+if (typeof window !== "undefined") {
+  window.toggleTvSimulator = toggleTvSimulator;
+  window.setSimulatedTables = setSimulatedTables;
+  window.setSimulatedBreak = setSimulatedBreak;
+  window.setSimulatedAlert = setSimulatedAlert;
+  window.resetToLiveFirebase = resetToLiveFirebase;
+  window.isSimulationMode = () => SIMULATION_MODE;
+}
+
 function setActiveTables(tables) {
   ACTIVE_TABLES = tables || {};
   LAST_RENDERED_SIGNATURE = ""; // Сброс сигнатуры для обновления в тестах
@@ -1806,7 +2042,21 @@ if (typeof module !== "undefined" && module.exports) {
     renderMttCinemaMode,
     patchMttCinemaDeck,
     isTableStale,
+    getSyncedNow,
+    getServerTimeOffset: () => SERVER_TIME_OFFSET,
+    setServerTimeOffset: (offset) => { SERVER_TIME_OFFSET = offset; },
     setCurrentMttSession: (s) => { CURRENT_MTT_SESSION = s; },
-    getCurrentMttSession: () => CURRENT_MTT_SESSION
+    getCurrentMttSession: () => CURRENT_MTT_SESSION,
+    getAudioContext,
+    setAudioCtx: (ctx) => { AUDIO_CTX = ctx; },
+    startRestPollingFallback,
+    getLastFirebaseSyncTs: () => LAST_FIREBASE_SYNC_TS,
+    setLastFirebaseSyncTs: (ts) => { LAST_FIREBASE_SYNC_TS = ts; },
+    toggleTvSimulator,
+    setSimulatedTables,
+    setSimulatedBreak,
+    setSimulatedAlert,
+    resetToLiveFirebase,
+    isSimulationMode: () => SIMULATION_MODE
   };
 }

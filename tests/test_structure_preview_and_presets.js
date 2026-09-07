@@ -51,20 +51,20 @@ console.log("1. Проверка getActiveStructure:");
 const classic = dealerModule.getActiveStructure("SNG_DEEP_1500");
 assert.ok(classic, "Классическая структура должна быть доступна");
 assert.strictEqual(classic.stack, 1500, "Стек классики = 1500");
-assert.strictEqual(classic.colorUpAfterLevel, 4, "Color-Up в классике строго после 4 уровня (50/100)");
+assert.strictEqual(classic.colorUpAfterLevel, undefined, "Color-Up убран из классики по запросу дилеров");
 assert.strictEqual(classic.levels[3].label, "50 / 100");
 assert.strictEqual(classic.levels[4].label, "100 / 200");
-console.log("   ✅ SNG_DEEP_1500: стек 1500, Color-Up после 4 уровня (50/100).");
+console.log("   ✅ SNG_DEEP_1500: стек 1500, чистая структура без Color-Up.");
 
 const pro = dealerModule.getActiveStructure("SNG_STANDARD");
 assert.ok(pro, "Структура Атмосфера Pro должна быть доступна");
 assert.strictEqual(pro.stack, 5000, "Стек Pro = 5000");
-assert.strictEqual(pro.colorUpAfterLevel, 5, "Color-Up в Pro строго после 5 уровня (150/300)");
+assert.strictEqual(pro.colorUpAfterLevel, undefined, "Color-Up убран из Pro по запросу дилеров");
 assert.strictEqual(pro.levels[4].label, "150 / 300");
 assert.strictEqual(pro.levels[5].label, "200 / 400 (BBA 400)");
 assert.strictEqual(pro.levels[7].label, "400 / 800 (BBA 800)");
 assert.strictEqual(pro.levels[8].label, "600 / 1200 (BBA 1200)");
-console.log("   ✅ SNG_STANDARD: стек 5000, Color-Up после 5 уровня (150/300), есть 400/800 и 600/1200 BBA.");
+console.log("   ✅ SNG_STANDARD: стек 5000, чистая структура без Color-Up, есть 400/800 и 600/1200 BBA.");
 
 // 2. Проверка функций модалки предпросмотра
 console.log("\n2. Тестирование функций Bottom Sheet модалки:");
@@ -82,9 +82,9 @@ const tbody = elements["preview-modal-tbody"];
 assert.strictEqual(backdrop.style.display, "block", "Backdrop должен стать видимым");
 assert.strictEqual(sheet.style.display, "flex", "Sheet должен стать видимым");
 assert(title.textContent.includes("1 500"), "Заголовок должен содержать стек 1 500");
-assert(tbody.innerHTML.includes("COLOR-UP"), "Таблица должна содержать строку COLOR-UP");
+assert(!tbody.innerHTML.includes("COLOR-UP"), "Таблица НЕ должна содержать строку COLOR-UP (убрано по запросу)");
 assert(tbody.innerHTML.includes("50 / 100"), "Таблица должна содержать блайнды 50/100");
-console.log("   ✅ openStructurePreview('SNG_DEEP_1500') корректно формирует разметку со строкой Color-Up.");
+console.log("   ✅ openStructurePreview('SNG_DEEP_1500') корректно формирует чистую разметку без Color-Up.");
 
 // Открываем модалку Pro
 dealerModule.openStructurePreview("SNG_STANDARD");

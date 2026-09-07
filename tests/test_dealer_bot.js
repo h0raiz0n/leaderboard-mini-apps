@@ -35,7 +35,7 @@ global.UrlFetchApp = {
   }
 };
 
-const bot = require("../DealerBot.js");
+const bot = require("../legacy/DealerBot.js");
 
 console.log("♠️ Тестирование Telegram-бота и белого списка доступа...\n");
 
@@ -76,7 +76,7 @@ const resUnauth = bot.handleDealerBotWebhook({ postData: { contents: JSON.string
 assert.strictEqual(JSON.parse(resUnauth.output).status, "ok");
 assert(lastSentPayload, "Ответ должен быть отправлен");
 assert(lastSentPayload.text.includes("Вход для ведущих") || lastSentPayload.text.includes("Доступ ограничен"), "Должен сообщать о проверке прав");
-assert(lastSentPayload.reply_markup.inline_keyboard[0][0].text.includes("PIN"), "Должна предлагаться кнопка входа по PIN");
-console.log("   ✅ Неавторизованному пользователю вежливо предлагается вход по PIN-коду.");
+assert(!lastSentPayload.reply_markup, "Кнопка входа по PIN не должна предлагаться неавторизованному пользователю");
+console.log("   ✅ Неавторизованному пользователю доступ ограничен, PIN не предлагается.");
 
 console.log("\n🎉 ВСЕ ТЕСТЫ БОТА И ДОСТУПА УСПЕШНО ПРОЙДЕНЫ!");

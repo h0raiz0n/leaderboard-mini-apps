@@ -47,11 +47,12 @@ assert(gitignoreContent.includes(".env"), ".gitignore должен содерж�
 assert(gitignoreContent.includes(".credentials"), ".gitignore должен содержать .credentials");
 console.log("   ✅ .gitignore надежно исключает .env и приватные ключи.");
 
-// 3. Проверка POKER_CONFIG структуры
+// 3. Проверка POKER_CONFIG на клиенте:
 console.log("\n3. Проверка POKER_CONFIG на клиенте:");
 const POKER_CONFIG = require("../shared/poker-config.js");
 assert(!POKER_CONFIG.DEALER_BOT_TOKEN, "POKER_CONFIG не должен содержать DEALER_BOT_TOKEN");
+assert(!POKER_CONFIG.MASTER_DEALER_PIN, "POKER_CONFIG не должен содержать MASTER_DEALER_PIN");
 assert(POKER_CONFIG.DEALERS_REGISTRY, "POKER_CONFIG должен содержать DEALERS_REGISTRY");
-console.log("   ✅ POKER_CONFIG безопасен для загрузки в браузер.");
+console.log("   ✅ POKER_CONFIG безопасен для загрузки в браузер, Master PIN отсутствует.");
 
 console.log("\n🎉 ВСЕ ТЕСТЫ БЕЗОПАСНОСТИ И ИЗОЛЯЦИИ СЕКРЕТОВ УСПЕШНО ПРОЙДЕНЫ!");

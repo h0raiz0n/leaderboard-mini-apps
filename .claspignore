@@ -1,8 +1,15 @@
 # Clasp Ignore Rules
 **/**
 !*.js
-!*.html
+!GameManager.html
 !appsscript.json
+index.html
+legacy/**
+api/**
+dealer/**
+tv/**
+shared/**
+scripts/**
 tests/**
 .agent/**
 *.md

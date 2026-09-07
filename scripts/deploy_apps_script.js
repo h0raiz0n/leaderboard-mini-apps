@@ -50,14 +50,13 @@ async function pushToAppsScript(accessToken) {
   const filesToPush = [
     { name: 'appsscript', type: 'JSON', path: 'c:/vibe/appsscript.json' },
     { name: 'Config', type: 'SERVER_JS', path: 'c:/vibe/Config.js' },
-    { name: 'DealerBot', type: 'SERVER_JS', path: 'c:/vibe/DealerBot.js' },
+    { name: 'AdminTools', type: 'SERVER_JS', path: 'c:/vibe/AdminTools.js' },
     { name: 'FirebaseSync', type: 'SERVER_JS', path: 'c:/vibe/FirebaseSync.js' },
     { name: 'Code', type: 'SERVER_JS', path: 'c:/vibe/Code.js' },
     { name: 'Setup', type: 'SERVER_JS', path: 'c:/vibe/Setup.js' },
     { name: 'Normalizer', type: 'SERVER_JS', path: 'c:/vibe/Normalizer.js' },
     { name: 'Leaderboard', type: 'SERVER_JS', path: 'c:/vibe/Leaderboard.js' },
     { name: 'Analytics', type: 'SERVER_JS', path: 'c:/vibe/Analytics.js' },
-    { name: 'Backfill', type: 'SERVER_JS', path: 'c:/vibe/Backfill.js' },
     { name: 'TelegramNotifier', type: 'SERVER_JS', path: 'c:/vibe/TelegramNotifier.js' },
     { name: 'Formatting', type: 'SERVER_JS', path: 'c:/vibe/Formatting.js' },
     { name: 'GameManager', type: 'HTML', path: 'c:/vibe/GameManager.html' }
@@ -88,7 +87,7 @@ async function pushToAppsScript(accessToken) {
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           console.log('🚀 ВСЕ ФАЙЛЫ УСПЕШНО ЗАГРУЖЕНЫ В GOOGLE APPS SCRIPT!');
-          console.log('   Всего файлов: ' + filesToPush.length + ' шт (включая DealerBot.js и FirebaseSync.js)');
+          console.log('   Всего файлов: ' + filesToPush.length + ' шт (включая AdminTools.js и FirebaseSync.js)');
           resolve(JSON.parse(data));
         } else {
           reject(new Error('Apps Script API error (' + res.statusCode + '): ' + data));

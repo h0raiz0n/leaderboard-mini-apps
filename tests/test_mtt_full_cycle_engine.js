@@ -23,7 +23,7 @@ assert(POKER_CONFIG.BLIND_STRUCTURES.MTT_PRO_5000, "Структура MTT_PRO_5
 const mttStruct = POKER_CONFIG.BLIND_STRUCTURES.MTT_PRO_5000;
 assert.strictEqual(mttStruct.stack, 5000, "Стартовый стек должен составлять 5 000 фишек");
 assert.strictEqual(mttStruct.levels.length, 17, "Структура должна содержать ровно 17 уровней");
-assert.strictEqual(mttStruct.colorUpAfterLevel, 5, "Color-Up должен происходить строго после 5 уровня (150/300)");
+assert.strictEqual(mttStruct.colorUpAfterLevel, undefined, "Color-Up убран из структуры по запросу дилеров");
 assert.strictEqual(mttStruct.lateRegLevels, 5, "Поздняя регистрация открыта ровно первые 5 уровней (50 мин)");
 assert.strictEqual(mttStruct.bbaStartLevel, 6, "Анте с большого блайнда (BBA) вводится с 6 уровня");
 

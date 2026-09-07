@@ -60,7 +60,8 @@ global.Logger = { log: () => {} };
 
 // Загружаем DealerBot
 const fs = require("fs");
-const dealerBotCode = fs.readFileSync("c:/vibe/DealerBot.js", "utf8");
+const path = require("path");
+const dealerBotCode = fs.readFileSync(path.join(__dirname, "../legacy/DealerBot.js"), "utf8");
 eval(dealerBotCode);
 
 let sentMessageText = "";

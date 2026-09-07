@@ -22,7 +22,8 @@ testFiles.forEach((file, idx) => {
   const filePath = path.join(testsDir, file);
   process.stdout.write(`[${idx + 1}/${testFiles.length}] 🧪 Запуск ${file}... `);
   try {
-    execSync(`node "${filePath}"`, { stdio: "pipe" });
+    const guardPath = path.join(__dirname, "network_guard.js");
+    execSync(`node -r "${guardPath}" "${filePath}"`, { stdio: "pipe" });
     console.log("✅ PASSED");
     passedCount++;
   } catch (err) {

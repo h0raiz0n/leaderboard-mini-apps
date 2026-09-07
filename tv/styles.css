@@ -103,12 +103,45 @@ body {
   50% { opacity: 0.4; transform: scale3d(0.85, 0.85, 1); }
 }
 
+.header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .header-clock {
   font-size: 20px;
   font-weight: 800;
   color: var(--ink-secondary);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.05em;
+}
+
+.tv-sim-toggle-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.tv-sim-toggle-btn:hover,
+.tv-sim-toggle-btn.active {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
+}
+
+.tv-sim-toggle-btn:active {
+  transform: scale(0.96);
 }
 
 /* Главная сетка отображения */
@@ -738,12 +771,14 @@ body {
 }
 
 .tv-viewport[data-tables="3"] .timer-digits {
-  font-size: clamp(80px, 13vh, 115px);
+  font-size: clamp(100px, 15vh, 136px);
+  line-height: 0.95;
 }
 
 .tv-viewport[data-tables="3"] .time-rail-track {
-  max-width: 360px;
-  height: 3px;
+  max-width: 420px;
+  height: 4px;
+  margin: 10px 0 6px 0;
 }
 
 .tv-viewport[data-tables="3"] .timer-subtext {
@@ -752,7 +787,7 @@ body {
 
 .tv-viewport[data-tables="3"] .blinds-grid,
 .tv-viewport[data-tables="3"] .blinds-monolith {
-  padding: 14px 18px;
+  padding: 16px 20px;
   gap: 6px;
 }
 
@@ -762,11 +797,12 @@ body {
 
 .tv-viewport[data-tables="3"] .blinds-number.current {
   font-size: 52px;
+  font-size: clamp(58px, 9vh, 76px);
 }
 
 .tv-viewport[data-tables="3"] .ante-badge {
-  font-size: 18px;
-  padding: 4px 12px;
+  font-size: 20px;
+  padding: 5px 14px;
 }
 
 .tv-viewport[data-tables="3"] .card-floor-bar {
@@ -790,11 +826,28 @@ body {
 }
 
 /* --- 4 СТОЛА (QUAD 2X2 ARENA) --- */
+/* Двухколоночный интерьер: слева таймер во всю высоту, справа монолит блайндов */
 .tv-viewport[data-tables="4"] .table-card {
-  padding: 12px 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header header"
+    "timer blinds"
+    "floor floor";
+  align-items: center;
+  gap: 8px 18px;
+  padding: 14px 22px;
+}
+
+.tv-viewport[data-tables="4"] .table-card.break-screen-card {
+  grid-template-areas:
+    "header header"
+    "timer blinds";
 }
 
 .tv-viewport[data-tables="4"] .card-top {
+  grid-area: header;
   padding-bottom: 8px;
 }
 
@@ -819,46 +872,59 @@ body {
 }
 
 .tv-viewport[data-tables="4"] .timer-block {
-  margin: 4px 0;
+  grid-area: timer;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .tv-viewport[data-tables="4"] .timer-digits {
-  font-size: clamp(56px, 9vh, 76px);
+  font-size: clamp(86px, 12vh, 108px);
+  line-height: 0.95;
 }
 
 .tv-viewport[data-tables="4"] .time-rail-track {
-  max-width: 280px;
-  height: 2.5px;
-  margin: 6px 0 4px 0;
+  max-width: 100%;
+  width: 88%;
+  height: 3.5px;
+  margin: 8px 0 0 0;
 }
 
 .tv-viewport[data-tables="4"] .timer-subtext {
-  font-size: 12px;
-  margin-top: 2px;
+  display: none; /* Убираем шум для максимального фокуса на цифрах */
 }
 
 .tv-viewport[data-tables="4"] .blinds-grid,
 .tv-viewport[data-tables="4"] .blinds-monolith {
-  padding: 8px 14px;
-  gap: 4px;
+  grid-area: blinds;
+  margin: 0;
+  width: 100%;
+  padding: 12px 18px;
+  gap: 6px;
 }
 
 .tv-viewport[data-tables="4"] .blinds-caption {
-  font-size: 11px;
+  display: none; /* Убираем лишнюю плашку, освобождая пространство */
 }
 
 .tv-viewport[data-tables="4"] .blinds-number.current {
   font-size: 46px;
+  font-size: clamp(56px, 8vh, 72px);
+  line-height: 1;
 }
 
 .tv-viewport[data-tables="4"] .ante-badge {
-  font-size: 15px;
-  padding: 2px 10px;
+  font-size: 16px;
+  padding: 3px 12px;
 }
 
 .tv-viewport[data-tables="4"] .card-floor-bar {
+  grid-area: floor;
+  margin: 0;
   padding-top: 8px;
-  margin-top: 2px;
 }
 
 .tv-viewport[data-tables="4"] .floor-caption {
@@ -1769,6 +1835,152 @@ body {
 .dock-players-count b {
   color: #ffffff;
   font-size: 16px;
+}
+
+/* ==========================================
+   СИМУЛЯТОР СТОЛОВ (DEV & DEMO TOOLBAR)
+   ========================================== */
+.tv-sim-toolbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 22, 40, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 20px rgba(251, 191, 36, 0.2);
+  padding: 12px 18px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 560px;
+  animation: sim-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sim-slide-up {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.sim-toolbar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.sim-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sim-toolbar-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.sim-toolbar-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.sim-toolbar-hint code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.sim-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.sim-close-btn:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sim-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sim-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.sim-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.sim-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 4px;
+}
+
+.sim-btn.sim-break {
+  color: #fef08a;
+}
+.sim-btn.sim-break:hover,
+.sim-btn.sim-break.active {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.sim-btn.sim-alert {
+  color: #fca5a5;
+}
+.sim-btn.sim-alert:hover,
+.sim-btn.sim-alert.active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.sim-btn.sim-live {
+  color: #4ade80;
+}
+.sim-btn.sim-live:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: var(--green);
+  color: var(--green);
 }
 
 

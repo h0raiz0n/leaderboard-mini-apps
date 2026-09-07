@@ -1,57 +1,57 @@
 /**
- * UNIT TEST: Dealer Mini App Direct Link Security & Master PIN Guard
+ * UNIT TEST: Dealer Mini App Strict Whitelist Security Guard
  * Антикафе «Атмосфера»
  */
 
 const assert = require("assert");
 const POKER_CONFIG = require("../shared/poker-config.js");
 
-console.log("🔒 Тестирование защиты прямого доступа и Master PIN к пульту...\n");
+console.log("🔒 Тестирование защиты прямого доступа и белого списка к пульту...\n");
 
-// 1. Тест: Прямой переход по ссылке (без Telegram initData) -> Должен требовать PIN
-console.log("1. Тест прямого захода без Telegram initData:");
-const session = {};
-function evaluateAccess(hasTelegramInitData, enteredPin) {
-  if (hasTelegramInitData) {
-    return { status: "telegram_authorized", allowed: true };
-  }
-  
-  if (session.isPinAuthed) {
-    return { status: "pin_session_active", allowed: true };
-  }
+// 1. Тест: Отсутствие утекшего MASTER_DEALER_PIN в публичной конфигурации
+console.log("1. Проверка отсутствия открытого Master PIN в POKER_CONFIG:");
+assert.strictEqual(POKER_CONFIG.MASTER_DEALER_PIN, undefined, "MASTER_DEALER_PIN не должен присутствовать в клиентском конфиге");
+console.log("   ✅ Открытый Master PIN надёжно удалён из конфигурации.");
 
-  const expectedPin = POKER_CONFIG.MASTER_DEALER_PIN || "7777";
-  if (enteredPin === expectedPin) {
-    session.isPinAuthed = true;
-    return { status: "pin_success", allowed: true };
+// 2. Тест: Прямой переход по ссылке (без Telegram initData) -> Доступ строго заблокирован
+console.log("\n2. Тест прямого захода без авторизации Telegram:");
+function evaluateAccess(user) {
+  if (!user || (!user.username && !user.id)) {
+    return { status: "access_denied", allowed: false, reason: "no_telegram_identity" };
   }
 
-  return { status: "pin_required_or_invalid", allowed: false };
+  const registry = POKER_CONFIG.DEALERS_REGISTRY || { MAP: {} };
+  const uname = String(user.username || "").toLowerCase().replace(/^@/, "").trim();
+  const uid = String(user.id || "").trim();
+
+  if ((uname && registry.MAP[uname]) || (uid && registry.MAP[uid])) {
+    const dealerName = registry.MAP[uname] || registry.MAP[uid];
+    return { status: "authorized", allowed: true, dealerName };
+  }
+
+  return { status: "access_denied", allowed: false, reason: "not_in_whitelist" };
 }
 
-let access = evaluateAccess(false, null);
+let access = evaluateAccess(null);
 assert.strictEqual(access.allowed, false, "Прямой доступ без авторизации должен быть заблокирован");
-assert.strictEqual(access.status, "pin_required_or_invalid");
-console.log("   ✅ Прямой доступ без PIN-кода надёжно заблокирован.");
+assert.strictEqual(access.status, "access_denied");
+assert.strictEqual(access.reason, "no_telegram_identity");
+console.log("   ✅ Прямой доступ без Telegram-авторизации надёжно заблокирован.");
 
-// 2. Тест: Ввод неверного PIN-кода
-console.log("\n2. Тест неверного PIN-кода:");
-access = evaluateAccess(false, "0000");
-assert.strictEqual(access.allowed, false, "Неверный PIN не должен давать доступ");
-console.log("   ✅ Неверный PIN-код отклонён.");
+// 3. Тест: Посторонний Telegram пользователь (не из белого списка)
+console.log("\n3. Тест постороннего пользователя Telegram:");
+access = evaluateAccess({ username: "unknown_player", id: 999999 });
+assert.strictEqual(access.allowed, false, "Посторонний пользователь не должен получать доступ");
+assert.strictEqual(access.status, "access_denied");
+assert.strictEqual(access.reason, "not_in_whitelist");
+console.log("   ✅ Посторонний пользователь отклонён (Access Denied).");
 
-// 3. Тест: Ввод корректного Master PIN (7777)
-console.log("\n3. Тест корректного Master PIN (7777):");
-access = evaluateAccess(false, "7777");
-assert.strictEqual(access.allowed, true, "Master PIN должен открывать доступ");
-assert.strictEqual(access.status, "pin_success");
-console.log("   ✅ Корректный Master PIN успешно открыл пульт.");
+// 4. Тест: Авторизованный ведущий из белого списка
+console.log("\n4. Тест авторизованного ведущего из белого списка:");
+const authAccess = evaluateAccess({ username: "h0raiz0n", id: 1001 });
+assert.strictEqual(authAccess.allowed, true);
+assert.strictEqual(authAccess.status, "authorized");
+assert.strictEqual(authAccess.dealerName, "Влад");
+console.log("   ✅ Авторизованный ведущий 'Влад' получает доступ без запроса паролей.");
 
-// 4. Тест: Авторизация через Telegram WebApp (без запроса PIN)
-console.log("\n4. Тест бесшовной авторизации через Telegram WebApp:");
-const tgAccess = evaluateAccess(true, null);
-assert.strictEqual(tgAccess.allowed, true);
-assert.strictEqual(tgAccess.status, "telegram_authorized");
-console.log("   ✅ Авторизованный ведущий из Telegram заходит мгновенно без запроса PIN.");
-
-console.log("\n🎉 ВСЕ ТЕСТЫ БЕЗОПАСНОСТИ И MASTER PIN УСПЕШНО ПРОЙДЕНЫ!");
+console.log("\n🎉 ВСЕ ТЕСТЫ БЕЗОПАСНОСТИ И БЕЛОГО СПИСКА УСПЕШНО ПРОЙДЕНЫ!");

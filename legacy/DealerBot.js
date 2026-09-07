@@ -1,3 +1,9 @@
+/**
+ * ⚠️ DEPRECATED (Moved to legacy/):
+ * Действующий бэкенд Telegram-бота: api/dealer-bot.js (Vercel Serverless Function).
+ * Данный файл сохранен исключительно в качестве исторического архива Google Apps Script и для совместимости тестов.
+ */
+
 function getDealerMiniAppUrl() {
   if (typeof getScriptProperty === "function") {
     var u = getScriptProperty("DEALER_APP_URL", "");
@@ -159,18 +165,11 @@ function handleDealerMessage(msg) {
   }
 
   if (!isAuthorized) {
-    var deniedText = "🔒 <b>Вход для ведущих «Атмосфера»</b>\n\n" +
+    var deniedText = "🔒 <b>Доступ ограничен</b>\n\n" +
       "Ваш Telegram: @" + escapeHtml(username || "не_задан") + " (ID: <code>" + escapeHtml(userId) + "</code>).\n\n" +
-      "Если вы приглашённый или разовый ведущий, нажмите кнопку ниже и введите <b>Master PIN</b> (<code>7777</code>) для входа:";
-    var pinKeyboard = [
-      [
-        {
-          text: "🔑 Открыть пульт (вход по PIN)",
-          web_app: { url: getDealerMiniAppUrl() }
-        }
-      ]
-    ];
-    sendDealerTelegram(chatId, deniedText, pinKeyboard);
+      "Ваш аккаунт не найден в списке авторизованных ведущих клуба «Атмосфера».\n" +
+      "Для получения доступа обратитесь к старшему администратору турниров.";
+    sendDealerTelegram(chatId, deniedText, null);
     return;
   }
 

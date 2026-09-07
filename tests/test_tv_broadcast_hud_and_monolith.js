@@ -23,30 +23,31 @@ const mockStructure = [
   { level: 6, sb: 150, bb: 300, ante: 300 }
 ];
 
-// Уровень 1 -> До Color-Up 3 уровня
-let tMock = { colorUpDone: false, status: "running" };
+// Турнирные вехи (пауза, перерыв объединения, фиксация, стандартная игра)
+let tMock = { status: "running" };
 let milestone = tv.getTournamentMilestone(tMock, mockStructure, 0, false, false);
-assert.strictEqual(milestone, "Color-Up через 3 ур.");
+assert.strictEqual(milestone, "Турнир продолжается");
 
-// Уровень 4 -> Color-Up в конце уровня
-milestone = tv.getTournamentMilestone(tMock, mockStructure, 3, false, false);
-assert.strictEqual(milestone, "Color-Up в конце уровня");
+// Перерыв 15 мин объединение столов
+tMock.breakReason = "consolidation";
+milestone = tv.getTournamentMilestone(tMock, mockStructure, 0, false, false);
+assert.strictEqual(milestone, "Перерыв 15 мин • Объединение столов");
 
-// Пауза Color-Up
-tMock.isColorUpActive = true;
+// Таймированная пауза / перерыв
+tMock.breakReason = null;
 milestone = tv.getTournamentMilestone(tMock, mockStructure, 3, false, true);
-assert.strictEqual(milestone, "Размен фишек <100");
+assert.strictEqual(milestone, "Перерыв");
 
-// После Color-Up
-tMock.isColorUpActive = false;
-tMock.colorUpDone = true;
+// Пауза
+tMock.status = "paused";
 milestone = tv.getTournamentMilestone(tMock, mockStructure, 4, false, false);
-assert.strictEqual(milestone, "Фишки <100 выведены");
+assert.strictEqual(milestone, "Пауза");
 
 // Финальный уровень
+tMock.status = "running";
 milestone = tv.getTournamentMilestone(tMock, mockStructure, 5, true, false);
 assert.strictEqual(milestone, "Блайнды зафиксированы");
-console.log("   ✅ Все турнирные вехи (Color-Up, размен, фиксация) рассчитываются корректно.");
+console.log("   ✅ Все турнирные вехи (перерыв, пауза, фиксация) рассчитываются корректно.");
 
 // 2. Тестирование генерации HTML структуры Cinema Broadcast HUD
 console.log("\n2. Тест генерации разметки Broadcast HUD (Time Rail, Монолит блайндов, Floor Bar):");
@@ -101,7 +102,7 @@ assert(capturedHtml.includes("blinds-number current"), "Текущие блай�
 assert(capturedHtml.includes("card-floor-bar"), "Должен присутствовать подвал card-floor-bar");
 assert(capturedHtml.includes("floor-upcoming"), "Должен присутствовать блок следующих блайндов");
 assert(capturedHtml.includes("floor-milestone"), "Должна присутствовать турнирная веха");
-assert(capturedHtml.includes("Color-Up"), "Должно присутствовать упоминание Color-Up");
+assert(capturedHtml.includes("Турнир продолжается"), "Должна отображаться актуальная турнирная веха (без Color-Up)");
 console.log("   ✅ Все компоненты Broadcast HUD (ведущий, Time Rail, монолит, подвал) успешно сгенерированы.");
 
 // 3. Проверка поведения Анте (скрытие при 0, показ при > 0)

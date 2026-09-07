@@ -34,13 +34,40 @@
       </div>
     </div>
     
-    <div class="header-clock" id="header-clock">--:--:--</div>
+    <div class="header-right-group">
+      <div class="header-clock" id="header-clock">--:--:--</div>
+      <button type="button" class="tv-sim-toggle-btn" id="tv-sim-toggle-btn" onclick="toggleTvSimulator()" title="Симулятор столов (Клавиша 'S')">
+        ⚙️ <span class="sim-btn-label">Dev</span>
+      </button>
+    </div>
   </header>
 
   <!-- Сетка столов -->
   <main class="tv-viewport" id="tv-viewport" data-tables="1">
     <!-- Столы рендерятся через tv.js -->
   </main>
+
+  <!-- Панель симулятора столов (Dev / Demo Mode) -->
+  <div id="tv-sim-toolbar" class="tv-sim-toolbar" style="display: none;">
+    <div class="sim-toolbar-head">
+      <div class="sim-title-group">
+        <span class="sim-toolbar-title">🛠️ СИМУЛЯТОР СТОЛОВ</span>
+        <span class="sim-toolbar-hint">Горячая клавиша <code>S</code></span>
+      </div>
+      <button type="button" class="sim-close-btn" onclick="toggleTvSimulator()" title="Скрыть панель">✕</button>
+    </div>
+    <div class="sim-toolbar-actions">
+      <button type="button" class="sim-btn" data-sim="1" onclick="setSimulatedTables(1)">1 Стол</button>
+      <button type="button" class="sim-btn" data-sim="2" onclick="setSimulatedTables(2)">2 Стола</button>
+      <button type="button" class="sim-btn" data-sim="3" onclick="setSimulatedTables(3)">3 Стола</button>
+      <button type="button" class="sim-btn" data-sim="4" onclick="setSimulatedTables(4)">4 Стола</button>
+      <span class="sim-divider"></span>
+      <button type="button" class="sim-btn sim-break" onclick="setSimulatedBreak()">☕ Перерыв</button>
+      <button type="button" class="sim-btn sim-alert" onclick="setSimulatedAlert()">⚠️ Алерт 25с</button>
+      <span class="sim-divider"></span>
+      <button type="button" class="sim-btn sim-live" onclick="resetToLiveFirebase()">🔴 Live Firebase</button>
+    </div>
+  </div>
 
   <!-- Информационный баннер разблокировки звука (исчезает при клике/клавише) -->
   <div id="audio-unlock-overlay" class="audio-unlock-overlay" style="display: none;" onclick="unlockAudioContext()">

@@ -42,8 +42,8 @@ global.fetch = async (url, options) => {
 global.POKER_CONFIG = require("../shared/poker-config.js");
 const dealer = require("../dealer/dealer.js");
 
-// 1. Тест автоматического Color-Up после 100/200
-console.log("1. Проверка автоматического входа в Color-Up после уровня 4 (100/200):");
+// 1. Проверка непрерывной автопрогрессии уровней (Color-Up НЕ останавливает игру)
+console.log("1. Проверка непрерывной автопрогрессии после уровня 4 (100/200):");
 dealer.initDealerIdentity();
 dealer.startTable();
 
@@ -55,22 +55,17 @@ table.levelEndsAt = Date.now() - 500; // Истек
 
 dealer.checkAutoLevelProgression();
 
-assert.strictEqual(table.colorUpDone, true, "Флаг colorUpDone должен стать true");
-assert.strictEqual(table.isColorUpActive, true, "isColorUpActive должен быть активен");
-assert.strictEqual(table.status, "paused", "Статус должен перейти в paused");
-assert(table.pauseEndsAt > Date.now(), "pauseEndsAt должен быть установлен на будущее время");
-assert.strictEqual(table.pauseTotalSec, 120, "Длительность Color-Up должна быть ровно 120 сек (2 мин)");
-console.log("   ✅ После уровня 100/200 автоматически включился 2-минутный Color-Up.");
+assert.strictEqual(table.status, "running", "Статус должен остаться running (без автопаузы Color-Up)");
+assert.strictEqual(table.levelIndex, 4, "Стол должен автоматически перейти на уровень 5 (150/300)");
+assert.strictEqual(table.isColorUpActive, false, "isColorUpActive должен быть false");
+console.log("   ✅ После уровня 100/200 игра продолжается непрерывно без блокировки на Color-Up.");
 
-// 2. Тест пропуска Color-Up дилером
-console.log("\n2. Проверка пропуска Color-Up дилером (skipColorUp):");
+// 2. Тест обратной совместимости skipColorUp
+console.log("\n2. Проверка функции skipColorUp (безопасный сброс):");
 dealer.skipColorUp();
 
-assert.strictEqual(table.isColorUpActive, false, "isColorUpActive должен отключиться");
-assert.strictEqual(table.status, "running", "Статус стола должен снова стать running");
-assert.strictEqual(table.levelIndex, 4, "Стол должен перейти на уровень 5 (150/300)");
-assert.strictEqual(dealer.getActiveStructure().levels[table.levelIndex].label, "150 / 300", "Блайнды должны стать 150/300");
-console.log("   ✅ Color-Up успешно пропущен в один клик, начался уровень 150/300.");
+assert.strictEqual(table.isColorUpActive, false, "isColorUpActive должен быть false");
+console.log("   ✅ Вызов skipColorUp безопасен и сбрасывает устаревшие флаги.");
 
 // 3. Тест атомарного ребаланса МТТ (Target Table Scoped Update)
 console.log("\n3. Проверка атомарного обновления игроков целевого стола при МТТ ребалансе:");
