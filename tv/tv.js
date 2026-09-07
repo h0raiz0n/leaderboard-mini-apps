@@ -923,7 +923,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
           <div class="timer-subtext">${subtext}</div>
         </div>
         
-        <!-- Монолит блайндов (EPT Style) -->
+        <!-- Монолит блайндов (EPT High-Contrast Deck) -->
         <div class="blinds-grid blinds-monolith">
           <div class="blinds-item current-blinds-box">
             <span class="blinds-caption">Текущие блайнды</span>
@@ -932,11 +932,15 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
               ${currentLevel.ante > 0 ? `<span class="ante-badge ante-strip">АНТЕ ${currentLevel.ante}</span>` : `<span class="ante-badge ante-strip" style="display: none;"></span>`}
             </div>
           </div>
+          <div class="upcoming-blinds-ticket">
+            <span class="upcoming-ticket-label">СЛЕДУЮЩИЙ:</span>
+            <span class="upcoming-ticket-val blinds-number upcoming">${upcomingStr}</span>
+          </div>
         </div>
 
         <!-- Нижний Floor Bar -->
         <div class="card-floor-bar">
-          <div class="floor-upcoming">
+          <div class="floor-upcoming" style="display: none;">
             <span class="floor-caption">Следующие:</span>
             <span class="blinds-number upcoming">${upcomingStr}</span>
           </div>
@@ -957,7 +961,42 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     `;
   }
 
+  // При 3 столах добавляем 4-й квадрант: Live Club Leaderboard Hub (устраняет узкие стаканы)
+  if (tableKeys.slice(0, 4).length === 3) {
+    cardsHtml += buildClubHubHtml();
+  }
+
   return cardsHtml;
+}
+
+// Генерация разметки 4-го квадранта (Live Club Leaderboard Mini-Hub)
+function buildClubHubHtml() {
+  return `
+    <div class="club-hub-card" id="club-hub-card">
+      <div class="club-hub-head">
+        <span class="club-hub-tag">АТМОСФЕРА LIVE</span>
+        <span class="club-hub-title">🏆 ЛИДЕРБОРД МЕСЯЦА</span>
+      </div>
+      <div class="club-hub-body">
+        <div class="hub-leader-feature">
+          <div class="hub-leader-avatar">👑</div>
+          <div class="hub-leader-info">
+            <span class="hub-leader-rank">ТОП-1 КЛУБА</span>
+            <span class="hub-leader-name">Александр М.</span>
+            <span class="hub-leader-pts"><b>1 420</b> pts • Shark Tier</span>
+          </div>
+        </div>
+        <div class="hub-top-list">
+          <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">Сергей К.</span><span class="hub-pts">1 280 pts</span></div>
+          <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">Дмитрий В.</span><span class="hub-pts">1 150 pts</span></div>
+        </div>
+      </div>
+      <div class="club-hub-foot">
+        <span class="hub-foot-badge">♠ ♥ СЛЕДУЮЩИЙ ТУРНИР ♦ ♣</span>
+        <span class="hub-foot-text">Сегодня 21:00 • DeepStack Turbo</span>
+      </div>
+    </div>
+  `;
 }
 
 // Генерация HTML экрана сбора столов МТТ (Lobby Assembly Board)
@@ -1716,10 +1755,17 @@ function renderTables() {
         }
       }
 
-      const upcomingBlindsEl = card.querySelector(".blinds-number.upcoming");
       const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
-      if (upcomingBlindsEl && upcomingBlindsEl.textContent !== upcomingStr) {
-        upcomingBlindsEl.textContent = upcomingStr;
+      const upcomingEls = (card.querySelectorAll && typeof card.querySelectorAll === "function") ? card.querySelectorAll(".blinds-number.upcoming") : [card.querySelector(".blinds-number.upcoming")];
+      if (upcomingEls && upcomingEls.forEach) {
+        upcomingEls.forEach(el => {
+          if (el && el.textContent !== upcomingStr) el.textContent = upcomingStr;
+        });
+      } else {
+        const upcomingBlindsEl = card.querySelector(".blinds-number.upcoming");
+        if (upcomingBlindsEl && upcomingBlindsEl.textContent !== upcomingStr) {
+          upcomingBlindsEl.textContent = upcomingStr;
+        }
       }
 
       const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);

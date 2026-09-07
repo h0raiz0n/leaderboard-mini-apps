@@ -144,14 +144,17 @@ body {
   transform: scale(0.96);
 }
 
-/* Главная сетка отображения */
+/* Главная сетка отображения (Edge-to-Edge Stadium HUD) */
 .tv-viewport {
   flex: 1;
-  padding: 16px;
+  padding: 8px 12px;
   display: grid;
-  gap: 16px;
+  gap: 10px;
   height: calc(100vh - 52px);
+  width: 100vw;
+  box-sizing: border-box;
   overflow: hidden;
+  background: radial-gradient(circle at 50% 30%, #0d1e38 0%, #050a14 100%);
 }
 
 /* Адаптивная раскладка под количество столов */
@@ -166,8 +169,8 @@ body {
 }
 
 .tv-viewport[data-tables="3"] {
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
 }
 
 .tv-viewport[data-tables="4"] {
@@ -231,16 +234,16 @@ body {
   grid-template-rows: 1fr 1fr;
 }
 
-/* Карточка стола ведущего */
+/* Карточка стола ведущего (Broadcast HUD Surface) */
 .table-card {
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(14, 28, 49, 0.95) 0%, rgba(8, 16, 29, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: var(--radius-card);
-  padding: 24px 32px;
+  padding: 20px 28px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   position: relative;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
   height: 100%;
@@ -253,8 +256,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
 }
 
 .dealer-identity {
@@ -263,12 +266,19 @@ body {
   gap: 12px;
 }
 
+.dealer-brand-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 5px 14px;
+}
+
 .dealer-badge-icon {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   color: var(--gold);
   flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.5));
 }
 
 .dealer-meta {
@@ -281,12 +291,12 @@ body {
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--muted);
-  letter-spacing: 0.12em;
+  color: var(--gold);
+  letter-spacing: 0.14em;
 }
 
 .dealer-name {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 900;
   color: var(--ink);
   letter-spacing: 0.02em;
@@ -476,7 +486,7 @@ body {
   margin-top: 4px;
 }
 
-/* Монолит блайндов (EPT Style) */
+/* Монолит блайндов (EPT High-Contrast Deck) */
 .blinds-grid,
 .blinds-monolith {
   display: flex;
@@ -484,12 +494,199 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: var(--bg-0);
-  border: 1px solid var(--line);
+  background: transparent;
+  border: none;
   border-radius: var(--radius-panel);
-  padding: 16px 24px;
+  padding: 6px 16px;
   gap: 6px;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
+}
+
+/* Билет следующих блайндов (High-Contrast Upcoming Ticket) */
+.upcoming-blinds-ticket {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 8px;
+  padding: 6px 16px;
+  margin-top: 6px;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+}
+
+.upcoming-ticket-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.upcoming-ticket-val {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+/* Карточка 4-го квадранта: Live Club Leaderboard Hub */
+.club-hub-card {
+  background: linear-gradient(180deg, rgba(16, 36, 64, 0.95) 0%, rgba(9, 18, 34, 0.98) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: var(--radius-card);
+  padding: 16px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  position: relative;
+  height: 100%;
+}
+
+.club-hub-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.club-hub-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--green);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.08em;
+}
+
+.club-hub-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+}
+
+.club-hub-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.hub-leader-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  padding: 8px 14px;
+}
+
+.hub-leader-avatar {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.hub-leader-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hub-leader-rank {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+}
+
+.hub-leader-name {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.hub-leader-pts {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.hub-leader-pts b {
+  color: var(--gold);
+  font-weight: 900;
+}
+
+.hub-top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hub-pos {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.hub-name {
+  flex: 1;
+  margin-left: 10px;
+  color: var(--ink);
+}
+
+.hub-pts {
+  color: #38bdf8;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.club-hub-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+  gap: 2px;
+}
+
+.hub-foot-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+}
+
+.hub-foot-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
 }
 
 .blinds-caption {
@@ -600,9 +797,29 @@ body {
    СПЕЦИАЛЬНЫЕ МАСШТАБЫ ДЛЯ 1, 2, 3 И 4 СТОЛОВ (IMPECCABLE)
    ========================================================= */
 
-/* --- 1 СТОЛ (HERO ARENA BILLBOARD) --- */
+/* --- 1 СТОЛ (STADIUM WIDESCREEN SPLIT) --- */
 .tv-viewport[data-tables="1"] .table-card {
-  padding: 32px 48px;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header header"
+    "timer blinds"
+    "floor floor";
+  align-items: center;
+  gap: 16px 48px;
+  padding: 28px 48px;
+}
+
+.tv-viewport[data-tables="1"] .table-card.break-screen-card {
+  grid-template-areas:
+    "header header"
+    "timer blinds";
+}
+
+.tv-viewport[data-tables="1"] .card-top {
+  grid-area: header;
+  padding-bottom: 12px;
 }
 
 .tv-viewport[data-tables="1"] .dealer-label {
@@ -610,12 +827,12 @@ body {
 }
 
 .tv-viewport[data-tables="1"] .dealer-name {
-  font-size: 38px;
+  font-size: 42px;
 }
 
 .tv-viewport[data-tables="1"] .dealer-badge-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
 }
 
 .tv-viewport[data-tables="1"] .format-badge,
@@ -625,14 +842,26 @@ body {
   padding: 10px 24px;
 }
 
+.tv-viewport[data-tables="1"] .timer-block {
+  grid-area: timer;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .tv-viewport[data-tables="1"] .timer-digits {
   font-size: clamp(160px, 24vh, 230px);
+  line-height: 0.95;
 }
 
 .tv-viewport[data-tables="1"] .time-rail-track {
-  max-width: 650px;
-  height: 4px;
-  margin: 14px 0 8px 0;
+  max-width: 100%;
+  width: 90%;
+  height: 5px;
+  margin: 16px 0 8px 0;
 }
 
 .tv-viewport[data-tables="1"] .timer-subtext {
@@ -641,8 +870,12 @@ body {
 
 .tv-viewport[data-tables="1"] .blinds-grid,
 .tv-viewport[data-tables="1"] .blinds-monolith {
-  padding: 24px 36px;
+  grid-area: blinds;
+  margin: 0;
+  width: 100%;
+  padding: 16px 24px;
   gap: 12px;
+  align-items: center;
 }
 
 .tv-viewport[data-tables="1"] .blinds-caption {
@@ -651,6 +884,7 @@ body {
 
 .tv-viewport[data-tables="1"] .blinds-number.current {
   font-size: clamp(72px, 9vw, 110px);
+  line-height: 1;
 }
 
 .tv-viewport[data-tables="1"] .ante-badge {
@@ -659,7 +893,8 @@ body {
 }
 
 .tv-viewport[data-tables="1"] .card-floor-bar {
-  padding-top: 18px;
+  grid-area: floor;
+  padding-top: 14px;
 }
 
 .tv-viewport[data-tables="1"] .floor-caption {
@@ -675,9 +910,22 @@ body {
   padding: 6px 18px;
 }
 
+.tv-viewport[data-tables="1"] .upcoming-blinds-ticket {
+  padding: 10px 24px;
+  border-radius: 12px;
+}
+
+.tv-viewport[data-tables="1"] .upcoming-ticket-label {
+  font-size: 16px;
+}
+
+.tv-viewport[data-tables="1"] .upcoming-ticket-val {
+  font-size: 34px;
+}
+
 /* --- 2 СТОЛА (SPLIT SCREEN DUAL PILLARS) --- */
 .tv-viewport[data-tables="2"] .table-card {
-  padding: 24px 32px;
+  padding: 24px 36px;
 }
 
 .tv-viewport[data-tables="2"] .dealer-label {
@@ -685,12 +933,12 @@ body {
 }
 
 .tv-viewport[data-tables="2"] .dealer-name {
-  font-size: 32px;
+  font-size: 36px;
 }
 
 .tv-viewport[data-tables="2"] .dealer-badge-icon {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
 }
 
 .tv-viewport[data-tables="2"] .format-badge,
@@ -706,7 +954,7 @@ body {
 
 .tv-viewport[data-tables="2"] .time-rail-track {
   max-width: 480px;
-  height: 3.5px;
+  height: 4px;
 }
 
 .tv-viewport[data-tables="2"] .timer-subtext {
@@ -715,7 +963,7 @@ body {
 
 .tv-viewport[data-tables="2"] .blinds-grid,
 .tv-viewport[data-tables="2"] .blinds-monolith {
-  padding: 20px 28px;
+  padding: 16px 24px;
   gap: 10px;
 }
 
@@ -732,6 +980,10 @@ body {
   padding: 6px 16px;
 }
 
+.tv-viewport[data-tables="2"] .card-floor-bar {
+  padding-top: 12px;
+}
+
 .tv-viewport[data-tables="2"] .floor-caption {
   font-size: 14px;
 }
@@ -745,9 +997,33 @@ body {
   padding: 5px 14px;
 }
 
-/* --- 3 СТОЛА (TRIPLE ARENA) --- */
+.tv-viewport[data-tables="2"] .upcoming-blinds-ticket .upcoming-ticket-val {
+  font-size: 26px;
+}
+
+/* --- 3 СТОЛА (QUAD 2X2 ARENA + LIVE CLUB HUB) --- */
 .tv-viewport[data-tables="3"] .table-card {
-  padding: 18px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header header"
+    "timer blinds"
+    "floor floor";
+  align-items: center;
+  gap: 8px 18px;
+  padding: 14px 22px;
+}
+
+.tv-viewport[data-tables="3"] .table-card.break-screen-card {
+  grid-template-areas:
+    "header header"
+    "timer blinds";
+}
+
+.tv-viewport[data-tables="3"] .card-top {
+  grid-area: header;
+  padding-bottom: 8px;
 }
 
 .tv-viewport[data-tables="3"] .dealer-label {
@@ -755,7 +1031,7 @@ body {
 }
 
 .tv-viewport[data-tables="3"] .dealer-name {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .tv-viewport[data-tables="3"] .dealer-badge-icon {
@@ -770,15 +1046,27 @@ body {
   padding: 6px 14px;
 }
 
+.tv-viewport[data-tables="3"] .timer-block {
+  grid-area: timer;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .tv-viewport[data-tables="3"] .timer-digits {
+  font-size: 115px;
   font-size: clamp(100px, 15vh, 136px);
   line-height: 0.95;
 }
 
 .tv-viewport[data-tables="3"] .time-rail-track {
-  max-width: 420px;
-  height: 4px;
-  margin: 10px 0 6px 0;
+  max-width: 100%;
+  width: 88%;
+  height: 3.5px;
+  margin: 8px 0 0 0;
 }
 
 .tv-viewport[data-tables="3"] .timer-subtext {
@@ -787,7 +1075,10 @@ body {
 
 .tv-viewport[data-tables="3"] .blinds-grid,
 .tv-viewport[data-tables="3"] .blinds-monolith {
-  padding: 16px 20px;
+  grid-area: blinds;
+  margin: 0;
+  width: 100%;
+  padding: 10px 16px;
   gap: 6px;
 }
 
@@ -798,6 +1089,7 @@ body {
 .tv-viewport[data-tables="3"] .blinds-number.current {
   font-size: 52px;
   font-size: clamp(58px, 9vh, 76px);
+  line-height: 1;
 }
 
 .tv-viewport[data-tables="3"] .ante-badge {
@@ -806,10 +1098,9 @@ body {
 }
 
 .tv-viewport[data-tables="3"] .card-floor-bar {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding-top: 10px;
+  grid-area: floor;
+  margin: 0;
+  padding-top: 8px;
 }
 
 .tv-viewport[data-tables="3"] .floor-caption {
@@ -823,6 +1114,10 @@ body {
 .tv-viewport[data-tables="3"] .floor-milestone-badge {
   font-size: 12px;
   padding: 4px 10px;
+}
+
+.tv-viewport[data-tables="3"] .upcoming-blinds-ticket .upcoming-ticket-val {
+  font-size: 22px;
 }
 
 /* --- 4 СТОЛА (QUAD 2X2 ARENA) --- */
@@ -852,16 +1147,16 @@ body {
 }
 
 .tv-viewport[data-tables="4"] .dealer-label {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .tv-viewport[data-tables="4"] .dealer-name {
-  font-size: 22px;
+  font-size: 28px;
 }
 
 .tv-viewport[data-tables="4"] .dealer-badge-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .tv-viewport[data-tables="4"] .format-badge,
@@ -882,6 +1177,7 @@ body {
 }
 
 .tv-viewport[data-tables="4"] .timer-digits {
+  font-size: 92px;
   font-size: clamp(86px, 12vh, 108px);
   line-height: 0.95;
 }
@@ -902,7 +1198,7 @@ body {
   grid-area: blinds;
   margin: 0;
   width: 100%;
-  padding: 12px 18px;
+  padding: 10px 16px;
   gap: 6px;
 }
 
@@ -938,6 +1234,10 @@ body {
 .tv-viewport[data-tables="4"] .floor-milestone-badge {
   font-size: 11px;
   padding: 3px 8px;
+}
+
+.tv-viewport[data-tables="4"] .upcoming-blinds-ticket .upcoming-ticket-val {
+  font-size: 22px;
 }
 
 /* Состояния стола */
@@ -1680,7 +1980,8 @@ body {
   height: 100%;
   background: linear-gradient(90deg, #10b981, #059669);
   border-radius: 9999px;
-  transition: width 0.3s linear, background 0.3s ease;
+  transform-origin: left center;
+  transition: transform 0.3s linear, background 0.3s ease;
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
 
