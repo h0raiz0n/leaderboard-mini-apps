@@ -37,6 +37,7 @@ if (typeof document !== "undefined" && document.addEventListener) {
     initWakeLock();
     initTvHotkeys();
     initDataSource();
+    initLeaderboardSync();
     
     // Регулярная перерисовка каждые 250 мс
     setInterval(renderTables, 250);
@@ -58,15 +59,82 @@ function initClock() {
   setInterval(update, 1000);
 }
 
-// Защита от засыпания экрана (Samsung Smart TV)
-async function initWakeLock() {
+// =========================================================
+// SMART TV ANTI-SLEEP ENGINE (Wake Lock + Video Keep-Alive)
+// =========================================================
+
+async function requestScreenWakeLock() {
   try {
     if (typeof navigator !== "undefined" && "wakeLock" in navigator) {
-      WAKE_LOCK = await navigator.wakeLock.request("screen");
+      if (!WAKE_LOCK || WAKE_LOCK.released) {
+        WAKE_LOCK = await navigator.wakeLock.request("screen");
+        if (WAKE_LOCK && typeof WAKE_LOCK.addEventListener === "function") {
+          WAKE_LOCK.addEventListener("release", () => {
+            WAKE_LOCK = null;
+          });
+        }
+      }
     }
   } catch (err) {
-    console.warn("WakeLock:", err.message);
+    // Тихо игнорируем ошибку ограничений безопасности браузера
   }
+}
+
+function startVideoKeepAlive() {
+  if (typeof document === "undefined") return;
+  const video = document.getElementById("tv-wake-video");
+  if (!video) return;
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 8;
+    canvas.height = 8;
+    const ctx = canvas.getContext ? canvas.getContext("2d") : null;
+
+    let toggle = false;
+    const drawFrame = () => {
+      toggle = !toggle;
+      if (ctx) {
+        ctx.fillStyle = toggle ? "#030712" : "#020617";
+        ctx.fillRect(0, 0, 8, 8);
+      }
+    };
+    drawFrame();
+    setInterval(drawFrame, 1000);
+
+    if (canvas.captureStream && typeof video.play === "function") {
+      const stream = canvas.captureStream(1);
+      video.srcObject = stream;
+      video.play().catch(() => {});
+    }
+  } catch (e) {
+    // Безопасное подавление при отсутствии Canvas / WebRTC API
+  }
+
+  const onUserInteraction = () => {
+    requestScreenWakeLock();
+    if (video && typeof video.play === "function") {
+      video.play().catch(() => {});
+    }
+  };
+  if (typeof document.addEventListener === "function") {
+    document.addEventListener("click", onUserInteraction, { once: false, passive: true });
+    document.addEventListener("touchstart", onUserInteraction, { once: false, passive: true });
+  }
+}
+
+async function initWakeLock() {
+  await requestScreenWakeLock();
+  startVideoKeepAlive();
+
+  if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        requestScreenWakeLock();
+      }
+    });
+  }
+  setInterval(requestScreenWakeLock, 180000);
 }
 
 // ==========================================
@@ -865,7 +933,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     const roundText = isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`));
     const milestoneText = getTournamentMilestone(timingTable, structure, safeIndex, isFinalLevel, isTimedPause);
     const railWarningClass = (time.isAlert && !isTimedPause) ? " is-warning" : "";
-    const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
+    const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (${nextLevel.ante})` : ""}` : "—";
 
     let rebalanceFlagHtml = "";
     if (activeMttTables.length >= 2 && table.format === "MTT") {
@@ -908,8 +976,11 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
           <div class="pill-group">
             ${table.format === "MTT" ? `<div class="players-pill">👥 ${table.playersCount || 9}</div>` : ""}
             ${table.format === "MTT" ? (table.isMttMaster ? `<span class="mtt-role-pill master">Главный</span>` : `<span class="mtt-role-pill satellite">Сателлит</span>`) : ""}
-            <span class="format-badge${table.format === "MTT" ? " mtt-badge" : ""}">${formatLabel}</span>
-            <div class="round-pill">${roundText}</div>
+            <div class="round-pill tournament-stage-badge">
+              <span class="stage-format format-badge">${formatLabel}</span>
+              <span class="stage-sep">•</span>
+              <span class="stage-round">${roundText}</span>
+            </div>
             ${rebalanceFlagHtml}
           </div>
         </div>
@@ -933,13 +1004,13 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
             </div>
           </div>
           <div class="upcoming-blinds-ticket">
-            <span class="upcoming-ticket-label">СЛЕДУЮЩИЙ:</span>
+            <span class="upcoming-ticket-arrow">➔</span>
             <span class="upcoming-ticket-val blinds-number upcoming">${upcomingStr}</span>
           </div>
         </div>
 
-        <!-- Нижний Floor Bar -->
-        <div class="card-floor-bar">
+        <!-- Нижний Floor Bar (скрыт через CSS для освобождения высоты) -->
+        <div class="card-floor-bar" style="display: none;">
           <div class="floor-upcoming" style="display: none;">
             <span class="floor-caption">Следующие:</span>
             <span class="blinds-number upcoming">${upcomingStr}</span>
@@ -969,34 +1040,192 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
   return cardsHtml;
 }
 
-// Генерация разметки 4-го квадранта (Live Club Leaderboard Mini-Hub)
-function buildClubHubHtml() {
-  return `
-    <div class="club-hub-card" id="club-hub-card">
+// =========================================================
+// LIVE CLUB LEADERBOARD & ROTATION ENGINE (4-й квадрант)
+// =========================================================
+
+const DEFAULT_LEADERBOARD_BUNDLE = {
+  current: [
+    { name: "Александр М.", points: 1420, tier: "Shark Tier" },
+    { name: "Сергей К.", points: 1280, tier: "Gold Tier" },
+    { name: "Дмитрий В.", points: 1150, tier: "Gold Tier" }
+  ],
+  all: [
+    { name: "Владимир Т.", points: 8450, tier: "Legend Tier" },
+    { name: "Александр М.", points: 7920, tier: "Legend Tier" },
+    { name: "Артем Д.", points: 6810, tier: "Diamond Tier" }
+  ],
+  hallOfFame: [
+    { name: "Александр М.", tournament: "DeepStack Turbo", pts: "1 место" },
+    { name: "Сергей К.", tournament: "Saturday Night Main", pts: "1 место" },
+    { name: "Дмитрий В.", tournament: "Bounty Hunter", pts: "1 место" }
+  ]
+};
+
+let LEADERBOARD_CACHE = DEFAULT_LEADERBOARD_BUNDLE;
+let CURRENT_HUB_SLIDE_INDEX = 0;
+let HUB_ROTATION_INTERVAL = null;
+
+async function fetchLeaderboardBundle() {
+  if (typeof fetch === "undefined") return;
+  try {
+    const res = await fetch("/api/leaderboard?type=bundle", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data) return;
+
+    const bundle = {
+      current: Array.isArray(data.current) ? data.current : (data.current?.players || DEFAULT_LEADERBOARD_BUNDLE.current),
+      all: Array.isArray(data.all) ? data.all : (data.all?.players || DEFAULT_LEADERBOARD_BUNDLE.all),
+      hallOfFame: Array.isArray(data.hallOfFame) ? data.hallOfFame : (data.recent || DEFAULT_LEADERBOARD_BUNDLE.hallOfFame)
+    };
+    LEADERBOARD_CACHE = bundle;
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem("atmo_tv_leaderboard_bundle", JSON.stringify(bundle));
+      } catch (e) {}
+    }
+  } catch (err) {
+    if (typeof localStorage !== "undefined") {
+      try {
+        const saved = localStorage.getItem("atmo_tv_leaderboard_bundle");
+        if (saved) LEADERBOARD_CACHE = JSON.parse(saved);
+      } catch (e) {}
+    }
+  }
+}
+
+function getClubHubSlideHtml(slideIdx) {
+  const data = LEADERBOARD_CACHE || DEFAULT_LEADERBOARD_BUNDLE;
+  const currentList = (data.current && data.current.length) ? data.current : DEFAULT_LEADERBOARD_BUNDLE.current;
+  const allList = (data.all && data.all.length) ? data.all : DEFAULT_LEADERBOARD_BUNDLE.all;
+  const hofList = (data.hallOfFame && data.hallOfFame.length) ? data.hallOfFame : DEFAULT_LEADERBOARD_BUNDLE.hallOfFame;
+
+  if (slideIdx === 1) {
+    // Слайд 2: 🌟 ТОП ЗА ВСЁ ВРЕМЯ
+    const l1 = allList[0] || { name: "Владимир Т.", points: 8450, tier: "Legend Tier" };
+    const l2 = allList[1] || { name: "Александр М.", points: 7920 };
+    const l3 = allList[2] || { name: "Артем Д.", points: 6810 };
+    return `
       <div class="club-hub-head">
         <span class="club-hub-tag">АТМОСФЕРА LIVE</span>
-        <span class="club-hub-title">🏆 ЛИДЕРБОРД МЕСЯЦА</span>
+        <span class="club-hub-title">🌟 ТОП ЗА ВСЁ ВРЕМЯ</span>
       </div>
       <div class="club-hub-body">
         <div class="hub-leader-feature">
-          <div class="hub-leader-avatar">👑</div>
+          <div class="hub-leader-avatar">🌟</div>
           <div class="hub-leader-info">
-            <span class="hub-leader-rank">ТОП-1 КЛУБА</span>
-            <span class="hub-leader-name">Александр М.</span>
-            <span class="hub-leader-pts"><b>1 420</b> pts • Shark Tier</span>
+            <span class="hub-leader-rank">ЛЕГЕНДА КЛУБА</span>
+            <span class="hub-leader-name">${l1.name}</span>
+            <span class="hub-leader-pts"><b>${Number(l1.points || 0).toLocaleString("ru-RU")}</b> pts • ${l1.tier || "Legend Tier"}</span>
           </div>
         </div>
         <div class="hub-top-list">
-          <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">Сергей К.</span><span class="hub-pts">1 280 pts</span></div>
-          <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">Дмитрий В.</span><span class="hub-pts">1 150 pts</span></div>
+          <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">${l2.name}</span><span class="hub-pts">${Number(l2.points || 0).toLocaleString("ru-RU")} pts</span></div>
+          <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">${l3.name}</span><span class="hub-pts">${Number(l3.points || 0).toLocaleString("ru-RU")} pts</span></div>
         </div>
       </div>
       <div class="club-hub-foot">
-        <span class="hub-foot-badge">♠ ♥ СЛЕДУЮЩИЙ ТУРНИР ♦ ♣</span>
-        <span class="hub-foot-text">Сегодня 21:00 • DeepStack Turbo</span>
+        <span class="hub-foot-badge">♠ ♥ РЕЙТИНГ АТМОСФЕРЫ ♦ ♣</span>
+        <span class="hub-foot-text">Обновляется автоматически после каждой игры</span>
+      </div>
+    `;
+  }
+
+  if (slideIdx === 2) {
+    // Слайд 3: 🔥 ПОСЛЕДНИЕ ПОБЕДИТЕЛИ
+    const h1 = hofList[0] || { name: "Александр М.", tournament: "DeepStack Turbo", pts: "1 место" };
+    const h2 = hofList[1] || { name: "Сергей К.", tournament: "Saturday Night Main" };
+    const h3 = hofList[2] || { name: "Дмитрий В.", tournament: "Bounty Hunter" };
+    return `
+      <div class="club-hub-head">
+        <span class="club-hub-tag">АТМОСФЕРА LIVE</span>
+        <span class="club-hub-title">🔥 ЗАЛ СЛАВЫ КЛУБА</span>
+      </div>
+      <div class="club-hub-body">
+        <div class="hub-leader-feature">
+          <div class="hub-leader-avatar">🏆</div>
+          <div class="hub-leader-info">
+            <span class="hub-leader-rank">ПОБЕДИТЕЛЬ ТУРНИРА</span>
+            <span class="hub-leader-name">${h1.name || h1.winner}</span>
+            <span class="hub-leader-pts"><b>1 МЕСТО</b> • ${h1.tournament || h1.format || "Турнир"}</span>
+          </div>
+        </div>
+        <div class="hub-top-list">
+          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h2.name || h2.winner}</span><span class="hub-pts">${h2.tournament || h2.format || "Турнир"}</span></div>
+          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h3.name || h3.winner}</span><span class="hub-pts">${h3.tournament || h3.format || "Турнир"}</span></div>
+        </div>
+      </div>
+      <div class="club-hub-foot">
+        <span class="hub-foot-badge">♠ ♥ ТРИУМФАТОРЫ СТОЛОВ ♦ ♣</span>
+        <span class="hub-foot-text">Поздравляем победителей турниров!</span>
+      </div>
+    `;
+  }
+
+  // Слайд 0 (по умолчанию): 🏆 ТОП МЕСЯЦА
+  const m1 = currentList[0] || { name: "Александр М.", points: 1420, tier: "Shark Tier" };
+  const m2 = currentList[1] || { name: "Сергей К.", points: 1280 };
+  const m3 = currentList[2] || { name: "Дмитрий В.", points: 1150 };
+  return `
+    <div class="club-hub-head">
+      <span class="club-hub-tag">АТМОСФЕРА LIVE</span>
+      <span class="club-hub-title">🏆 ТОП МЕСЯЦА</span>
+    </div>
+    <div class="club-hub-body">
+      <div class="hub-leader-feature">
+        <div class="hub-leader-avatar">👑</div>
+        <div class="hub-leader-info">
+          <span class="hub-leader-rank">ТОП-1 КЛУБА</span>
+          <span class="hub-leader-name">${m1.name}</span>
+          <span class="hub-leader-pts"><b>${Number(m1.points || 0).toLocaleString("ru-RU")}</b> pts • ${m1.tier || "Shark Tier"}</span>
+        </div>
+      </div>
+      <div class="hub-top-list">
+        <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">${m2.name}</span><span class="hub-pts">${Number(m2.points || 0).toLocaleString("ru-RU")} pts</span></div>
+        <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">${m3.name}</span><span class="hub-pts">${Number(m3.points || 0).toLocaleString("ru-RU")} pts</span></div>
+      </div>
+    </div>
+    <div class="club-hub-foot">
+      <span class="hub-foot-badge">♠ ♥ СЛЕДУЮЩИЙ ТУРНИР ♦ ♣</span>
+      <span class="hub-foot-text">Сегодня 21:00 • DeepStack Turbo</span>
+    </div>
+  `;
+}
+
+// Генерация разметки 4-го квадранта (Live Club Leaderboard Hub)
+function buildClubHubHtml() {
+  return `
+    <div class="club-hub-card" id="club-hub-card">
+      <div class="club-hub-slide" id="club-hub-slide">
+        ${getClubHubSlideHtml(CURRENT_HUB_SLIDE_INDEX)}
       </div>
     </div>
   `;
+}
+
+function rotateClubHubSlide() {
+  if (typeof document === "undefined") return;
+  const slideEl = document.getElementById("club-hub-slide");
+  if (!slideEl) return;
+
+  CURRENT_HUB_SLIDE_INDEX = (CURRENT_HUB_SLIDE_INDEX + 1) % 3;
+  if (slideEl.classList) slideEl.classList.add("slide-fading");
+
+  setTimeout(() => {
+    if (slideEl) {
+      slideEl.innerHTML = getClubHubSlideHtml(CURRENT_HUB_SLIDE_INDEX);
+      if (slideEl.classList) slideEl.classList.remove("slide-fading");
+    }
+  }, 350);
+}
+
+function initLeaderboardSync() {
+  fetchLeaderboardBundle();
+  setInterval(fetchLeaderboardBundle, 300000);
+  if (!HUB_ROTATION_INTERVAL) {
+    HUB_ROTATION_INTERVAL = setInterval(rotateClubHubSlide, 45000);
+  }
 }
 
 // Генерация HTML экрана сбора столов МТТ (Lobby Assembly Board)
@@ -1755,7 +1984,7 @@ function renderTables() {
         }
       }
 
-      const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (АНТЕ ${nextLevel.ante})` : ""}` : "—";
+      const upcomingStr = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}${nextLevel.ante > 0 ? ` (${nextLevel.ante})` : ""}` : "—";
       const upcomingEls = (card.querySelectorAll && typeof card.querySelectorAll === "function") ? card.querySelectorAll(".blinds-number.upcoming") : [card.querySelector(".blinds-number.upcoming")];
       if (upcomingEls && upcomingEls.forEach) {
         upcomingEls.forEach(el => {
@@ -1776,8 +2005,15 @@ function renderTables() {
 
       const roundPill = card.querySelector(".round-pill");
       const roundText = isTimedPause ? "ПЕРЕРЫВ" : (isFinalLevel ? "ФИНАЛЬНЫЙ УРОВЕНЬ" : (currentLevel.isBreak ? "ПЕРЕРЫВ" : `УРОВЕНЬ ${currentLevel.level}`));
-      if (roundPill && roundPill.textContent !== roundText) {
-        roundPill.textContent = roundText;
+      if (roundPill) {
+        const stageRound = (typeof roundPill.querySelector === "function") ? roundPill.querySelector(".stage-round") : null;
+        if (stageRound) {
+          if (stageRound.textContent !== roundText) {
+            stageRound.textContent = roundText;
+          }
+        } else if (roundPill.textContent !== roundText) {
+          roundPill.textContent = roundText;
+        }
       }
 
       if (table.format === "MTT") {
@@ -2062,6 +2298,9 @@ if (typeof window !== "undefined") {
   window.setSimulatedAlert = setSimulatedAlert;
   window.resetToLiveFirebase = resetToLiveFirebase;
   window.isSimulationMode = () => SIMULATION_MODE;
+  window.buildClubHubHtml = buildClubHubHtml;
+  window.rotateClubHubSlide = rotateClubHubSlide;
+  window.fetchLeaderboardBundle = fetchLeaderboardBundle;
 }
 
 function setActiveTables(tables) {
@@ -2103,6 +2342,16 @@ if (typeof module !== "undefined" && module.exports) {
     setSimulatedBreak,
     setSimulatedAlert,
     resetToLiveFirebase,
-    isSimulationMode: () => SIMULATION_MODE
+    isSimulationMode: () => SIMULATION_MODE,
+    buildClubHubHtml,
+    rotateClubHubSlide,
+    getClubHubSlideHtml,
+    fetchLeaderboardBundle,
+    initLeaderboardSync,
+    getLeaderboardCache: () => LEADERBOARD_CACHE,
+    setLeaderboardCache: (d) => { LEADERBOARD_CACHE = d; },
+    getCurrentHubSlideIndex: () => CURRENT_HUB_SLIDE_INDEX,
+    setCurrentHubSlideIndex: (i) => { CURRENT_HUB_SLIDE_INDEX = i; },
+    initSmartTvAntiSleep: initWakeLock
   };
 }
