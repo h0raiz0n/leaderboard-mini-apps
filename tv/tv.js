@@ -1912,7 +1912,7 @@ function setSimulatedTables(count) {
       dealerName: "Алексей",
       format: "SnG",
       structKey: "SNG_STANDARD",
-      levelIndex: 2, // 50 / 100
+      levelIndex: 5, // 200 / 400, ante 400
       durationSec: 420,
       remainingMs: 275000,
       status: "running"
@@ -1922,7 +1922,7 @@ function setSimulatedTables(count) {
       dealerName: "Михаил",
       format: "SnG",
       structKey: "SNG_STANDARD",
-      levelIndex: 4, // 100 / 200, ante 25
+      levelIndex: 6, // 300 / 600, ante 600
       durationSec: 420,
       remainingMs: 145000,
       status: "running"
@@ -1931,8 +1931,8 @@ function setSimulatedTables(count) {
       id: "table_3",
       dealerName: "Дмитрий",
       format: "Mystery",
-      structKey: "SNG_DEEP_1500",
-      levelIndex: 6, // 200 / 400, ante 50
+      structKey: "SNG_STANDARD",
+      levelIndex: 7, // 400 / 800, ante 800
       durationSec: 420,
       remainingMs: 310000,
       status: "running"
@@ -1941,8 +1941,8 @@ function setSimulatedTables(count) {
       id: "table_4",
       dealerName: "Сергей",
       format: "SnG",
-      structKey: "SNG_DEEP_1500",
-      levelIndex: 1, // 25 / 50
+      structKey: "SNG_STANDARD",
+      levelIndex: 8, // 600 / 1200, ante 1200
       durationSec: 420,
       remainingMs: 390000,
       status: "running"
@@ -2020,7 +2020,7 @@ function setSimulatedAlert() {
       dealerName: "Алексей",
       format: "SnG",
       structKey: "SNG_STANDARD",
-      levelIndex: 3,
+      levelIndex: 5, // 200 / 400, ante 400
       durationSec: 420,
       remainingMs: remainingMs,
       startedAt: now - (420000 - remainingMs),
@@ -2032,7 +2032,7 @@ function setSimulatedAlert() {
       dealerName: "Михаил",
       format: "SnG",
       structKey: "SNG_STANDARD",
-      levelIndex: 5,
+      levelIndex: 6, // 300 / 600, ante 600
       durationSec: 420,
       remainingMs: remainingMs,
       startedAt: now - (420000 - remainingMs),
