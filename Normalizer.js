@@ -202,10 +202,12 @@ function countDealerGamesToday(ss, deploymentSheet, dateStr, dealer, currentGame
   // --- Логирование входа для диагностики ---
   Logger.log("countDealerGamesToday: dateStr=" + dateStr + " | dealer=" + dealer + " | gameId=" + currentGameId);
 
-  // Нормализованная дата игры (с fallback на сегодня в таймзоне проекта)
+  // Нормализованная дата игры (с fallback на дату турнирного вечера)
   var targetDate = normalizeDate(dateStr);
   if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
-    targetDate = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+    targetDate = typeof getTournamentSessionDate === "function"
+      ? getTournamentSessionDate(new Date())
+      : (typeof Utilities !== "undefined" ? Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd") : new Date().toISOString().slice(0, 10));
   }
 
   // 1. Уникальные игры (gameId) дилера за дату из DB_Results.

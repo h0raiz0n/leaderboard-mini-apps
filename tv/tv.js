@@ -267,6 +267,29 @@ function initTvHotkeys() {
     document.addEventListener("click", handleUserGesture);
     document.addEventListener("touchstart", handleUserGesture);
 
+    // 1.0. Скрытый жест: 4 быстрых тапа (<=1500мс) по шапке/логотипу для открытия симулятора
+    let tvTapCount = 0;
+    let tvTapTimer = null;
+    const handleTvMultiTap = (e) => {
+      if (!e || !e.target) return;
+      if (e.target.closest && (e.target.closest("#tv-sim-toolbar") || e.target.closest("button"))) {
+        return;
+      }
+      const headerEl = e.target.closest ? (e.target.closest(".tv-header") || e.target.closest(".brand-section") || e.target.closest(".club-title")) : null;
+      if (!headerEl) return;
+
+      tvTapCount++;
+      clearTimeout(tvTapTimer);
+      if (tvTapCount >= 4) {
+        tvTapCount = 0;
+        toggleTvSimulator();
+      } else {
+        tvTapTimer = setTimeout(() => { tvTapCount = 0; }, 1500);
+      }
+    };
+    document.addEventListener("click", handleTvMultiTap);
+    document.addEventListener("touchend", handleTvMultiTap);
+
     document.addEventListener("keydown", (e) => {
       unlockAudioContext();
 
@@ -481,27 +504,44 @@ function initDataSource() {
       try { CURRENT_MTT_SESSION = JSON.parse(savedSession); } catch (e) {}
     }
 
-    // Проверка параметров URL (?mock=1..4 или ?mock=break)
-    if (window.location && window.location.search) {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has("mock")) {
-          const mockVal = urlParams.get("mock");
-          const tb = document.getElementById("tv-sim-toolbar");
-          if (tb) tb.style.display = "flex";
-          const btn = document.getElementById("tv-sim-toggle-btn");
-          if (btn) btn.classList.add("active");
-          if (mockVal === "break") {
-            setSimulatedBreak();
-          } else {
-            const count = parseInt(mockVal, 10);
-            if (!isNaN(count) && count >= 1 && count <= 4) {
-              setSimulatedTables(count);
-            }
+    // Проверка параметров URL (?mock=1..4 или hash #mock=1..4 или localStorage)
+    let mockVal = null;
+    try {
+      if (window.location) {
+        if (window.location.search) {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.has("mock")) mockVal = urlParams.get("mock");
+        }
+        if (!mockVal && window.location.hash) {
+          const hashMatch = window.location.hash.match(/mock=([^&]+)/);
+          if (hashMatch) mockVal = hashMatch[1];
+        }
+      }
+      if (!mockVal && typeof localStorage !== "undefined") {
+        const savedSim = localStorage.getItem("atmo_tv_sim_state");
+        if (savedSim) {
+          const parsed = JSON.parse(savedSim);
+          mockVal = parsed.type === "tables" ? String(parsed.count) : parsed.type;
+        }
+      }
+
+      if (mockVal) {
+        const tb = document.getElementById("tv-sim-toolbar");
+        if (tb) tb.style.display = "flex";
+        const btn = document.getElementById("tv-sim-toggle-btn");
+        if (btn) btn.classList.add("active");
+        if (mockVal === "break") {
+          setSimulatedBreak();
+        } else if (mockVal === "alert") {
+          setSimulatedAlert();
+        } else {
+          const count = parseInt(mockVal, 10);
+          if (!isNaN(count) && count >= 1 && count <= 4) {
+            setSimulatedTables(count);
           }
         }
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
   }
 }
 
@@ -2186,12 +2226,12 @@ function toggleTvSimulator() {
 }
 
 function updateSimButtonState(activeSelector) {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") return;
   const btns = document.querySelectorAll(".sim-toolbar-actions .sim-btn");
   btns.forEach(b => {
     if (b.classList) b.classList.remove("active");
   });
-  if (activeSelector) {
+  if (activeSelector && typeof document.querySelector === "function") {
     const activeBtn = document.querySelector(`.sim-toolbar-actions ${activeSelector}`);
     if (activeBtn && activeBtn.classList) activeBtn.classList.add("active");
   }
@@ -2260,6 +2300,14 @@ function setSimulatedTables(count) {
 
   ACTIVE_TABLES = mockTables;
   LAST_RENDERED_SIGNATURE = "";
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("atmo_tv_sim_state", JSON.stringify({ type: "tables", count: safeCount }));
+    }
+    if (typeof window !== "undefined" && window.location) {
+      window.location.hash = "mock=" + safeCount;
+    }
+  } catch (e) {}
   updateSimButtonState(`[data-sim="${safeCount}"]`);
   renderTables();
 }
@@ -2299,6 +2347,14 @@ function setSimulatedBreak() {
   };
 
   LAST_RENDERED_SIGNATURE = "";
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("atmo_tv_sim_state", JSON.stringify({ type: "break" }));
+    }
+    if (typeof window !== "undefined" && window.location) {
+      window.location.hash = "mock=break";
+    }
+  } catch (e) {}
   updateSimButtonState(".sim-break");
   renderTables();
 }
@@ -2339,6 +2395,14 @@ function setSimulatedAlert() {
   };
 
   LAST_RENDERED_SIGNATURE = "";
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("atmo_tv_sim_state", JSON.stringify({ type: "alert" }));
+    }
+    if (typeof window !== "undefined" && window.location) {
+      window.location.hash = "mock=alert";
+    }
+  } catch (e) {}
   updateSimButtonState(".sim-alert");
   renderTables();
 }
@@ -2348,6 +2412,14 @@ function resetToLiveFirebase() {
   ACTIVE_TABLES = LIVE_BACKUP_TABLES || {};
   LIVE_BACKUP_TABLES = null;
   LAST_RENDERED_SIGNATURE = "";
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem("atmo_tv_sim_state");
+    }
+    if (typeof window !== "undefined" && window.location && window.location.hash) {
+      window.location.hash = "";
+    }
+  } catch (e) {}
   updateSimButtonState(null);
   renderTables();
 }

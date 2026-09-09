@@ -249,30 +249,91 @@ function getScriptProperty(key, fallback) {
  * (некоторые формы отдают дату именно так — раньше такие значения
  * «выпадали» из расчётов и ломали gameId).
  */
+function formatIsoDateString(d) {
+  if (typeof Utilities !== "undefined" && typeof Session !== "undefined") {
+    try {
+      return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    } catch (e) {}
+  }
+  var yr = d.getFullYear();
+  var mo = d.getMonth() + 1;
+  var da = d.getDate();
+  return yr + "-" + (mo < 10 ? "0" + mo : mo) + "-" + (da < 10 ? "0" + da : da);
+}
+
 function normalizeDate(rawDate) {
   if (!rawDate) return "";
-  try {
-    var d = new Date(rawDate);
-    if (!isNaN(d.getTime())) {
-      return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
-    }
-  } catch (e) {}
 
-  // Текстовые даты ДД.ММ.ГГГГ / ДД/ММ/ГГГГ (с валидацией дня/месяца)
+  // 1. Если передан объект Date
+  if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+    return formatIsoDateString(rawDate);
+  }
+
+  // 2. Текстовые даты: проверяем форматы ДД.ММ.ГГГГ и ДД/ММ/ГГГГ СТРОГО ПЕРВЫМИ,
+  // чтобы движок JS (V8) не интерпретировал первые 12 дней как месяцы США (MM/DD/YYYY).
   if (typeof rawDate === "string" || rawDate instanceof String) {
-    var m = String(rawDate).match(/^\s*(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})\s*$/);
+    var s = String(rawDate).trim();
+    var isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return isoMatch[1] + "-" + isoMatch[2] + "-" + isoMatch[3];
+    }
+
+    var m = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/);
     if (m) {
       var day = Number(m[1]), mon = Number(m[2]), yr = Number(m[3]);
       if (mon >= 1 && mon <= 12 && day >= 1 && day <= 31) {
-        var d2 = new Date(yr, mon - 1, day);
-        if (d2.getDate() === day && d2.getMonth() === mon - 1 && d2.getFullYear() === yr) {
-          return Utilities.formatDate(d2, Session.getScriptTimeZone(), "yyyy-MM-dd");
-        }
+        var mm = mon < 10 ? "0" + mon : "" + mon;
+        var dd = day < 10 ? "0" + day : "" + day;
+        return yr + "-" + mm + "-" + dd;
       }
     }
   }
 
-  return rawDate.toString().trim();
+  // 3. Fallback на new Date(...) для timestamp и иных форматов
+  try {
+    var d = new Date(rawDate);
+    if (!isNaN(d.getTime())) {
+      return formatIsoDateString(d);
+    }
+  } catch (e) {}
+
+  return String(rawDate).trim();
+}
+
+/**
+ * Определение даты турнирного игрового вечера.
+ * Если игра/отправка формы произошла ночью после полуночи (до 06:00 утра),
+ * игра относится к предыдущему турнирному вечеру.
+ *
+ * @param {Date|string} [dateOrTimestamp]
+ * @returns {string} YYYY-MM-DD
+ */
+function getTournamentSessionDate(dateOrTimestamp) {
+  var d = null;
+  if (dateOrTimestamp instanceof Date && !isNaN(dateOrTimestamp.getTime())) {
+    d = dateOrTimestamp;
+  } else if (dateOrTimestamp) {
+    var s = String(dateOrTimestamp).trim();
+    // Если передана чистая дата без времени вида ДД.ММ.ГГГГ или YYYY-MM-DD,
+    // считаем её явной датой турнира
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s) || /^\d{1,2}[.\/]\d{1,2}[.\/]\d{4}$/.test(s)) {
+      return normalizeDate(s);
+    }
+    try {
+      var parsed = new Date(dateOrTimestamp);
+      if (!isNaN(parsed.getTime())) d = parsed;
+    } catch (e) {}
+  }
+
+  if (!d) d = new Date();
+
+  // Если время от 00:00 до 05:59 утра, относим к вечеру предыдущего календарного дня
+  var hours = d.getHours();
+  if (hours < 6) {
+    var prev = new Date(d.getTime() - 24 * 60 * 60 * 1000);
+    return formatIsoDateString(prev);
+  }
+  return formatIsoDateString(d);
 }
 
 /**

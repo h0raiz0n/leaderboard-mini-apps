@@ -665,6 +665,7 @@ function startRestPollingFallback() {
 let PENDING_SYNC_TIMEOUT = null;
 
 function saveState() {
+  if (DEALER_SIMULATION_MODE) return;
   const myTable = getMyTable();
   if (typeof localStorage !== "undefined") {
     try {
@@ -684,6 +685,7 @@ function saveState() {
 }
 
 function flushPendingSync() {
+  if (DEALER_SIMULATION_MODE) return Promise.resolve(true);
   const isPending = (typeof localStorage !== "undefined" && 
     (localStorage.getItem("atmosphere_pending_sync_" + DEALER_ID) === "true" || localStorage.getItem("atmosphere_pending_sync") === "true"));
   if (!isPending) return Promise.resolve(true);
@@ -2766,8 +2768,95 @@ function renderDealerView() {
   }
 }
 
+// ==========================================
+// СИМУЛЯЦИОННЫЙ РЕЖИМ ПУЛЬТА (DEV & DEMO)
+// ==========================================
+let DEALER_SIMULATION_MODE = false;
+let DEALER_SIM_BACKUP_STATE = null;
+
+function enableDealerSimulation() {
+  DEALER_SIMULATION_MODE = true;
+  if (DEALER_SIM_BACKUP_STATE === null) {
+    DEALER_SIM_BACKUP_STATE = JSON.parse(JSON.stringify(TABLES_STATE || {}));
+  }
+
+  const now = getSyncedNow();
+  const mockTable = {
+    id: DEALER_ID,
+    dealerName: DEALER_NAME || "Паша",
+    format: "SnG",
+    structKey: "SNG_STANDARD",
+    levelIndex: 5, // 200 / 400, ante 400
+    durationSec: 420,
+    remainingMs: 315000, // 5:15
+    startedAt: now - (420000 - 315000),
+    levelEndsAt: now + 315000,
+    status: "running",
+    playersCount: 9,
+    eliminations: 0
+  };
+
+  TABLES_STATE = {};
+  TABLES_STATE[DEALER_ID] = mockTable;
+
+  if (typeof document !== "undefined") {
+    const banner = document.getElementById("dealer-sim-banner");
+    if (banner) banner.style.display = "flex";
+  }
+
+  renderDealerView();
+}
+
+function exitDealerSimulation() {
+  DEALER_SIMULATION_MODE = false;
+  TABLES_STATE = DEALER_SIM_BACKUP_STATE || {};
+  DEALER_SIM_BACKUP_STATE = null;
+
+  if (typeof document !== "undefined") {
+    const banner = document.getElementById("dealer-sim-banner");
+    if (banner) banner.style.display = "none";
+  }
+
+  renderDealerView();
+}
+
+function toggleDealerSimulation() {
+  if (DEALER_SIMULATION_MODE) {
+    exitDealerSimulation();
+  } else {
+    enableDealerSimulation();
+  }
+}
+
+// 4 быстрых тапа (<=1500мс) по шапке пульта для активации демо-режима
+let dealerTapCount = 0;
+let dealerTapTimer = null;
+function handleDealerHeaderTap(e) {
+  if (!e || !e.target) return;
+  if (e.target.closest && (e.target.closest("#dealer-sim-banner") || e.target.closest("button"))) {
+    return;
+  }
+  const header = e.target.closest ? e.target.closest(".dealer-header") : null;
+  if (!header) return;
+
+  dealerTapCount++;
+  clearTimeout(dealerTapTimer);
+  if (dealerTapCount >= 4) {
+    dealerTapCount = 0;
+    toggleDealerSimulation();
+  } else {
+    dealerTapTimer = setTimeout(() => { dealerTapCount = 0; }, 1500);
+  }
+}
+
+if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+  document.addEventListener("click", handleDealerHeaderTap);
+  document.addEventListener("touchend", handleDealerHeaderTap);
+}
+
 // Автоматическое восстановление состояния при разблокировке телефона или возврате во вкладку
 async function syncWithServerOnWakeup() {
+  if (DEALER_SIMULATION_MODE) return;
   try {
     await fetchTablesRest();
   } catch (e) {}
@@ -2793,10 +2882,18 @@ if (typeof window !== "undefined") {
   window.adjustLevelTime = adjustLevelTime;
   window.stepLevelWithUndo = stepLevelWithUndo;
   window.dismissUndoSnackbar = dismissUndoSnackbar;
+  window.enableDealerSimulation = enableDealerSimulation;
+  window.exitDealerSimulation = exitDealerSimulation;
+  window.toggleDealerSimulation = toggleDealerSimulation;
+  window.isDealerSimulationMode = () => DEALER_SIMULATION_MODE;
 }
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    enableDealerSimulation,
+    exitDealerSimulation,
+    toggleDealerSimulation,
+    isDealerSimulationMode: () => DEALER_SIMULATION_MODE,
     initDealerIdentity,
     getMyTable,
     startTable,

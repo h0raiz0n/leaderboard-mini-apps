@@ -12,7 +12,14 @@ const testFiles = fs.readdirSync(testsDir)
   .filter(f => f.startsWith("test_") && f.endsWith(".js"))
   .sort();
 
-console.log(`🚀 ЗАПУСК ПОЛНОГО ТЕСТОВОГО НАБОРА «АТМОСФЕРА» (${testFiles.length} ТЕСТОВ)...\n`);
+// 0. Запуск автоматического валидатора качества тестов (Quality Gate)
+try {
+  execSync(`node "${path.join(__dirname, "validate_test_quality.js")}"`, { stdio: "inherit" });
+} catch (e) {
+  process.exit(1);
+}
+
+console.log(`\n🚀 ЗАПУСК ПОЛНОГО ТЕСТОВОГО НАБОРА «АТМОСФЕРА» (${testFiles.length} ТЕСТОВ)...\n`);
 
 let passedCount = 0;
 let failedCount = 0;

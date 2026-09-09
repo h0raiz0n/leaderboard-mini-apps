@@ -150,7 +150,7 @@ function notifyGameResult(format, date, dealer, gameNumber, items) {
 
   var text = titleEmoji + " <b>РЕЗУЛЬТАТЫ ИГРЫ [" + safeFormat.toUpperCase() + "]</b>\n";
   text += "📅 <b>Дата:</b> " + safeDate + "\n";
-  text += "🎩 <b>Ведущий:</b> " + safeDealer + " (" + Number(gameNumber || 1) + "-я игра за сегодня)\n";
+  text += "🎩 <b>Ведущий:</b> " + safeDealer + " (" + Number(gameNumber || 1) + "-я игра у ведущего за сегодня)\n";
   text += "───────────────────────────\n";
 
   var placesText = "";

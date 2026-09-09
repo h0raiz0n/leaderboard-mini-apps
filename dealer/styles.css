@@ -2412,3 +2412,55 @@ body {
   display: none !important;
 }
 
+/* ==========================================
+   ТЕСТОВЫЙ РЕЖИМ ПУЛЬТА (DEV & DEMO BANNER)
+   ========================================== */
+.dealer-sim-banner {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 12px;
+  margin: 8px 16px 12px 16px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: fadeInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dealer-sim-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dealer-sim-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: 0.06em;
+}
+
+.dealer-sim-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dealer-sim-exit-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dealer-sim-exit-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+}
+

@@ -37,6 +37,15 @@
     <div class="latency-indicator" id="latency-tag">⚡ 20ms</div>
   </header>
 
+  <!-- Баннер тестового режима пульта (активируется по 4 тапам по шапке) -->
+  <div id="dealer-sim-banner" class="dealer-sim-banner" style="display: none;">
+    <div class="dealer-sim-content">
+      <span class="dealer-sim-tag">🛠️ ТЕСТОВЫЙ РЕЖИМ ПУЛЬТА</span>
+      <span class="dealer-sim-desc">Действия изолированы и не пишутся в базу</span>
+    </div>
+    <button type="button" class="dealer-sim-exit-btn" onclick="exitDealerSimulation()">Выйти в Live</button>
+  </div>
+
   <!-- Экран выбора настроек перед стартом (если стол idle) -->
   <section class="setup-panel" id="setup-panel">
     <div class="panel-section-header">
