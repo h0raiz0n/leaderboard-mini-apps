@@ -590,21 +590,40 @@ function startRestPollingFallback() {
 }
 
 function getTableStructure(table) {
-  const cfg = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.BLIND_STRUCTURES)
-    ? POKER_CONFIG.BLIND_STRUCTURES
-    : {};
+  let config = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG) ? POKER_CONFIG : null;
+  if (!config && typeof window !== "undefined" && window.POKER_CONFIG) {
+    config = window.POKER_CONFIG;
+  }
+  if (!config && typeof require === "function") {
+    try { config = require("../shared/poker-config.js"); } catch (e) {}
+  }
 
-  if (table && table.structKey && cfg[table.structKey]) {
+  const cfg = config && config.BLIND_STRUCTURES ? config.BLIND_STRUCTURES : null;
+
+  if (table && table.structKey && cfg && cfg[table.structKey]) {
     return cfg[table.structKey].levels;
   }
 
-  if (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.SNG_STRUCTURE) {
-    return POKER_CONFIG.SNG_STRUCTURE.levels;
+  if (table && (table.structKey === "MTT_PRO_5000" || table.format === "MTT") && cfg && cfg.MTT_PRO_5000) {
+    return cfg.MTT_PRO_5000.levels;
+  }
+
+  if (table && table.structKey === "SNG_STANDARD" && config && config.SNG_STRUCTURE) {
+    return config.SNG_STRUCTURE.levels;
+  }
+
+  // Legacy SnG fallback (where format is explicitly SnG without structKey in older test mocks)
+  if (table && table.format === "SnG" && !table.structKey && config && config.SNG_STRUCTURE) {
+    return config.SNG_STRUCTURE.levels;
+  }
+
+  if (cfg && cfg.SNG_DEEP_1500) {
+    return cfg.SNG_DEEP_1500.levels;
   }
 
   return [
-    { level: 1, sb: 25, bb: 50, ante: 0, durationSec: 420, label: "25 / 50" },
-    { level: 2, sb: 50, bb: 100, ante: 0, durationSec: 420, label: "50 / 100" }
+    { level: 1, sb: 5, bb: 10, ante: 0, durationSec: 600, label: "5 / 10" },
+    { level: 2, sb: 10, bb: 25, ante: 0, durationSec: 600, label: "10 / 25" }
   ];
 }
 
@@ -695,6 +714,36 @@ function getTournamentMilestone(table, structure, safeIndex, isFinalLevel, isTim
   return "Турнир продолжается";
 }
 
+function notifyBlindRaise(table, nextLevelIndex, tableKey) {
+  if (!table || table.notifyBlinds === false || !table.dealerChatId) return;
+  if (table.lastNotifiedLevelIndex === nextLevelIndex) return;
+
+  table.lastNotifiedLevelIndex = nextLevelIndex;
+
+  const structure = getTableStructure(table);
+  const nextLvl = (structure && structure[nextLevelIndex]) ? structure[nextLevelIndex] : null;
+  if (!nextLvl) return;
+
+  const payload = {
+    action: "notify_blind_raise",
+    tableId: table.id || tableKey || "table",
+    dealerChatId: table.dealerChatId,
+    levelIndex: nextLevelIndex,
+    sb: nextLvl.sb,
+    bb: nextLvl.bb,
+    ante: nextLvl.ante || 0,
+    format: table.format || "SnG"
+  };
+
+  if (typeof fetch === "function") {
+    fetch("/api/dealer-bot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+}
+
 function syncTableAutoProgression(tableKey, table) {
   if (SIMULATION_MODE) return;
   if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
@@ -708,7 +757,9 @@ function syncTableAutoProgression(tableKey, table) {
         colorUpDone: table.colorUpDone || false,
         isColorUpActive: table.isColorUpActive || false,
         pauseEndsAt: table.pauseEndsAt || null,
-        pauseTotalSec: table.pauseTotalSec || null
+        pauseTotalSec: table.pauseTotalSec || null,
+        lastNotifiedLevelIndex: table.lastNotifiedLevelIndex !== undefined ? table.lastNotifiedLevelIndex : null,
+        requireManualStep: table.requireManualStep || false
       });
     } catch (e) {}
   }
@@ -811,6 +862,8 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
     const nextLevel = isFinalLevel ? null : (structure[safeIndex + 1] || null);
     const formatLabel = getFormatLabel(table.format);
     const now = Date.now();
+    const firstLevel = (structure && structure[0]) ? structure[0] : { sb: 5, bb: 10 };
+    const initialBlindsStr = `${firstLevel.sb} / ${firstLevel.bb}`;
 
     // Состояние перерыва (ручного или послеигрового)
     const isPostGame = Boolean(timingTable.isPostGameBreak && timingTable.nextGameAt);
@@ -867,7 +920,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
               <div class="blinds-item current-blinds-box">
                 <span class="blinds-caption">Старт следующей игры</span>
                 <div class="blinds-main-row">
-                  <span class="blinds-number current">25 / 50</span>
+                  <span class="blinds-number current">${initialBlindsStr}</span>
                   <span class="ante-badge ante-strip">РЕГИСТРАЦИЯ</span>
                 </div>
               </div>
@@ -925,7 +978,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
               <div class="blinds-item current-blinds-box">
                 <span class="blinds-caption">Старт следующей игры</span>
                 <div class="blinds-main-row">
-                  <span class="blinds-number current">25 / 50</span>
+                  <span class="blinds-number current">${initialBlindsStr}</span>
                   <span class="ante-badge ante-strip" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4);">ОЖИДАНИЕ</span>
                 </div>
               </div>
@@ -1714,13 +1767,14 @@ function renderMttCinemaMode(viewport, activeMttTables, tableKeys) {
 
   // 1. Автопрогрессия уровней (ТВ как автономный исполнитель в зале)
   if (masterMttTable.status === "running" && masterMttTable.levelEndsAt && now >= masterMttTable.levelEndsAt) {
-    if (masterMttTable.levelIndex < structure.length - 1) {
+    if (!masterMttTable.requireManualStep && masterMttTable.levelIndex < structure.length - 1) {
       masterMttTable.levelIndex += 1;
       const nextLvl = structure[masterMttTable.levelIndex];
       masterMttTable.durationSec = nextLvl.durationSec;
       masterMttTable.remainingMs = nextLvl.durationSec * 1000;
       masterMttTable.levelEndsAt = now + masterMttTable.remainingMs;
       playTournamentChime();
+      notifyBlindRaise(masterMttTable, masterMttTable.levelIndex, masterMttTable.id || "master");
       syncTableAutoProgression(masterMttTable.id || "master", masterMttTable);
     }
   }
@@ -1935,13 +1989,14 @@ function renderTables() {
     // Автопрогрессия уровней на ТВ
     // ВАЖНО: Сателлитные столы в режиме МТТ НЕ отправляют автопрогрессию в Firebase, чтобы исключить гонку и дрифт таймера!
     if (!isMttSatellite && timingTable.status === "running" && timingTable.levelEndsAt && now >= timingTable.levelEndsAt) {
-      if (timingTable.levelIndex < structure.length - 1) {
+      if (!timingTable.requireManualStep && timingTable.levelIndex < structure.length - 1) {
         timingTable.levelIndex += 1;
         const nextLvl = structure[timingTable.levelIndex];
         timingTable.durationSec = nextLvl.durationSec;
         timingTable.remainingMs = nextLvl.durationSec * 1000;
         timingTable.levelEndsAt = now + timingTable.remainingMs;
         playTournamentChime();
+        notifyBlindRaise(timingTable, timingTable.levelIndex, key);
         syncTableAutoProgression(key, timingTable);
       }
     }
@@ -2485,6 +2540,7 @@ if (typeof module !== "undefined" && module.exports) {
     setLeaderboardCache: (d) => { LEADERBOARD_CACHE = d; },
     getCurrentHubSlideIndex: () => CURRENT_HUB_SLIDE_INDEX,
     setCurrentHubSlideIndex: (i) => { CURRENT_HUB_SLIDE_INDEX = i; },
-    initSmartTvAntiSleep: initWakeLock
+    initSmartTvAntiSleep: initWakeLock,
+    notifyBlindRaise
   };
 }

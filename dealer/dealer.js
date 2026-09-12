@@ -13,8 +13,10 @@ if (typeof window === "undefined" && typeof require === "function") {
 let DEALER_NAME = "Ведущий";
 let DEALER_ID = "dealer_vlad";
 let SELECTED_FORMAT = "SnG";
-let SELECTED_STRUCT = "SNG_STANDARD";
+let SELECTED_STRUCT = "SNG_DEEP_1500";
 let CURRENT_PREVIEW_STRUCT = "SNG_DEEP_1500";
+let DEALER_CHAT_ID = null;
+let LAST_PAUSE_CLICK_TS = 0;
 let IS_MTT_MASTER = true;
 let MTT_SETUP_PLAYERS = 9;
 let DISSOLVE_TARGET_TABLE_KEY = null;
@@ -31,6 +33,7 @@ if (typeof document !== "undefined" && document.addEventListener) {
   document.addEventListener("DOMContentLoaded", () => {
     initDealerIdentity();
     initPillSelectors();
+    initNotifyToggle();
     initButtonListeners();
     initDataSource();
     
@@ -91,6 +94,12 @@ function initDealerIdentity() {
       const u = tg.initDataUnsafe.user;
       const uid = String(u.id || "");
       const uname = String(u.username || "").toLowerCase().replace(/^@/, "").trim();
+
+      if (uid) {
+        DEALER_CHAT_ID = uid;
+        const myTbl = getMyTable();
+        if (myTbl) myTbl.dealerChatId = uid;
+      }
 
       // Поиск по реестру Telegram ID / Username
       if (uname && registry.MAP[uname]) {
@@ -306,7 +315,7 @@ function updateStructureVisibilityForFormat(format) {
     }
 
     if (SELECTED_STRUCT === "MTT_PRO_5000" || !SELECTED_STRUCT) {
-      SELECTED_STRUCT = "SNG_STANDARD";
+      SELECTED_STRUCT = "SNG_DEEP_1500";
     }
 
     if (classicCard && proCard) {
@@ -396,13 +405,28 @@ function initPillSelectors() {
     });
   });
 
+  const savedStruct = (typeof localStorage !== "undefined") ? localStorage.getItem("atmosphere_dealer_struct") : null;
+  if (savedStruct) {
+    const cfg = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG.BLIND_STRUCTURES) ? POKER_CONFIG.BLIND_STRUCTURES : null;
+    if (cfg && cfg[savedStruct]) {
+      SELECTED_STRUCT = savedStruct;
+    }
+  }
+
   const structPills = document.querySelectorAll("#struct-pills .pill");
-  if (typeof document !== "undefined" && typeof document.querySelector === "function") {
+  if (structPills && structPills.length > 0) {
+    structPills.forEach(p => {
+      if (p.classList && typeof p.classList.toggle === "function") {
+        p.classList.toggle("active", p.dataset && p.dataset.struct === SELECTED_STRUCT);
+      }
+    });
+  } else if (typeof document !== "undefined" && typeof document.querySelector === "function") {
     const activeStructPill = document.querySelector("#struct-pills .pill.active");
-    if (activeStructPill && activeStructPill.dataset && activeStructPill.dataset.struct) {
+    if (activeStructPill && activeStructPill.dataset && activeStructPill.dataset.struct && !savedStruct) {
       SELECTED_STRUCT = activeStructPill.dataset.struct;
     }
   }
+
   structPills.forEach(pill => {
     pill.addEventListener("click", () => {
       if (pill.classList.contains("locked")) return;
@@ -415,8 +439,17 @@ function initPillSelectors() {
       structPills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
       SELECTED_STRUCT = targetStruct;
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("atmosphere_dealer_struct", targetStruct);
+      }
       const table = getMyTable();
       table.structKey = SELECTED_STRUCT;
+      const structObj = getActiveStructure(SELECTED_STRUCT);
+      if (structObj && structObj.levels && structObj.levels[0]) {
+        if (table.status === "idle") {
+          table.durationSec = structObj.levels[0].durationSec;
+        }
+      }
       saveState();
       triggerHaptic("light");
       renderDealerView();
@@ -442,9 +475,71 @@ function initPillSelectors() {
   });
 }
 
+function initNotifyToggle() {
+  if (typeof document === "undefined") return;
+  const toggleNotify = document.getElementById("toggle-notify-blinds");
+  let isNotify = true;
+  if (typeof localStorage !== "undefined") {
+    const saved = localStorage.getItem("atmosphere_notify_blinds");
+    if (saved !== null) isNotify = (saved === "true");
+  }
+
+  if (toggleNotify) {
+    toggleNotify.checked = isNotify;
+    toggleNotify.addEventListener("change", (e) => {
+      const enabled = Boolean(e.target.checked);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("atmosphere_notify_blinds", enabled ? "true" : "false");
+      }
+      const table = getMyTable();
+      if (table) {
+        table.notifyBlinds = enabled;
+        saveState();
+      }
+      triggerHaptic("light");
+    });
+  }
+
+  const myTbl = getMyTable();
+  if (myTbl) {
+    myTbl.notifyBlinds = isNotify;
+  }
+}
+
+function notifyBlindRaise(table, nextLevelIndex) {
+  if (!table || table.notifyBlinds === false || !table.dealerChatId) return;
+  if (table.lastNotifiedLevelIndex === nextLevelIndex) return;
+
+  table.lastNotifiedLevelIndex = nextLevelIndex;
+
+  const structure = getActiveStructure(table.structKey || SELECTED_STRUCT);
+  const levels = (structure && structure.levels) ? structure.levels : [];
+  const nextLvl = levels[nextLevelIndex];
+  if (!nextLvl) return;
+
+  const payload = {
+    action: "notify_blind_raise",
+    tableId: table.id || DEALER_ID,
+    dealerChatId: table.dealerChatId,
+    levelIndex: nextLevelIndex,
+    sb: nextLvl.sb,
+    bb: nextLvl.bb,
+    ante: nextLvl.ante || 0,
+    format: table.format || SELECTED_FORMAT
+  };
+
+  if (typeof fetch === "function") {
+    fetch("/api/dealer-bot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+}
+
 function initButtonListeners() {
   document.getElementById("btn-start")?.addEventListener("click", startTable);
-  document.getElementById("btn-pause")?.addEventListener("click", togglePause);
+  document.getElementById("btn-pause")?.addEventListener("click", () => togglePause(true));
   document.getElementById("btn-step")?.addEventListener("click", handleStepClick);
   document.getElementById("btn-reset")?.addEventListener("click", resetTable);
   document.getElementById("btn-finish")?.addEventListener("click", openFinishModal);
@@ -796,20 +891,33 @@ function isTableStale(table) {
 
 function getMyTable() {
   if (!TABLES_STATE[DEALER_ID]) {
+    const activeStruct = getActiveStructure(SELECTED_STRUCT);
+    const defaultDuration = (activeStruct && activeStruct.levels && activeStruct.levels[0] && activeStruct.levels[0].durationSec) || 600;
+    
+    let isNotify = true;
+    if (typeof localStorage !== "undefined") {
+      const savedNotify = localStorage.getItem("atmosphere_notify_blinds");
+      if (savedNotify !== null) isNotify = (savedNotify === "true");
+    }
+
     TABLES_STATE[DEALER_ID] = {
       id: DEALER_ID,
       dealerName: DEALER_NAME,
+      dealerChatId: DEALER_CHAT_ID || null,
       format: SELECTED_FORMAT,
       structKey: SELECTED_STRUCT,
       status: "idle",
       levelIndex: 0,
-      durationSec: 420,
+      durationSec: defaultDuration,
       elapsedBeforePause: 0,
       isPostGameBreak: false,
       isMttMaster: true,
       playersCount: 9,
       initialPlayers: 9,
-      lateEntries: 0
+      lateEntries: 0,
+      notifyBlinds: isNotify,
+      lastNotifiedLevelIndex: null,
+      requireManualStep: false
     };
   }
   return TABLES_STATE[DEALER_ID];
@@ -829,19 +937,19 @@ function getActiveStructure(structKey) {
     try { config = require("../shared/poker-config.js"); } catch (e) {}
   }
 
-  const key = structKey || SELECTED_STRUCT || "SNG_STANDARD";
+  const key = structKey || SELECTED_STRUCT || "SNG_DEEP_1500";
   if (config && config.BLIND_STRUCTURES) {
-    return config.BLIND_STRUCTURES[key] || config.BLIND_STRUCTURES[SELECTED_STRUCT] || config.BLIND_STRUCTURES.SNG_STANDARD || config.BLIND_STRUCTURES.SNG_DEEP_1500;
+    return config.BLIND_STRUCTURES[key] || config.BLIND_STRUCTURES[SELECTED_STRUCT] || config.BLIND_STRUCTURES.SNG_DEEP_1500 || config.BLIND_STRUCTURES.SNG_STANDARD;
   }
   if (config && config.SNG_STRUCTURE) {
     return config.SNG_STRUCTURE;
   }
   return {
-    name: "5 000 стек / 7 мин (Атмосфера Pro)",
-    stack: 5000,
+    name: "1 500 стек / 10 мин (Классика)",
+    stack: 1500,
     levels: [
-      { level: 1, sb: 25, bb: 50, ante: 0, durationSec: 420, label: "25 / 50" },
-      { level: 2, sb: 50, bb: 100, ante: 0, durationSec: 420, label: "50 / 100" }
+      { level: 1, sb: 5, bb: 10, ante: 0, durationSec: 600, label: "5 / 10" },
+      { level: 2, sb: 10, bb: 25, ante: 0, durationSec: 600, label: "10 / 25" }
     ]
   };
 }
@@ -941,6 +1049,11 @@ function startTable() {
   table.isColorUpActive = false;
   table.pauseEndsAt = null;
   table.pauseTotalSec = null;
+  table.pausedAt = null;
+  table.requireManualStep = false;
+  table.dealerChatId = DEALER_CHAT_ID || table.dealerChatId || null;
+  table.notifyBlinds = (table.notifyBlinds !== undefined) ? table.notifyBlinds : true;
+  table.lastNotifiedLevelIndex = 0;
   table.breakEndsAt = null;
   table.isBreakActive = false;
   table.breakDurationSec = null;
@@ -1288,24 +1401,40 @@ function cancelSatelliteReady() {
 
 
 // 2. Пауза / Возобновление с миллисекундной точностью (без скачков вперед)
-function togglePause() {
+function togglePause(isUserClick = false) {
+  if (isUserClick) {
+    const nowClick = getSyncedNow();
+    if (nowClick - LAST_PAUSE_CLICK_TS < 300) return;
+    LAST_PAUSE_CLICK_TS = nowClick;
+  }
   triggerHaptic("medium");
   const table = getMyTable();
   const now = getSyncedNow();
 
   if (table.status === "running") {
     table.status = "paused";
+    table.pausedAt = now;
     let remainingMs = 0;
     if (table.levelEndsAt) {
       remainingMs = Math.max(0, table.levelEndsAt - now);
     } else if (table.startedAt) {
       remainingMs = Math.max(0, (table.durationSec * 1000) - (now - table.startedAt));
     } else {
-      remainingMs = (table.durationSec || 420) * 1000;
+      remainingMs = (table.durationSec || 600) * 1000;
     }
     table.remainingMs = remainingMs;
-    table.elapsedBeforePause = Math.max(0, (table.durationSec || 420) - Math.ceil(remainingMs / 1000));
-    table.startedAt = null;
+    table.elapsedBeforePause = Math.max(0, (table.durationSec || 600) - Math.ceil(remainingMs / 1000));
+    
+    // Защита овертайма: если пауза нажата при 00:00 или в овертайме
+    if (remainingMs === 0 && table.levelEndsAt && now >= table.levelEndsAt) {
+      table.overtimePausedMs = now - table.levelEndsAt;
+      table.requireManualStep = true;
+    } else {
+      table.overtimePausedMs = 0;
+      table.requireManualStep = false;
+    }
+
+    table.pausedLevelEndsAt = table.levelEndsAt;
     table.levelEndsAt = null;
     table.pauseEndsAt = null;
     table.pauseTotalSec = null;
@@ -1313,12 +1442,26 @@ function togglePause() {
     table.status = "running";
     table.pauseEndsAt = null;
     table.pauseTotalSec = null;
-    table.startedAt = now;
-    const remainingMs = (table.remainingMs !== undefined && table.remainingMs !== null)
-      ? table.remainingMs
-      : Math.max(0, ((table.durationSec || 420) - (table.elapsedBeforePause || 0)) * 1000);
-    table.remainingMs = remainingMs;
-    table.levelEndsAt = now + remainingMs;
+
+    const pauseDuration = table.pausedAt ? Math.max(0, now - table.pausedAt) : 0;
+    if (table.startedAt) {
+      table.startedAt += pauseDuration;
+    } else {
+      table.startedAt = now;
+    }
+
+    if (table.requireManualStep) {
+      // Овертайм guard: не вызываем мгновенный автоперескок, удерживаем 00:00
+      table.remainingMs = 0;
+      table.levelEndsAt = now - (table.overtimePausedMs || 0);
+    } else {
+      const remainingMs = (table.remainingMs !== undefined && table.remainingMs !== null)
+        ? table.remainingMs
+        : Math.max(0, ((table.durationSec || 600) - (table.elapsedBeforePause || 0)) * 1000);
+      table.remainingMs = remainingMs;
+      table.levelEndsAt = now + remainingMs;
+    }
+    table.pausedAt = null;
   }
   saveState();
   if (table.format === "MTT" && table.isMttMaster) {
@@ -1411,11 +1554,14 @@ function stepLevelWithUndo() {
     elapsedBeforePause: table.elapsedBeforePause,
     startedAt: table.startedAt,
     levelEndsAt: table.levelEndsAt,
-    status: table.status
+    status: table.status,
+    lastNotifiedLevelIndex: table.lastNotifiedLevelIndex,
+    requireManualStep: table.requireManualStep
   };
 
   // Мгновенный переход на следующий уровень
   table.levelIndex += 1;
+  table.requireManualStep = false;
   const nextLvl = levels[table.levelIndex];
   table.durationSec = nextLvl.durationSec;
   table.remainingMs = nextLvl.durationSec * 1000;
@@ -1428,6 +1574,7 @@ function stepLevelWithUndo() {
     table.levelEndsAt = null;
   }
 
+  notifyBlindRaise(table, table.levelIndex);
   triggerHaptic("medium");
   saveState();
 
@@ -1512,6 +1659,8 @@ function undoStepLevel() {
   table.startedAt = PREV_LEVEL_STATE.startedAt;
   table.levelEndsAt = PREV_LEVEL_STATE.levelEndsAt;
   table.status = PREV_LEVEL_STATE.status;
+  table.lastNotifiedLevelIndex = PREV_LEVEL_STATE.lastNotifiedLevelIndex;
+  table.requireManualStep = PREV_LEVEL_STATE.requireManualStep;
 
   PREV_LEVEL_STATE = null;
   dismissUndoSnackbar();
@@ -1615,12 +1764,14 @@ function nextLevel() {
   
   if (table.levelIndex < maxIdx) {
     table.levelIndex += 1;
+    table.requireManualStep = false;
     table.durationSec = levels[table.levelIndex].durationSec;
     table.remainingMs = table.durationSec * 1000;
     table.elapsedBeforePause = 0;
     const now = getSyncedNow();
     table.startedAt = now;
     table.levelEndsAt = now + (table.durationSec * 1000);
+    notifyBlindRaise(table, table.levelIndex);
     saveState();
     if (table.format === "MTT" && table.isMttMaster) {
       broadcastMttMasterState({
@@ -1654,6 +1805,9 @@ function resetTable() {
   table.levelEndsAt = null;
   table.pauseEndsAt = null;
   table.pauseTotalSec = null;
+  table.pausedAt = null;
+  table.requireManualStep = false;
+  table.lastNotifiedLevelIndex = null;
   table.breakEndsAt = null;
   table.isBreakActive = false;
   table.breakDurationSec = null;
@@ -2158,6 +2312,7 @@ function dissolveTable(tableKey) {
 function checkAutoLevelProgression() {
   const table = getMyTable();
   if (table.status !== "running" || !table.levelEndsAt) return;
+  if (table.requireManualStep) return;
   // Сателлитные столы в режиме МТТ не прогрессируют таймер независимо
   if (table.format === "MTT" && !table.isMttMaster) return;
 
@@ -2174,6 +2329,7 @@ function checkAutoLevelProgression() {
       table.remainingMs = nextLvl.durationSec * 1000;
       table.levelEndsAt = now + table.remainingMs;
       table.elapsedBeforePause = 0;
+      notifyBlindRaise(table, table.levelIndex);
       saveState();
       if (table.format === "MTT" && table.isMttMaster) {
         broadcastMttMasterState({
@@ -2594,7 +2750,7 @@ function renderDealerView() {
     if (statusEl) {
       statusEl.textContent = isFinalLevel ? "🟢 Блайнды зафиксированы" : "🟢 Идёт игра";
     }
-    if (runningRow) runningRow.style.display = "grid";
+    if (runningRow) runningRow.style.display = "flex";
     if (colorUpBtn) colorUpBtn.style.display = "none";
     if (skipColorUpBtn) skipColorUpBtn.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "⏸ Пауза";
@@ -2616,7 +2772,7 @@ function renderDealerView() {
         statusEl.textContent = isTimedPause ? "☕ Перерыв" : "⏸ На паузе";
       }
     }
-    if (runningRow) runningRow.style.display = "grid";
+    if (runningRow) runningRow.style.display = "flex";
     if (colorUpBtn) colorUpBtn.style.display = "none";
     if (skipColorUpBtn) skipColorUpBtn.style.display = "none";
     if (pauseBtn) pauseBtn.textContent = "▶️ Продолжить";
@@ -2693,6 +2849,11 @@ function renderDealerView() {
     // idle, lobby или ready -> показываем экран выбора параметров
     if (setupPanel) setupPanel.style.display = "flex";
     if (controlCard) controlCard.style.display = "none";
+
+    const toggleNotify = document.getElementById("toggle-notify-blinds");
+    if (toggleNotify && table && table.notifyBlinds !== undefined) {
+      toggleNotify.checked = Boolean(table.notifyBlinds);
+    }
 
     const isMttSetup = (SELECTED_FORMAT === "MTT" || table.format === "MTT");
     const mttMasterIdleActions = document.getElementById("mtt-master-idle-actions");
@@ -2975,6 +3136,15 @@ if (typeof module !== "undefined" && module.exports) {
     setMttSetupPlayers: (p) => { MTT_SETUP_PLAYERS = p; },
     setDealerName: (name) => { DEALER_NAME = name; applyDealerIdentity(); },
     getLastFirebaseSyncTs: () => LAST_FIREBASE_SYNC_TS,
-    setLastFirebaseSyncTs: (ts) => { LAST_FIREBASE_SYNC_TS = ts; }
+    setLastFirebaseSyncTs: (ts) => { LAST_FIREBASE_SYNC_TS = ts; },
+    notifyBlindRaise,
+    initNotifyToggle,
+    setDealerChatId: (id) => {
+      DEALER_CHAT_ID = id;
+      const t = getMyTable();
+      if (t) t.dealerChatId = id;
+    },
+    getDealerChatId: () => DEALER_CHAT_ID,
+    getLastPauseClickTs: () => LAST_PAUSE_CLICK_TS
   };
 }

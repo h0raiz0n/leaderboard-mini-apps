@@ -80,6 +80,9 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Кэш дедупликации пушей о смене блайндов (tableId + dealerChatId + levelIndex)
+const NOTIFIED_BLINDS_MAP = new Map();
+
 module.exports = async function handler(req, res) {
   // Telegram Webhook всегда ждет 200 OK
   if (req.method === "GET") {
@@ -88,6 +91,60 @@ module.exports = async function handler(req, res) {
 
   if (req.method !== "POST") {
     return res.status(200).json({ ok: true });
+  }
+
+  const body = req.body || {};
+  const action = body.action || (req.query && req.query.action);
+
+  // Обработка пуша дилеру о смене блайндов
+  if (action === "notify_blind_raise") {
+    const tableId = String(body.tableId || "table").slice(0, 64);
+    const dealerChatId = body.dealerChatId;
+    const chatIdNum = parseInt(dealerChatId, 10);
+    if (!chatIdNum || isNaN(chatIdNum) || chatIdNum <= 0) {
+      return res.status(400).json({ ok: false, error: "missing_dealer_chat_id" });
+    }
+
+    const levelIndex = Math.max(0, parseInt(body.levelIndex, 10) || 0);
+    const sb = Math.max(0, parseInt(body.sb !== undefined ? body.sb : 5, 10) || 0);
+    const bb = Math.max(0, parseInt(body.bb !== undefined ? body.bb : 10, 10) || 0);
+    const ante = Math.max(0, parseInt(body.ante, 10) || 0);
+
+    const roundNum = levelIndex + 1;
+    const dedupKey = `${tableId}_${dealerChatId}_lvl_${levelIndex}`;
+    const dealerDedupKey = `${dealerChatId}_lvl_${levelIndex}`;
+    const now = Date.now();
+    if ((NOTIFIED_BLINDS_MAP.has(dedupKey) && (now - NOTIFIED_BLINDS_MAP.get(dedupKey) < 300000)) ||
+        (NOTIFIED_BLINDS_MAP.has(dealerDedupKey) && (now - NOTIFIED_BLINDS_MAP.get(dealerDedupKey) < 300000))) {
+      return res.status(200).json({
+        ok: true,
+        skipped: true,
+        reason: "duplicate",
+        round: roundNum
+      });
+    }
+    NOTIFIED_BLINDS_MAP.set(dedupKey, now);
+    NOTIFIED_BLINDS_MAP.set(dealerDedupKey, now);
+
+    let pushText = "";
+    if (ante > 0) {
+      pushText = `🔔 Раунд ${roundNum}: ${sb} / ${bb} (анте ${ante})`;
+    } else {
+      pushText = `🔔 Раунд ${roundNum}: ${sb} / ${bb}`;
+    }
+
+    let sent = false;
+    if (DEALER_BOT_TOKEN) {
+      await sendTelegramMessage(dealerChatId, pushText, undefined);
+      sent = true;
+    }
+
+    return res.status(200).json({
+      ok: true,
+      sent,
+      round: roundNum,
+      text: pushText
+    });
   }
 
   const update = req.body;

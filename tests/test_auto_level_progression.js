@@ -60,16 +60,16 @@ dealer.initDealerIdentity();
 dealer.startTable();
 
 const table = dealer.getMyTable();
-assert.strictEqual(table.levelIndex, 0, "На старте уровень должен быть 0 (25/50)");
+assert.strictEqual(table.levelIndex, 0, "На старте уровень должен быть 0 (5/10 Классика)");
 
 // Симулируем истечение времени уровня (таймер ушел в прошлое на 500 мс)
 table.levelEndsAt = Date.now() - 500;
 
 dealer.checkAutoLevelProgression();
 
-assert.strictEqual(table.levelIndex, 1, "Уровень должен АВТОМАТИЧЕСКИ переключиться на 1 (50/100)");
+assert.strictEqual(table.levelIndex, 1, "Уровень должен АВТОМАТИЧЕСКИ переключиться на 1 (10/25 Классика)");
 assert(table.levelEndsAt > Date.now(), "Новый levelEndsAt должен быть установлен на будущее время");
-assert.strictEqual(table.durationSec, 420, "Длительность нового уровня должна быть 420 сек");
+assert.strictEqual(table.durationSec, 600, "Длительность нового уровня должна быть 600 сек (Классика)");
 console.log("   ✅ Пульт дилера автоматически переключил уровень с 0 на 1 без ручных кликов.");
 
 // 2. Тест авто-перехода на ТВ-дашборде (tv.js)

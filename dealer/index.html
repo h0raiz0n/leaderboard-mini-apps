@@ -13,12 +13,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   
-  <link rel="stylesheet" href="/dealer/styles.css?v=20.0">
-  <script src="/shared/poker-config.js?v=20.0"></script>
-  <script src="/dealer/dealer.js?v=20.0" defer></script>
+  <link rel="stylesheet" href="/dealer/styles.css?v=21.0">
+  <script src="/shared/poker-config.js?v=21.0"></script>
+  <script src="/dealer/dealer.js?v=21.0" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js?v=20.0').catch(function () {});
+      navigator.serviceWorker.register('/sw.js?v=21.0').catch(function () {});
     }
   </script>
 </head>
@@ -240,6 +240,23 @@
       </div>
     </div>
 
+    <!-- Настройки пульта (Telegram-пуши) -->
+    <div class="selector-group notify-settings-group" id="notify-settings-group">
+      <div class="notify-toggle-card">
+        <div class="notify-toggle-info">
+          <div class="notify-toggle-title">
+            <span class="notify-toggle-icon">🔔</span>
+            <span>Пуши в Telegram</span>
+          </div>
+          <div class="notify-toggle-desc">Уведомление дилеру о смене блайндов</div>
+        </div>
+        <label class="toggle-switch" for="toggle-notify-blinds">
+          <input type="checkbox" id="toggle-notify-blinds" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
     <!-- Кнопка запуска обычного турнира (SnG / Mystery) -->
     <button type="button" class="btn btn-start" id="btn-start">
       <svg class="btn-action-icon" viewBox="0 0 20 20" fill="currentColor">
@@ -381,7 +398,7 @@
 
       <div class="btn-row" id="running-btn-row">
         <button class="btn btn-pause" id="btn-pause">⏸ Пауза</button>
-        <button class="btn btn-step" id="btn-step" title="Следующий уровень">⏩</button>
+        <button class="btn btn-step" id="btn-step" title="Следующий уровень">⏩ Следующий уровень</button>
       </div>
 
       <!-- Всплывающий снекбар отмены перехода (Undo) -->
