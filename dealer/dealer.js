@@ -3042,14 +3042,16 @@ if (typeof document !== "undefined" && typeof document.addEventListener === "fun
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       IS_SERVER_SYNC_PENDING = true;
-      syncWithServerOnWakeup();
+      return syncWithServerOnWakeup();
     }
   });
 }
 if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
   window.addEventListener("focus", () => {
-    IS_SERVER_SYNC_PENDING = true;
-    syncWithServerOnWakeup();
+    if (document.visibilityState !== "hidden") {
+      IS_SERVER_SYNC_PENDING = true;
+      return syncWithServerOnWakeup();
+    }
   });
 }
 
