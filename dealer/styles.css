@@ -95,6 +95,18 @@
   outline-offset: 2px;
 }
 
+html {
+  height: 100%;
+}
+
+html:has(body.is-game-active),
+html:has(body:has(#control-card:not([style*="display: none"]))) {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
 body {
   background: var(--bg-app);
   background-image: radial-gradient(circle at 50% 0%, #101c30 0%, #070b12 80%);

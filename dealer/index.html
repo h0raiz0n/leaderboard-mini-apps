@@ -13,12 +13,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   
-  <link rel="stylesheet" href="/dealer/styles.css?v=38.0">
-  <script src="/shared/poker-config.js?v=38.0"></script>
-  <script src="/dealer/dealer.js?v=38.0" defer></script>
+  <link rel="stylesheet" href="/dealer/styles.css?v=39.0">
+  <script src="/shared/poker-config.js?v=39.0"></script>
+  <script src="/dealer/dealer.js?v=39.0" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js?v=38.0').catch(function () {});
+      navigator.serviceWorker.register('/sw.js?v=39.0').catch(function () {});
     }
   </script>
 </head>
@@ -412,8 +412,8 @@
         <div class="confirm-toast-content">
           <span class="confirm-toast-text">Перейти на след. уровень?</span>
           <div class="confirm-toast-actions">
-            <button type="button" class="btn-toast-confirm" onclick="confirmNextLevel()">⏩ Да</button>
-            <button type="button" class="btn-toast-cancel" onclick="dismissStepToast()">✕</button>
+            <button type="button" class="btn-toast-confirm" id="btn-toast-confirm" onclick="confirmNextLevel()">⏩ Да</button>
+            <button type="button" class="btn-toast-cancel" id="btn-toast-cancel" onclick="dismissStepToast()">✕</button>
           </div>
         </div>
       </div>
