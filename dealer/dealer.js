@@ -38,6 +38,16 @@ if (typeof document !== "undefined" && document.addEventListener) {
     initButtonListeners();
     initDataSource();
     
+    // Проверка параметров URL (?mock=1..4 или hash #mock=1) для демо-режима
+    try {
+      if (typeof window !== "undefined" && window.location) {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has("mock") || (window.location.hash && window.location.hash.includes("mock"))) {
+          enableDealerSimulation();
+        }
+      }
+    } catch (e) {}
+
     // Тикер обновления интерфейса пульта каждые 250 мс
     setInterval(renderDealerView, 250);
   });
