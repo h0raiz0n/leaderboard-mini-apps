@@ -212,7 +212,7 @@
 ### Этап 1. Децентрализованные Турнирные Часы (Pure Math Clock) и Шина Сессии
 *Цель: Полная независимость таймера турнира от засыпания смартфонов любых дилеров. Ни один телефон не тикает за других. Время турнира — чистая детерминированная функция.*
 
-- [TODO] **1.1. [FIX] Архитектура Pure Math турнирных часов и ликвидация broadcastMttMasterState**
+- [IN_PROGRESS] **1.1. [FIX] Архитектура Pure Math турнирных часов и ликвидация broadcastMttMasterState**
   * **Задачи**:
     1. В `mtt_session` хранить исключительно корневые параметры турнира: `{ sessionId, startedAt, structKey, status, pausedAt, totalPausedMs }`.
     2. Полностью ликвидировать функцию `broadcastMttMasterState` (которая циклично перезаписывала чужие узлы `atmosphere/tables/{satKey}`).
