@@ -79,6 +79,9 @@ assert.strictEqual(typeof dealer.loadState, "function", "loadState должна 
 assert.doesNotThrow(() => {
   dealer.syncWithServerOnWakeup();
 }, "Вызов syncWithServerOnWakeup не должен бросать ошибок");
+if (dealer.setServerSyncPending) {
+  dealer.setServerSyncPending(false);
+}
 console.log("   ✅ Вызов syncWithServerOnWakeup() и loadState() успешен, ошибки ReferenceError устранены.");
 
 // 3. Проверка Monotonic Level Protection (защита отката уровня при просыпании телефона)

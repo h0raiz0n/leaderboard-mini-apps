@@ -23,6 +23,7 @@ let DISSOLVE_TARGET_TABLE_KEY = null;
 let TABLES_STATE = {};
 let CURRENT_MTT_SESSION = null;
 let SERVER_TIME_OFFSET = 0;
+let IS_SERVER_SYNC_PENDING = false;
 
 function getSyncedNow() {
   return Date.now() + SERVER_TIME_OFFSET;
@@ -570,6 +571,12 @@ function initDataSource() {
         });
       }
       const db = firebase.database();
+      // Отключаем предыдущие слушатели во избежание утечек и дублирования
+      try {
+        db.ref(".info/serverTimeOffset").off();
+        db.ref("atmosphere/tables").off();
+        db.ref("atmosphere/mtt_session").off();
+      } catch (e) {}
 
       // Синхронизация времени с сервером Firebase
       db.ref(".info/serverTimeOffset").on("value", (snap) => {
@@ -761,6 +768,7 @@ let PENDING_SYNC_TIMEOUT = null;
 
 function saveState() {
   if (DEALER_SIMULATION_MODE) return;
+  if (IS_SERVER_SYNC_PENDING) return;
   const myTable = getMyTable();
   if (typeof localStorage !== "undefined") {
     try {
@@ -2311,6 +2319,7 @@ function dissolveTable(tableKey) {
 
 // Автоматическое переключение уровней блайндов по истечении таймера (стандарт TDv3)
 function checkAutoLevelProgression() {
+  if (IS_SERVER_SYNC_PENDING) return;
   const table = getMyTable();
   if (table.status !== "running" || !table.levelEndsAt) return;
   if (table.requireManualStep) return;
@@ -3019,9 +3028,12 @@ if (typeof document !== "undefined" && typeof document.addEventListener === "fun
 // Автоматическое восстановление состояния при разблокировке телефона или возврате во вкладку
 async function syncWithServerOnWakeup() {
   if (DEALER_SIMULATION_MODE) return;
+  IS_SERVER_SYNC_PENDING = true;
   try {
     await fetchTablesRest();
-  } catch (e) {}
+  } catch (e) {} finally {
+    IS_SERVER_SYNC_PENDING = false;
+  }
   renderDealerView();
 }
 const loadState = syncWithServerOnWakeup;
@@ -3029,12 +3041,14 @@ const loadState = syncWithServerOnWakeup;
 if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
+      IS_SERVER_SYNC_PENDING = true;
       syncWithServerOnWakeup();
     }
   });
 }
 if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
   window.addEventListener("focus", () => {
+    IS_SERVER_SYNC_PENDING = true;
     syncWithServerOnWakeup();
   });
 }
@@ -3146,6 +3160,8 @@ if (typeof module !== "undefined" && module.exports) {
       if (t) t.dealerChatId = id;
     },
     getDealerChatId: () => DEALER_CHAT_ID,
-    getLastPauseClickTs: () => LAST_PAUSE_CLICK_TS
+    getLastPauseClickTs: () => LAST_PAUSE_CLICK_TS,
+    isServerSyncPending: () => IS_SERVER_SYNC_PENDING,
+    setServerSyncPending: (v) => { IS_SERVER_SYNC_PENDING = v; }
   };
 }
