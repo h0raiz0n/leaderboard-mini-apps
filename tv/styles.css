@@ -537,12 +537,12 @@ body.cursor-hidden * {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1.5px solid rgba(56, 189, 248, 0.55);
+  border-radius: 10px;
   padding: 6px 18px;
   margin-top: 6px;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.22);
   white-space: nowrap;
 }
 
@@ -551,12 +551,13 @@ body.cursor-hidden * {
   font-weight: 900;
   color: #38bdf8;
   line-height: 1;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
 }
 
 .upcoming-ticket-label {
   font-size: 13px;
   font-weight: 800;
-  color: #38bdf8;
+  color: #7dd3fc;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   white-space: nowrap;
@@ -568,7 +569,7 @@ body.cursor-hidden * {
   color: #ffffff;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.45), 0 2px 4px rgba(0, 0, 0, 0.6);
   white-space: nowrap;
 }
 
@@ -771,7 +772,7 @@ body.cursor-hidden * {
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
-  text-shadow: 0 0 16px var(--gold-glow);
+  text-shadow: 0 0 18px var(--gold-glow), 0 2px 4px rgba(0, 0, 0, 0.6);
   box-shadow: none !important;
 }
 
@@ -2278,5 +2279,175 @@ body.cursor-hidden * {
   border-color: var(--green);
   color: var(--green);
 }
+
+/* ==========================================
+   4K UHD & ULTRA-WIDE STADIUM BROADCAST SCALING
+   (3840x2160, 2560x1440, UltraWide 21:9)
+   Обеспечивает монументальную читаемость с 5–10 метров
+   ========================================== */
+@media (min-width: 2560px) {
+  :root {
+    --radius-card: 28px;
+    --radius-panel: 20px;
+  }
+
+  .tv-header {
+    height: 72px;
+    padding: 0 44px;
+  }
+
+  .club-title {
+    font-size: 26px;
+  }
+
+  .live-indicator {
+    font-size: 16px;
+    padding: 6px 16px;
+  }
+
+  .header-clock {
+    font-size: 26px;
+  }
+
+  .tv-viewport {
+    height: calc(100vh - 72px);
+    gap: 14px;
+    padding: 12px 18px;
+  }
+
+  .table-card {
+    padding: 24px 34px;
+  }
+
+  .tv-viewport[data-tables="1"] .timer-digits {
+    font-size: clamp(230px, 28vh, 290px);
+  }
+
+  .tv-viewport[data-tables="1"] .blinds-number.current {
+    font-size: clamp(110px, 11vw, 145px);
+  }
+
+  .tv-viewport[data-tables="1"] .ante-badge {
+    font-size: clamp(38px, 3.5vw, 50px);
+  }
+
+  .tv-viewport[data-tables="1"] .upcoming-blinds-ticket .upcoming-ticket-val {
+    font-size: clamp(34px, 2.5vw, 44px);
+  }
+
+  .tv-viewport[data-tables="2"] .timer-digits {
+    font-size: clamp(155px, 20vh, 205px);
+  }
+
+  .tv-viewport[data-tables="2"] .blinds-number.current {
+    font-size: clamp(68px, 8vw, 102px);
+  }
+
+  .tv-viewport[data-tables="2"] .ante-badge {
+    font-size: clamp(30px, 2.5vw, 40px);
+  }
+
+  .tv-viewport[data-tables="2"] .upcoming-blinds-ticket .upcoming-ticket-val {
+    font-size: clamp(28px, 2vw, 36px);
+  }
+
+  .tv-viewport[data-tables="3"] .timer-digits,
+  .tv-viewport[data-tables="4"] .timer-digits {
+    font-size: clamp(115px, 14vh, 145px);
+  }
+
+  .tv-viewport[data-tables="3"] .blinds-number.current,
+  .tv-viewport[data-tables="4"] .blinds-number.current {
+    font-size: clamp(56px, 9vh, 88px);
+  }
+
+  .tv-viewport[data-tables="3"] .ante-badge,
+  .tv-viewport[data-tables="4"] .ante-badge {
+    font-size: clamp(24px, 3vh, 36px);
+  }
+}
+
+@media (min-width: 3840px) {
+  :root {
+    --radius-card: 36px;
+    --radius-panel: 24px;
+  }
+
+  .tv-header {
+    height: 96px;
+    padding: 0 64px;
+  }
+
+  .club-title {
+    font-size: 36px;
+  }
+
+  .live-indicator {
+    font-size: 22px;
+    padding: 8px 22px;
+  }
+
+  .header-clock {
+    font-size: 36px;
+  }
+
+  .tv-viewport {
+    height: calc(100vh - 96px);
+    gap: 20px;
+    padding: 20px 28px;
+  }
+
+  .table-card {
+    padding: 32px 48px;
+  }
+
+  .tv-viewport[data-tables="1"] .timer-digits {
+    font-size: clamp(290px, 30vh, 380px);
+  }
+
+  .tv-viewport[data-tables="1"] .blinds-number.current {
+    font-size: clamp(140px, 12vw, 190px);
+  }
+
+  .tv-viewport[data-tables="1"] .ante-badge {
+    font-size: clamp(48px, 4vw, 68px);
+  }
+
+  .tv-viewport[data-tables="1"] .upcoming-blinds-ticket .upcoming-ticket-val {
+    font-size: clamp(44px, 3vw, 56px);
+  }
+
+  .tv-viewport[data-tables="2"] .timer-digits {
+    font-size: clamp(200px, 22vh, 270px);
+  }
+
+  .tv-viewport[data-tables="2"] .blinds-number.current {
+    font-size: clamp(95px, 9vw, 135px);
+  }
+
+  .tv-viewport[data-tables="2"] .ante-badge {
+    font-size: clamp(38px, 3vw, 52px);
+  }
+
+  .tv-viewport[data-tables="2"] .upcoming-blinds-ticket .upcoming-ticket-val {
+    font-size: clamp(36px, 2.5vw, 46px);
+  }
+
+  .tv-viewport[data-tables="3"] .timer-digits,
+  .tv-viewport[data-tables="4"] .timer-digits {
+    font-size: clamp(140px, 16vh, 185px);
+  }
+
+  .tv-viewport[data-tables="3"] .blinds-number.current,
+  .tv-viewport[data-tables="4"] .blinds-number.current {
+    font-size: clamp(75px, 10vh, 115px);
+  }
+
+  .tv-viewport[data-tables="3"] .ante-badge,
+  .tv-viewport[data-tables="4"] .ante-badge {
+    font-size: clamp(32px, 3.5vh, 48px);
+  }
+}
+
 
 

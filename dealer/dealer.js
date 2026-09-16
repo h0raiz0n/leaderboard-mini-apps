@@ -257,7 +257,17 @@ function triggerHaptic(type = "light") {
       if (type === "medium") window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
       else if (type === "heavy") window.Telegram.WebApp.HapticFeedback.impactOccurred("heavy");
       else if (type === "success") window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
+      else if (type === "warning" || type === "error") window.Telegram.WebApp.HapticFeedback.notificationOccurred(type === "warning" ? "warning" : "error");
       else window.Telegram.WebApp.HapticFeedback.impactOccurred("light");
+      return;
+    } catch (e) {}
+  }
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    try {
+      if (type === "heavy" || type === "error") navigator.vibrate([40, 30, 40]);
+      else if (type === "medium" || type === "warning") navigator.vibrate(25);
+      else if (type === "success") navigator.vibrate([15, 20, 15]);
+      else navigator.vibrate(12);
     } catch (e) {}
   }
 }
