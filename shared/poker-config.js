@@ -179,6 +179,183 @@ const POKER_CONFIG = {
     if (table.format !== "MTT") return false;
     if (table.dissolved) return false;
     return table.mttSessionId === currentSession.sessionId;
+  },
+
+  // ==========================================
+  // ДЕКЛАРАТИВНЫЙ ЧИСТЫЙ РАСЧЕТ ВРЕМЕНИ И УРОВНЕЙ (STAGE 4)
+  // ==========================================
+  formatTime: function(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const min = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  },
+
+  calculateTournamentProgress: function(structure, startedAt, totalPausedMs = 0, pausedAt = null, now = Date.now(), options = {}) {
+    let levels = [];
+    if (Array.isArray(structure)) {
+      levels = structure;
+    } else if (structure && Array.isArray(structure.levels)) {
+      levels = structure.levels;
+    } else if (typeof structure === "string" && POKER_CONFIG.BLIND_STRUCTURES && POKER_CONFIG.BLIND_STRUCTURES[structure]) {
+      levels = POKER_CONFIG.BLIND_STRUCTURES[structure].levels;
+    } else if (POKER_CONFIG.BLIND_STRUCTURES && POKER_CONFIG.BLIND_STRUCTURES.SNG_DEEP_1500) {
+      levels = POKER_CONFIG.BLIND_STRUCTURES.SNG_DEEP_1500.levels;
+    }
+
+    if (!levels || levels.length === 0) {
+      levels = [
+        { level: 1, sb: 25, bb: 50, ante: 0, durationSec: 600, label: "25 / 50", isBreak: false }
+      ];
+    }
+
+    const isPaused = Boolean(pausedAt && pausedAt > 0);
+    const effectiveNow = isPaused ? pausedAt : now;
+
+    if (!startedAt || startedAt <= 0) {
+      const firstLevel = levels[0];
+      const durSec = firstLevel.durationSec || 600;
+      return {
+        levelIndex: 0,
+        levelNumber: firstLevel.level || 1,
+        currentLevel: firstLevel,
+        nextLevel: levels[1] || null,
+        sb: firstLevel.sb || 0,
+        bb: firstLevel.bb || 0,
+        ante: firstLevel.ante || 0,
+        label: firstLevel.label || `${firstLevel.sb || 0} / ${firstLevel.bb || 0}`,
+        isBreak: Boolean(firstLevel.isBreak),
+        isPaused: false,
+        isOvertime: false,
+        elapsedMs: 0,
+        levelElapsedMs: 0,
+        levelRemainingMs: durSec * 1000,
+        levelRemainingSec: durSec,
+        levelDurationSec: durSec,
+        totalTournamentElapsedSec: 0,
+        formattedRemaining: POKER_CONFIG.formatTime(durSec),
+        levelEndsAt: null
+      };
+    }
+
+    const elapsedMs = Math.max(0, (effectiveNow - startedAt) - (totalPausedMs || 0));
+    const totalTournamentElapsedSec = Math.floor(elapsedMs / 1000);
+
+    let accumulatedMs = 0;
+    let targetIndex = 0;
+    let levelElapsedMs = 0;
+    let levelRemainingMs = 0;
+    let isOvertime = false;
+
+    if (options.manualLevelIndex !== undefined && options.manualLevelIndex !== null) {
+      targetIndex = Math.min(Math.max(0, options.manualLevelIndex), levels.length - 1);
+      const lvlDurMs = (levels[targetIndex].durationSec || 600) * 1000;
+      if (options.remainingMs !== undefined && options.remainingMs !== null) {
+        levelRemainingMs = Math.max(0, options.remainingMs);
+        levelElapsedMs = Math.max(0, lvlDurMs - levelRemainingMs);
+      } else {
+        levelElapsedMs = 0;
+        levelRemainingMs = lvlDurMs;
+      }
+    } else {
+      let found = false;
+      for (let i = 0; i < levels.length; i++) {
+        const lvlDurationMs = (levels[i].durationSec || 600) * 1000;
+        if (elapsedMs < accumulatedMs + lvlDurationMs) {
+          targetIndex = i;
+          levelElapsedMs = elapsedMs - accumulatedMs;
+          levelRemainingMs = lvlDurationMs - levelElapsedMs;
+          found = true;
+          break;
+        }
+        accumulatedMs += lvlDurationMs;
+      }
+
+      if (!found) {
+        targetIndex = levels.length - 1;
+        const lastLvlDurMs = (levels[targetIndex].durationSec || 600) * 1000;
+        const prevLevelsMs = accumulatedMs - lastLvlDurMs;
+        levelElapsedMs = elapsedMs - prevLevelsMs;
+        levelRemainingMs = 0;
+        isOvertime = true;
+      }
+    }
+
+    const currentLevel = levels[targetIndex];
+    const nextLevel = levels[targetIndex + 1] || null;
+    const levelRemainingSec = Math.ceil(levelRemainingMs / 1000);
+    const levelDurationSec = currentLevel.durationSec || 600;
+
+    return {
+      levelIndex: targetIndex,
+      levelNumber: currentLevel.level || (targetIndex + 1),
+      currentLevel,
+      nextLevel,
+      sb: currentLevel.sb,
+      bb: currentLevel.bb,
+      ante: currentLevel.ante || 0,
+      label: currentLevel.label || `${currentLevel.sb} / ${currentLevel.bb}`,
+      isBreak: Boolean(currentLevel.isBreak),
+      isPaused,
+      isOvertime,
+      elapsedMs,
+      levelElapsedMs,
+      levelRemainingMs,
+      levelRemainingSec,
+      levelDurationSec,
+      totalTournamentElapsedSec,
+      formattedRemaining: POKER_CONFIG.formatTime(levelRemainingSec),
+      levelEndsAt: isPaused ? null : (effectiveNow + levelRemainingMs)
+    };
+  },
+
+  calculateTableProgress: function(table, now = Date.now()) {
+    if (!table) return this.calculateTournamentProgress(null, null, 0, null, now);
+    const structKey = table.structKey || table.structureId;
+    let structure = table.customStructure || (structKey && this.BLIND_STRUCTURES && this.BLIND_STRUCTURES[structKey]);
+    
+    // Если структура явно не задана через structKey/customStructure, формируем ее с учетом table.durationSec
+    if (!structure) {
+      const dur = table.durationSec || 420;
+      const baseStruct = (this.BLIND_STRUCTURES && this.BLIND_STRUCTURES.SNG_STANDARD) || (this.BLIND_STRUCTURES && this.BLIND_STRUCTURES.SNG_DEEP_1500);
+      if (baseStruct && baseStruct.levels) {
+        structure = {
+          levels: baseStruct.levels.map(l => Object.assign({}, l, { durationSec: dur }))
+        };
+      } else {
+        structure = {
+          levels: [
+            { level: 1, sb: 25, bb: 50, ante: 0, durationSec: dur, label: "25 / 50", isBreak: false }
+          ]
+        };
+      }
+    } else if (table.durationSec && structure.levels && structure.levels[0] && structure.levels[0].durationSec !== table.durationSec && !table.structKey) {
+      structure = {
+        levels: structure.levels.map(l => Object.assign({}, l, { durationSec: table.durationSec }))
+      };
+    }
+
+    const pausedAt = (table.status === "paused") ? (table.pausedAt || now) : null;
+    
+    const options = {};
+    if (table.levelIndex !== undefined && table.levelIndex !== null) {
+      if (table.levelEndsAt && table.status === "running") {
+        options.manualLevelIndex = table.levelIndex;
+        options.remainingMs = Math.max(0, table.levelEndsAt - now);
+      } else if (table.remainingMs !== undefined && table.status === "paused") {
+        options.manualLevelIndex = table.levelIndex;
+        options.remainingMs = table.remainingMs;
+      }
+    }
+
+    return this.calculateTournamentProgress(
+      structure,
+      table.startedAt,
+      table.totalPausedMs || 0,
+      pausedAt,
+      now,
+      options
+    );
   }
 };
 

@@ -2704,10 +2704,14 @@ function renderDealerView() {
     dismissStepToast();
   }
 
-  // Расчет времени по абсолютным меткам (без дрифта при сворачивании и без скачков при паузе)
+  // Расчет времени по абсолютным меткам (декларативная математика времени Stage 4)
   let remaining = currentLvl.durationSec;
   let totalElapsed = table.elapsedBeforePause || 0;
-  if (table.status === "running") {
+  if (typeof POKER_CONFIG !== "undefined" && typeof POKER_CONFIG.calculateTableProgress === "function") {
+    const progress = POKER_CONFIG.calculateTableProgress(table, now);
+    remaining = progress.levelRemainingSec;
+    totalElapsed = progress.levelElapsedMs ? Math.floor(progress.levelElapsedMs / 1000) : Math.max(0, table.durationSec - remaining);
+  } else if (table.status === "running") {
     if (table.levelEndsAt) {
       remaining = Math.max(0, Math.ceil((table.levelEndsAt - now) / 1000));
       totalElapsed = Math.max(0, table.durationSec - remaining);

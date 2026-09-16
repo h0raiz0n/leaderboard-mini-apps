@@ -647,7 +647,7 @@ function getTableStructure(table) {
   ];
 }
 
-// Расчёт времени стола
+// Расчёт времени стола (декларативная математика времени Stage 4)
 function calculateTableTime(table, isFinalLevel = false) {
   const now = getSyncedNow();
   const duration = table.durationSec || 420;
@@ -655,7 +655,41 @@ function calculateTableTime(table, isFinalLevel = false) {
   let isOvertime = false;
   let remaining = 0;
 
-  if (table.status === "running") {
+  if (isFinalLevel) {
+    if (table.status === "running") {
+      if (table.levelEndsAt) {
+        if (now <= table.levelEndsAt) {
+          remaining = Math.max(0, Math.ceil((table.levelEndsAt - now) / 1000));
+          elapsed = duration - remaining;
+        } else {
+          const overtimeSec = Math.floor((now - table.levelEndsAt) / 1000);
+          remaining = 0;
+          elapsed = duration + overtimeSec;
+          isOvertime = true;
+        }
+      } else if (table.startedAt) {
+        elapsed += Math.floor((now - table.startedAt) / 1000);
+        if (elapsed >= duration) {
+          isOvertime = true;
+          remaining = 0;
+        } else {
+          remaining = Math.max(0, duration - elapsed);
+        }
+      }
+    } else if (table.status === "paused") {
+      if (table.remainingMs !== undefined && table.remainingMs !== null) {
+        remaining = Math.max(0, Math.ceil(table.remainingMs / 1000));
+        elapsed = Math.max(0, duration - remaining);
+      } else {
+        remaining = Math.max(0, duration - elapsed);
+      }
+    }
+  } else if (typeof POKER_CONFIG !== "undefined" && typeof POKER_CONFIG.calculateTableProgress === "function") {
+    const progress = POKER_CONFIG.calculateTableProgress(table, now);
+    remaining = progress.levelRemainingSec;
+    elapsed = progress.levelElapsedMs ? Math.floor(progress.levelElapsedMs / 1000) : Math.max(0, duration - remaining);
+    isOvertime = progress.isOvertime;
+  } else if (table.status === "running") {
     if (table.levelEndsAt) {
       if (now <= table.levelEndsAt) {
         remaining = Math.max(0, Math.ceil((table.levelEndsAt - now) / 1000));
