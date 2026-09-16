@@ -2780,6 +2780,19 @@ function renderDealerView() {
     }
   }
 
+  const isGameRunningOrPaused = Boolean(table && (table.status === "running" || table.status === "paused"));
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.toggle("is-game-active", isGameRunningOrPaused);
+    document.body.classList.toggle("status-running", table.status === "running");
+    document.body.classList.toggle("status-paused", table.status === "paused");
+    if (document.body.dataset) {
+      document.body.dataset.gameStatus = table.status || "idle";
+    }
+  }
+  if (controlCard && controlCard.dataset) {
+    controlCard.dataset.status = table.status || "idle";
+  }
+
   if (table.status === "running") {
     if (setupPanel) setupPanel.style.display = "none";
     if (controlCard) controlCard.style.display = "block";
