@@ -655,6 +655,11 @@ function calculateTableTime(table, isFinalLevel = false) {
   let isOvertime = false;
   let remaining = 0;
 
+  const pokerConfig = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG)
+    || (typeof window !== "undefined" && window.POKER_CONFIG)
+    || (typeof global !== "undefined" && global.POKER_CONFIG)
+    || (typeof require !== "undefined" ? (() => { try { return require("../shared/poker-config.js"); } catch (e) { return null; } })() : null);
+
   if (isFinalLevel) {
     if (table.status === "running") {
       if (table.levelEndsAt) {
@@ -684,8 +689,8 @@ function calculateTableTime(table, isFinalLevel = false) {
         remaining = Math.max(0, duration - elapsed);
       }
     }
-  } else if (typeof POKER_CONFIG !== "undefined" && typeof POKER_CONFIG.calculateTableProgress === "function") {
-    const progress = POKER_CONFIG.calculateTableProgress(table, now);
+  } else if (pokerConfig && typeof pokerConfig.calculateTableProgress === "function") {
+    const progress = pokerConfig.calculateTableProgress(table, now);
     remaining = progress.levelRemainingSec;
     elapsed = progress.levelElapsedMs ? Math.floor(progress.levelElapsedMs / 1000) : Math.max(0, duration - remaining);
     isOvertime = progress.isOvertime;

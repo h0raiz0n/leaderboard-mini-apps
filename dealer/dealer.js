@@ -2706,9 +2706,13 @@ function renderDealerView() {
 
   // Расчет времени по абсолютным меткам (декларативная математика времени Stage 4)
   let remaining = currentLvl.durationSec;
-  let totalElapsed = table.elapsedBeforePause || 0;
-  if (typeof POKER_CONFIG !== "undefined" && typeof POKER_CONFIG.calculateTableProgress === "function") {
-    const progress = POKER_CONFIG.calculateTableProgress(table, now);
+  const pokerConfig = (typeof POKER_CONFIG !== "undefined" && POKER_CONFIG)
+    || (typeof window !== "undefined" && window.POKER_CONFIG)
+    || (typeof global !== "undefined" && global.POKER_CONFIG)
+    || (typeof require !== "undefined" ? (() => { try { return require("../shared/poker-config.js"); } catch (e) { return null; } })() : null);
+
+  if (pokerConfig && typeof pokerConfig.calculateTableProgress === "function") {
+    const progress = pokerConfig.calculateTableProgress(table, now);
     remaining = progress.levelRemainingSec;
     totalElapsed = progress.levelElapsedMs ? Math.floor(progress.levelElapsedMs / 1000) : Math.max(0, table.durationSec - remaining);
   } else if (table.status === "running") {

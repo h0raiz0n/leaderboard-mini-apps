@@ -212,7 +212,7 @@ const POKER_CONFIG = {
     const isPaused = Boolean(pausedAt && pausedAt > 0);
     const effectiveNow = isPaused ? pausedAt : now;
 
-    if (!startedAt || startedAt <= 0) {
+    if ((!startedAt || startedAt <= 0) && (options.remainingMs === undefined || options.remainingMs === null)) {
       const firstLevel = levels[0];
       const durSec = firstLevel.durationSec || 600;
       return {
@@ -256,6 +256,12 @@ const POKER_CONFIG = {
       } else {
         levelElapsedMs = 0;
         levelRemainingMs = lvlDurMs;
+      }
+      if (options.isOvertime || (targetIndex === levels.length - 1 && levelRemainingMs === 0)) {
+        isOvertime = true;
+        if (options.overtimeMs) {
+          levelElapsedMs = lvlDurMs + options.overtimeMs;
+        }
       }
     } else {
       let found = false;
@@ -338,14 +344,21 @@ const POKER_CONFIG = {
     const pausedAt = (table.status === "paused") ? (table.pausedAt || now) : null;
     
     const options = {};
-    if (table.levelIndex !== undefined && table.levelIndex !== null) {
-      if (table.levelEndsAt && table.status === "running") {
-        options.manualLevelIndex = table.levelIndex;
-        options.remainingMs = Math.max(0, table.levelEndsAt - now);
-      } else if (table.remainingMs !== undefined && table.status === "paused") {
-        options.manualLevelIndex = table.levelIndex;
-        options.remainingMs = table.remainingMs;
+    if (table.requireManualStep && table.levelIndex !== undefined && table.levelIndex !== null) {
+      options.manualLevelIndex = table.levelIndex;
+      options.remainingMs = (table.remainingMs !== undefined && table.remainingMs !== null) ? table.remainingMs : 0;
+    } else if (table.levelEndsAt && table.status === "running") {
+      options.manualLevelIndex = (table.levelIndex !== undefined && table.levelIndex !== null) ? table.levelIndex : 0;
+      if (now <= table.levelEndsAt) {
+        options.remainingMs = table.levelEndsAt - now;
+      } else {
+        options.remainingMs = 0;
+        options.isOvertime = true;
+        options.overtimeMs = now - table.levelEndsAt;
       }
+    } else if (table.remainingMs !== undefined && table.remainingMs !== null && table.status === "paused") {
+      options.manualLevelIndex = (table.levelIndex !== undefined && table.levelIndex !== null) ? table.levelIndex : 0;
+      options.remainingMs = table.remainingMs;
     }
 
     return this.calculateTournamentProgress(
