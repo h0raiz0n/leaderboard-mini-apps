@@ -48,6 +48,12 @@ body {
   flex-direction: column;
 }
 
+/* Автоскрытие курсора мыши на экране ТВ при бездействии */
+body.cursor-hidden,
+body.cursor-hidden * {
+  cursor: none !important;
+}
+
 /* Верхняя статусная панель (компактная, нулевой мусор) */
 .tv-header {
   height: 52px;
