@@ -877,6 +877,14 @@ function doGet(e) {
         var reg = (typeof syncDealersToFirebase === "function") ? syncDealersToFirebase() : null;
         payload = { success: true, type: "sync_dealers", registry: reg, generatedAt: new Date() };
         break;
+      case "publish_latest_mtt":
+        var resMTT = (typeof resendLatestGame === "function") ? resendLatestGame("MTT") : { success: false, message: "no resendLatestGame fn" };
+        payload = { success: true, type: "publish_latest_mtt", result: resMTT, generatedAt: new Date() };
+        break;
+      case "inspect_tg":
+        var insp = (typeof inspectTelegramChat === "function") ? inspectTelegramChat() : { error: "no inspectTelegramChat fn" };
+        payload = { success: true, type: "inspect_tg", inspection: insp, generatedAt: new Date() };
+        break;
       case "diag":
         if (!admin) { payload = { success: false, error: "unauthorized" }; break; }
         var diagData = (typeof telegramDiag === "function") ? telegramDiag() : { error: "no diag" };

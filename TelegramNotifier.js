@@ -40,6 +40,43 @@ function telegramDiag() {
 }
 
 /**
+ * Проверка статуса бота и прав в чате через Telegram API.
+ */
+function inspectTelegramChat() {
+  var token = getBotToken();
+  var chatId = getChatId();
+  if (!token || !chatId) {
+    return { ok: false, error: "Token or ChatId missing" };
+  }
+
+  var out = { chatId: chatId };
+  try {
+    var meRes = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/getMe", { muteHttpExceptions: true });
+    out.me = JSON.parse(meRes.getContentText());
+  } catch (e) {
+    out.me = { error: e.message };
+  }
+
+  try {
+    var chatRes = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/getChat?chat_id=" + encodeURIComponent(chatId), { muteHttpExceptions: true });
+    out.chat = JSON.parse(chatRes.getContentText());
+  } catch (e) {
+    out.chat = { error: e.message };
+  }
+
+  if (out.me && out.me.result && out.me.result.id) {
+    try {
+      var memberRes = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/getChatMember?chat_id=" + encodeURIComponent(chatId) + "&user_id=" + out.me.result.id, { muteHttpExceptions: true });
+      out.botMember = JSON.parse(memberRes.getContentText());
+    } catch (e) {
+      out.botMember = { error: e.message };
+    }
+  }
+
+  return out;
+}
+
+/**
  * Вернуть публичный URL лидерборда (учитывая скриптовые свойства).
  * @returns {string} URL или "" если не настроен.
  */
@@ -208,6 +245,24 @@ function notifyGameResult(format, date, dealer, gameNumber, items) {
 }
 
 /**
+ * Безопасное получение таблицы (активной или по ID).
+ */
+function getAdminSpreadsheet() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) return ss;
+  } catch (e) {}
+
+  var pubId = getScriptProperty("PUBLIC_SPREADSHEET_ID", CONFIG.PUBLIC_SPREADSHEET_ID);
+  if (pubId && pubId.indexOf("ВСТАВЬ") === -1) {
+    try {
+      return SpreadsheetApp.openById(pubId);
+    } catch (e2) {}
+  }
+  return null;
+}
+
+/**
  * Повторная (или ручная) отправка победного поста в Telegram для любой игры из DB_Results.
  * @param {string} gameId ID игры (например, H_MTT_2026-09-16_...)
  * @returns {Object} { success: boolean, message: string }
@@ -215,7 +270,8 @@ function notifyGameResult(format, date, dealer, gameNumber, items) {
 function resendGameNotification(gameId) {
   if (!gameId) return { success: false, message: "Не указан gameId" };
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getAdminSpreadsheet();
+  if (!ss) return { success: false, message: "Не удалось открыть таблицу" };
   var dbSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
   if (!dbSheet) return { success: false, message: "Лист DB_Results не найден" };
 
@@ -280,7 +336,8 @@ function resendGameNotification(gameId) {
  * @param {string} [formatFilter] Опциональный фильтр формата ("MTT", "SnG", "Mystery Bounty")
  */
 function resendLatestGame(formatFilter) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getAdminSpreadsheet();
+  if (!ss) return { success: false, message: "Не удалось открыть таблицу" };
   var dbSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
   if (!dbSheet) return { success: false, message: "Лист DB_Results не найден" };
 
