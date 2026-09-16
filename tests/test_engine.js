@@ -257,11 +257,66 @@ function testPlayerCardMilestones() {
   console.log("✔ Test 6 Passed: Player Card Milestones, Buffers and Gaps calculate flawlessly");
 }
 
+// Test 7: MTT Sheet Name Aliases (Cyrillic, Spaces, MTT_POKER) & Telegram Notification Text
+function testMttNormalizationAndNotification() {
+  const sb = loadSandbox(['TelegramNotifier.js']);
+
+  // 1. Sheet name variations
+  const variations = ["MTT", "МТТ", "MTT ", " МТТ ", "MTT_POKER", "МТТ_POKER", "MTT Турнир"];
+  for (const v of variations) {
+    const cfg = sb.getFormatConfigByRawSheet(v);
+    assert.ok(cfg, `Failed to resolve format for sheet variation "${v}"`);
+    assert.strictEqual(cfg.formatName, "MTT");
+    assert.strictEqual(cfg.places.length, 5);
+  }
+
+  // 2. MTT row normalization
+  const sampleRow = [
+    "2026-09-16 23:30:00",
+    "2026-09-16",
+    "Влад",
+    "Иван Иванов 123",
+    "Петр Петров 456",
+    "Сергей Сергеев 789",
+    "Алексей Алексеев 111",
+    "Дмитрий Дмитриев 222",
+    "Заметки об игре"
+  ];
+
+  const norm = sb.normalizeFormRow("МТТ", sampleRow, "H_MTT_2026-09-16_123");
+  assert.strictEqual(norm.format, "MTT");
+  assert.strictEqual(norm.dealer, "Влад");
+  assert.strictEqual(norm.items.length, 5);
+  assert.strictEqual(norm.items[0].player, "Иван Иванов");
+  assert.strictEqual(norm.items[0].points, 30);
+  assert.strictEqual(norm.items[4].player, "Дмитрий Дмитриев");
+  assert.strictEqual(norm.items[4].points, 5);
+
+  // 3. Notification text builder
+  const notifyItems = [
+    { event: "1 место", playerNick: "Иван123", points: 30, isParticipating: true },
+    { event: "2 место", playerNick: "Петр456", points: 20, isParticipating: true },
+    { event: "3 место", playerNick: "Сергей789", points: 14, isParticipating: true },
+    { event: "4 место", playerNick: "Алексей111", points: 9, isParticipating: true },
+    { event: "5 место", playerNick: "Дмитрий222", points: 5, isParticipating: true }
+  ];
+
+  const text = sb.buildNotificationText("MTT", "2026-09-16", "Влад", 2, notifyItems);
+  assert.ok(text.includes("[MTT]"));
+  assert.ok(text.includes("🥇 <b>1 место:</b> Иван123 (+30 очков)"));
+  assert.ok(text.includes("5️⃣ <b>5 место:</b> Дмитрий222 (+5 очков)"));
+  assert.ok(text.includes("2-я игра у ведущего за сегодня"));
+
+  console.log("✔ Test 7 Passed: MTT Sheet Name Aliases & Telegram Notification Text verified");
+}
+
 testCleanPlayerName();
 testNormalizeFormRows();
 testUnifiedGameId();
 testDynamicChunkedCache();
 testAchievementsFormulas();
 testPlayerCardMilestones();
+testMttNormalizationAndNotification();
 
-console.log("\nALL TEST SUITES PASSED PERFECTLY! (6/6)");
+console.log("\nALL TEST SUITES PASSED PERFECTLY! (7/7)");
+

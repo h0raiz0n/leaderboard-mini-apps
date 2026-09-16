@@ -12,7 +12,12 @@
 var RAW_SHEET_TO_FORMAT_KEY = {
   "Data": "Data",
   "MTT": "MTT",
-  "Mystery": "Mystery"
+  "МТТ": "MTT",
+  "MTT_POKER": "MTT",
+  "МТТ_POKER": "MTT",
+  "Mystery": "Mystery",
+  "Mystery Bounty": "Mystery",
+  "Мистери": "Mystery"
 };
 
 /**
@@ -37,10 +42,22 @@ function cleanPlayerName(raw) {
 
 /**
  * Получить конфигурацию формата по имени листа-приёмника.
+ * Устойчив к кириллице (МТТ), пробелам и названию формы MTT_POKER.
  * @returns {Object|null} конфиг формата или null, если лист не является игровым
  */
 function getFormatConfigByRawSheet(sheetName) {
-  var key = RAW_SHEET_TO_FORMAT_KEY[sheetName];
+  if (!sheetName) return null;
+  var s = String(sheetName).trim();
+  var upper = s.toUpperCase();
+  if (upper === "MTT" || upper === "МТТ" || upper === "MTT_POKER" || upper === "МТТ_POKER" || upper.indexOf("MTT") === 0 || upper.indexOf("МТТ") === 0) {
+    s = "MTT";
+  } else if (upper === "MYSTERY" || upper === "МИСТЕРИ" || upper.indexOf("MYSTERY") === 0) {
+    s = "Mystery";
+  } else if (upper === "DATA" || upper === "SNG" || upper === "СНГ") {
+    s = "Data";
+  }
+
+  var key = RAW_SHEET_TO_FORMAT_KEY[s];
   if (!key) return null;
   var cfg = CONFIG.FORMATS[key];
   if (!cfg) return null;
@@ -277,6 +294,7 @@ if (typeof module !== "undefined" && module.exports) {
     cleanPlayerName: cleanPlayerName,
     normalizeFormRow: normalizeFormRow,
     getFormatConfigByRawSheet: getFormatConfigByRawSheet,
-    buildNickMap: buildNickMap
+    buildNickMap: buildNickMap,
+    unifiedGameId: unifiedGameId
   };
 }

@@ -375,3 +375,16 @@ function clearRawRowPlayers(rawInfo) {
     }
   }
 }
+
+/**
+ * Отправить (или повторно отправить) победный пост в Telegram для игры.
+ * Вызывается из боковой панели GameManager.
+ * @param {string} gameId ID игры
+ * @returns {Object} { success, message }
+ */
+function adminResendTelegram(gameId) {
+  if (typeof resendGameNotification === "function") {
+    return resendGameNotification(gameId);
+  }
+  return { success: false, message: "Функция resendGameNotification не найдена" };
+}

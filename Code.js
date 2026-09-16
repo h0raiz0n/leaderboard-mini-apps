@@ -12,8 +12,45 @@ function onOpen() {
       .addItem('🧹 СВЕРКА С СЫРЫМИ (ПРЕДПРОСМОТР)', 'reconcilePreview')
       .addItem('🧹 СВЕРКА С СЫРЫМИ (ПРИМЕНИТЬ)', 'reconcileCommit')
       .addSeparator()
+      .addItem('📢 ОТПРАВИТЬ В TG ПОСЛЕДНЮЮ ИГРУ', 'menuResendLatestGame')
+      .addItem('🔔 ТЕСТ СВЯЗИ С TELEGRAM', 'menuTestTelegram')
+      .addSeparator()
       .addItem('🎨 ОФОРМИТЬ ЛИДЕРБОРД', 'applyLeaderboardFormatting')
       .addToUi();
+}
+
+/**
+ * Ручной пуш победного поста в Telegram для самой свежей игры из DB_Results.
+ */
+function menuResendLatestGame() {
+  var ui = SpreadsheetApp.getUi();
+  if (typeof resendLatestGame !== "function") {
+    ui.alert("⚠️ Функция resendLatestGame не найдена в проекте.");
+    return;
+  }
+  var res = resendLatestGame();
+  if (res && res.success) {
+    ui.alert("✅ Успешно!\n\n" + res.message);
+  } else {
+    ui.alert("⚠️ Не удалось отправить:\n\n" + (res && res.message ? res.message : "Неизвестная ошибка"));
+  }
+}
+
+/**
+ * Проверка связи с ботом Telegram через тестовое сообщение.
+ */
+function menuTestTelegram() {
+  var ui = SpreadsheetApp.getUi();
+  if (typeof sendTelegramMessage !== "function") {
+    ui.alert("⚠️ Функция sendTelegramMessage не найдена в проекте.");
+    return;
+  }
+  var res = sendTelegramMessage("🔔 Тестовое сообщение из Google Таблицы Атмосферы — бот работает исправно!");
+  if (res && res.ok) {
+    ui.alert("✅ Тест успешен!\nСообщение доставлено в Telegram.");
+  } else {
+    ui.alert("⚠️ Ошибка отправки:\nКод: " + (res ? res.code : "нет") + "\nОтвет: " + (res ? (res.response || res.error) : "нет ответа"));
+  }
 }
 
 function syncAll() {
@@ -206,8 +243,14 @@ function processFormSubmit(e) {
     // Записываем участников в DB_Results
     if (rowsToInsert.length > 0 && dbSheet) {
       dbSheet.getRange(dbSheet.getLastRow() + 1, 1, rowsToInsert.length, 8).setValues(rowsToInsert);
-      calculateLeaderboard();
-      invalidateAnalyticsCache();
+      try {
+        calculateLeaderboard();
+      } catch (errCalc) {
+        Logger.log("Ошибка calculateLeaderboard: " + errCalc.message);
+      }
+      try {
+        invalidateAnalyticsCache();
+      } catch (errCache) {}
       try {
         pushLeaderboardUpdate(gameId, format, dateStr);
       } catch (errSync) {}
@@ -216,9 +259,14 @@ function processFormSubmit(e) {
 
     // Подсчёт порядкового номера игры дилера за сегодня.
     // Считаем ТОЛЬКО из источника (листов форм), чтобы не терять "пустые" игры.
-    var dealerGameCount = countDealerGamesToday(
-      sheet.getParent(), sheetName, dateStr, dealer, gameId
-    );
+    var dealerGameCount = 1;
+    try {
+      dealerGameCount = countDealerGamesToday(
+        sheet.getParent(), sheetName, dateStr, dealer, gameId
+      );
+    } catch (errCount) {
+      Logger.log("Ошибка countDealerGamesToday: " + errCount.message);
+    }
     log.dealerCount = dealerGameCount;
 
     // Подтягиваем анонимные никнеймы для Telegram

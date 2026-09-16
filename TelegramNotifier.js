@@ -103,7 +103,7 @@ function sendTelegramMessage(messageText, keyboard) {
 
   var buttons = keyboard || buildInlineKeyboard();
   if (buttons && buttons.length) {
-    payload.reply_markup = JSON.stringify({ inline_keyboard: buttons });
+    payload.reply_markup = { inline_keyboard: buttons };
   }
 
   var url = "https://api.telegram.org/bot" + token + "/sendMessage";
@@ -116,16 +116,26 @@ function sendTelegramMessage(messageText, keyboard) {
 
   try {
     var response = UrlFetchApp.fetch(url, options);
+    var statusCode = response.getResponseCode();
     var respText = response.getContentText();
-    Logger.log("Telegram Response: " + respText);
+    Logger.log("Telegram Response [" + statusCode + "]: " + respText);
+    var isOk = (statusCode === 200);
     try {
-      PropertiesService.getScriptProperties().setProperty("LAST_TG", response.getResponseCode() + "|" + respText.substring(0, 300));
+      var props = PropertiesService.getScriptProperties();
+      props.setProperty("LAST_TG", statusCode + "|" + respText.substring(0, 300));
+      if (!isOk) {
+        props.setProperty("LAST_TG_ERR", statusCode + ": " + respText.substring(0, 300));
+      }
     } catch (e2) {}
+    return { ok: isOk, code: statusCode, response: respText };
   } catch (e) {
     Logger.log("Ошибка отправки в Telegram: " + e.message);
     try {
-      PropertiesService.getScriptProperties().setProperty("LAST_TG", "NETERR|" + e.message.substring(0, 200));
+      var props2 = PropertiesService.getScriptProperties();
+      props2.setProperty("LAST_TG", "NETERR|" + e.message.substring(0, 200));
+      props2.setProperty("LAST_TG_ERR", "NETERR: " + e.message.substring(0, 200));
     } catch (e2) {}
+    return { ok: false, error: e.message };
   }
 }
 
@@ -142,7 +152,10 @@ function escapeTelegramHtml(str) {
     .replace(/>/g, "&gt;");
 }
 
-function notifyGameResult(format, date, dealer, gameNumber, items) {
+/**
+ * Формирование форматированного HTML-текста сообщения для Telegram.
+ */
+function buildNotificationText(format, date, dealer, gameNumber, items) {
   var titleEmoji = format === "Mystery Bounty" ? "🎯" : (format === "MTT" ? "🏆" : "🃏");
   var safeFormat = escapeTelegramHtml(format);
   var safeDealer = escapeTelegramHtml(dealer);
@@ -156,7 +169,7 @@ function notifyGameResult(format, date, dealer, gameNumber, items) {
   var placesText = "";
   var koText = "";
 
-  for (var i = 0; i < items.length; i++) {
+  for (var i = 0; i < (items || []).length; i++) {
     var item = items[i];
     var placePrefix = "";
     var safeNick = escapeTelegramHtml(item.playerNick);
@@ -186,6 +199,116 @@ function notifyGameResult(format, date, dealer, gameNumber, items) {
 
   text += "───────────────────────────\n";
   text += "📊 <i>Полный лидерборд и статистика — по кнопкам ниже.</i>";
+  return text;
+}
 
-  sendTelegramMessage(text);
+function notifyGameResult(format, date, dealer, gameNumber, items) {
+  var text = buildNotificationText(format, date, dealer, gameNumber, items);
+  return sendTelegramMessage(text);
+}
+
+/**
+ * Повторная (или ручная) отправка победного поста в Telegram для любой игры из DB_Results.
+ * @param {string} gameId ID игры (например, H_MTT_2026-09-16_...)
+ * @returns {Object} { success: boolean, message: string }
+ */
+function resendGameNotification(gameId) {
+  if (!gameId) return { success: false, message: "Не указан gameId" };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dbSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
+  if (!dbSheet) return { success: false, message: "Лист DB_Results не найден" };
+
+  var data = dbSheet.getDataRange().getValues();
+  if (data.length <= 1) return { success: false, message: "DB_Results пуст" };
+
+  var format = "";
+  var rawDate = "";
+  var dealer = "";
+  var items = [];
+
+  for (var r = 1; r < data.length; r++) {
+    var rowGid = String(data[r][CONFIG.DB_COL.GAME_ID] || "").trim();
+    if (rowGid === gameId) {
+      if (!format) format = String(data[r][CONFIG.DB_COL.FORMAT] || "").trim();
+      if (!rawDate) rawDate = data[r][CONFIG.DB_COL.DATE];
+      if (!dealer) dealer = String(data[r][CONFIG.DB_COL.DEALER] || "").trim();
+
+      var player = String(data[r][CONFIG.DB_COL.PLAYER] || "").trim();
+      var event = String(data[r][CONFIG.DB_COL.EVENT] || "").trim();
+      var points = Number(data[r][CONFIG.DB_COL.POINTS]) || 0;
+
+      items.push({
+        player: player,
+        event: event,
+        points: points,
+        isParticipating: isParticipating(player)
+      });
+    }
+  }
+
+  if (!items.length) {
+    return { success: false, message: "Игра с ID " + gameId + " не найдена в DB_Results" };
+  }
+
+  var nickMap = typeof buildNickMap === "function" ? buildNickMap(ss) : {};
+  var notifyItems = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    notifyItems.push({
+      event: it.event,
+      playerNick: (typeof pushNick === "function") ? pushNick(nickMap, it.player) : it.player,
+      points: it.points,
+      isParticipating: it.isParticipating
+    });
+  }
+
+  var dateStr = normalizeDate(rawDate);
+  var dealerCount = 1;
+  try {
+    if (typeof countDealerGamesToday === "function") {
+      dealerCount = countDealerGamesToday(ss, format, dateStr, dealer, gameId);
+    }
+  } catch (e) {}
+
+  var res = notifyGameResult(format, rawDate, dealer, dealerCount, notifyItems);
+  return { success: true, message: "Уведомление для игры [" + format + " · " + dealer + "] отправлено в Telegram", result: res };
+}
+
+/**
+ * Отправить уведомление для самой последней игры из DB_Results (или последнего MTT).
+ * @param {string} [formatFilter] Опциональный фильтр формата ("MTT", "SnG", "Mystery Bounty")
+ */
+function resendLatestGame(formatFilter) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dbSheet = ss.getSheetByName(CONFIG.SHEETS.RESULTS);
+  if (!dbSheet) return { success: false, message: "Лист DB_Results не найден" };
+
+  var data = dbSheet.getDataRange().getValues();
+  if (data.length <= 1) return { success: false, message: "DB_Results пуст" };
+
+  var targetGameId = "";
+  for (var r = data.length - 1; r >= 1; r--) {
+    var gid = String(data[r][CONFIG.DB_COL.GAME_ID] || "").trim();
+    var fmt = String(data[r][CONFIG.DB_COL.FORMAT] || "").trim();
+    if (gid) {
+      if (!formatFilter || fmt.toLowerCase() === formatFilter.toLowerCase()) {
+        targetGameId = gid;
+        break;
+      }
+    }
+  }
+
+  if (!targetGameId) {
+    return { success: false, message: "Подходящая игра не найдена" };
+  }
+
+  return resendGameNotification(targetGameId);
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    escapeTelegramHtml: escapeTelegramHtml,
+    buildNotificationText: buildNotificationText
+  };
 }

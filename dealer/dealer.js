@@ -380,28 +380,12 @@ function initPillSelectors() {
   const formatPills = document.querySelectorAll("#format-pills .pill");
   const mttSetupBlock = document.getElementById("mtt-setup-block");
 
-  // Защита: если сохранен MTT, сбрасываем на SnG
-  if (SELECTED_FORMAT === "MTT") {
-    SELECTED_FORMAT = "SnG";
-  }
-
   // Инициализируем правильное состояние при старте
   updateStructureVisibilityForFormat(SELECTED_FORMAT);
 
   formatPills.forEach(pill => {
     pill.addEventListener("click", () => {
-      // Заглушка для формата MTT (в разработке)
-      if (pill.dataset.disabled === "true" || pill.dataset.format === "MTT" || (pill.classList && pill.classList.contains("is-disabled"))) {
-        triggerHaptic("heavy");
-        showAppToast("⚠️ Режим МТТ в разработке. Доступны форматы SnG и Mystery Bounty");
-        // Принудительно удерживаем активную плашку выбранного формата
-        const safeFormat = (SELECTED_FORMAT === "MTT" ? "SnG" : SELECTED_FORMAT);
-        SELECTED_FORMAT = safeFormat;
-        formatPills.forEach(p => {
-          if (p.classList && typeof p.classList.toggle === "function") {
-            p.classList.toggle("active", p.dataset.format === safeFormat);
-          }
-        });
+      if (pill.dataset.disabled === "true" || (pill.classList && pill.classList.contains("is-disabled"))) {
         return;
       }
 
@@ -414,12 +398,9 @@ function initPillSelectors() {
       // Обновляем видимость карточек структур
       updateStructureVisibilityForFormat(SELECTED_FORMAT);
 
-      // Показ / скрытие блока параметров МТТ
-      if (SELECTED_FORMAT === "MTT") {
-        if (mttSetupBlock) mttSetupBlock.style.display = "flex";
-      } else {
-        if (mttSetupBlock) mttSetupBlock.style.display = "none";
-      }
+      // Рудименты старого сбора лобби скрыты для чистого эргономичного таймера
+      if (mttSetupBlock) mttSetupBlock.style.display = "none";
+
       triggerHaptic("light");
       saveState();
       renderDealerView();

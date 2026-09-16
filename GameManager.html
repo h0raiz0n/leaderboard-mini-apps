@@ -25,6 +25,8 @@
     .card .head .fmt { background:#eef1f4; border-radius:10px; padding:1px 8px; font-size:12px; color:#57606a; }
     .card .head .gid { font-size:11px; color:#8c959f; word-break:break-all; }
     .card .head .acts { margin-left:auto; display:flex; gap:6px; }
+    button.tg { background:#0969da; color:#fff; border-color:#0969da; }
+    button.tg:hover { background:#0854b0; }
     .card .rows { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px 12px; }
     .chip { font-size:12px; padding:1px 6px; border-radius:6px; background:#f6f8fa; }
     .chip.win { background:#fff8c5; }
@@ -134,6 +136,7 @@
             '<span class="fmt">' + esc(g.format) + '</span>' +
             '<span class="gid">' + esc(g.gameId) + '</span>' +
             '<span class="acts">' +
+              '<button class="tg" onclick="doResendTg(' + i + ')" title="Отправить победный пост в Telegram">📢 Telegram</button>' +
               '<button onclick="openEdit(' + i + ')">Изменить</button>' +
               '<button class="danger" onclick="doDelete(' + i + ')">Удалить</button>' +
             '</span>' +
@@ -266,6 +269,24 @@
         })
         .withFailureHandler(function (e) { toast("Ошибка: " + e.message); })
         .adminSaveGame(data.gameId, data.date, data.dealer, data.players, data.formatName);
+    }
+
+    function doResendTg(idx) {
+      var g = G.games[idx];
+      if (!g) return;
+      var ok = confirm("Отправить победный пост в Telegram для игры:\n" + g.date + " · " + g.format + " · ведущий: " + g.dealer + "?");
+      if (!ok) return;
+      toast("Отправка в Telegram...");
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.success) {
+            toast("✅ " + res.message);
+          } else {
+            toast("⚠️ " + (res && res.message ? res.message : "Ошибка отправки"));
+          }
+        })
+        .withFailureHandler(function (e) { toast("Ошибка: " + e.message); })
+        .adminResendTelegram(g.gameId);
     }
 
     function doDelete(idx) {
