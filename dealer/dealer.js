@@ -2494,7 +2494,7 @@ function renderDealerView() {
 
   // Синхронизация формата и видимости структур при настройке
   if (table.status === "idle" || !table.status || table.status === "lobby" || table.status === "ready") {
-    const activeFormat = SELECTED_FORMAT || table.format || "SnG";
+    const activeFormat = table.format || SELECTED_FORMAT || "SnG";
     table.format = activeFormat;
     updateStructureVisibilityForFormat(activeFormat);
     if (typeof document !== "undefined" && typeof document.querySelectorAll === "function") {
@@ -2511,19 +2511,31 @@ function renderDealerView() {
 
   // Синхронизация сателлитного стола с турнирными часами МТТ (Pure Time Math)
   let masterTable = null;
-  if (table.format === "MTT" && !table.isMttMaster && table.status !== "ready" && table.status !== "lobby") {
+  const isMttRunning = Boolean(
+    CURRENT_MTT_SESSION &&
+    CURRENT_MTT_SESSION.status === "running" &&
+    CURRENT_MTT_SESSION.startedAt &&
+    (!CURRENT_MTT_SESSION.sessionId || !table.mttSessionId || CURRENT_MTT_SESSION.sessionId === table.mttSessionId)
+  );
+  if (table.format === "MTT" && !table.isMttMaster && (isMttRunning || (table.status !== "ready" && table.status !== "lobby"))) {
     const activeSessionId = (CURRENT_MTT_SESSION && CURRENT_MTT_SESSION.sessionId) ? CURRENT_MTT_SESSION.sessionId : table.mttSessionId;
     masterTable = Object.values(TABLES_STATE).find(t => 
       t && t.format === "MTT" && t.isMttMaster && t.id !== table.id && !isTableStale(t) &&
-      (!activeSessionId || t.mttSessionId === activeSessionId) &&
+      (!activeSessionId || !t.mttSessionId || t.mttSessionId === activeSessionId) &&
       (t.status === "running" || t.status === "paused")
     );
 
     const cfg = (typeof POKER_CONFIG !== "undefined" ? POKER_CONFIG : null);
     const now = getSyncedNow();
 
+    const isSessionActive = Boolean(
+      CURRENT_MTT_SESSION && CURRENT_MTT_SESSION.status && CURRENT_MTT_SESSION.status !== "lobby" && CURRENT_MTT_SESSION.startedAt &&
+      (!CURRENT_MTT_SESSION.sessionId || !masterTable || !masterTable.mttSessionId || masterTable.mttSessionId === CURRENT_MTT_SESSION.sessionId) &&
+      (!masterTable || masterTable.mttSessionId || !CURRENT_MTT_SESSION.sessionId)
+    );
+
     // 1. Приоритет: чистая математика от CURRENT_MTT_SESSION (Pure Time Math, телефон ведущего может спать)
-    if (CURRENT_MTT_SESSION && CURRENT_MTT_SESSION.status && CURRENT_MTT_SESSION.status !== "lobby" && CURRENT_MTT_SESSION.startedAt) {
+    if (isSessionActive) {
       const mttStructKey = CURRENT_MTT_SESSION.structKey || table.structKey || (masterTable && masterTable.structKey) || "MTT_PRO_5000";
       if (cfg && typeof cfg.calculateTournamentProgress === "function") {
         const progress = cfg.calculateTournamentProgress(
@@ -2533,21 +2545,45 @@ function renderDealerView() {
           CURRENT_MTT_SESSION.pausedAt || null,
           now,
           {
-            manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : (masterTable ? masterTable.levelIndex : undefined)
+            manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : undefined
           }
         );
+        const rawLevelIndex = progress.levelIndex;
+        const masterLevel = (masterTable && typeof masterTable.levelIndex === "number") ? masterTable.levelIndex : 0;
+        const effectiveLevelIndex = Math.max(rawLevelIndex, masterLevel);
+        
+        let finalProgress = progress;
+        if (effectiveLevelIndex !== rawLevelIndex && cfg && typeof cfg.calculateTournamentProgress === "function") {
+          finalProgress = cfg.calculateTournamentProgress(
+            mttStructKey,
+            CURRENT_MTT_SESSION.startedAt,
+            CURRENT_MTT_SESSION.totalPausedMs || 0,
+            CURRENT_MTT_SESSION.pausedAt || null,
+            now,
+            { manualLevelIndex: effectiveLevelIndex }
+          );
+        }
+
+        const prevStatus = table.status;
         table.status = CURRENT_MTT_SESSION.status;
-        table.levelIndex = progress.levelIndex;
-        table.durationSec = progress.levelDurationSec;
-        table.remainingMs = progress.levelRemainingMs;
-        table.levelEndsAt = progress.levelEndsAt;
+        table.levelIndex = effectiveLevelIndex;
+        table.durationSec = finalProgress.levelDurationSec;
+        table.remainingMs = finalProgress.levelRemainingMs;
+        table.levelEndsAt = finalProgress.levelEndsAt;
         table.startedAt = CURRENT_MTT_SESSION.startedAt;
         table.elapsedBeforePause = 0;
         table.pauseEndsAt = CURRENT_MTT_SESSION.pauseEndsAt || null;
         table.pauseTotalSec = CURRENT_MTT_SESSION.pauseTotalSec || null;
-        table.isBreakActive = progress.isBreak;
+        table.isBreakActive = finalProgress.isBreak;
+        if (prevStatus !== table.status) {
+          saveState();
+        }
       } else {
+        const prevStatus = table.status;
         table.status = CURRENT_MTT_SESSION.status;
+        if (prevStatus !== table.status) {
+          saveState();
+        }
       }
     } else if (masterTable && (masterTable.status === "running" || masterTable.status === "paused")) {
       // 2. Fallback синхронизация от masterTable в TABLES_STATE (для локальных тестов)

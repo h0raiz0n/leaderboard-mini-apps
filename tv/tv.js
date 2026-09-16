@@ -968,7 +968,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
         CURRENT_MTT_SESSION.pausedAt || null,
         now,
         {
-          manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : timingTable.levelIndex
+          manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : undefined
         }
       );
       safeIndex = progress.levelIndex;
@@ -1922,7 +1922,7 @@ function renderMttCinemaMode(viewport, activeMttTables, tableKeys) {
       CURRENT_MTT_SESSION.pausedAt || null,
       now,
       {
-        manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : masterMttTable.levelIndex
+        manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : undefined
       }
     );
     safeIndex = progress.levelIndex;
@@ -2025,7 +2025,7 @@ function renderTables() {
     const sessionMttTables = Object.values(ACTIVE_TABLES).filter(t => 
       t && t.format === "MTT" && !t.dissolved && !isTableStale(t) &&
       (t.mttSessionId === sessionId || t.id === CURRENT_MTT_SESSION.masterId) &&
-      (t.status === "running" || t.status === "paused")
+      (t.status === "running" || t.status === "paused" || t.status === "ready")
     );
 
     if (sessionMttTables.length > 0) {
