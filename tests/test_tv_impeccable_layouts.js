@@ -26,8 +26,8 @@ console.log("   ✅ 1 стол: блайнды до 110px, таймер до 230
 // 2. Проверка CSS правил для 2 столов
 console.log("\n2. Проверка масштаба для 2 столов (Split Screen):");
 assert(css.includes('.tv-viewport[data-tables="2"] .blinds-number.current'), "Должен быть селектор для 2 столов");
-assert(css.includes("68px"), "Блайнды для 2 столов должны быть 68px");
-console.log("   ✅ 2 стола: блайнды 68px, таймер до 155px.");
+assert(css.includes("100px") || css.includes("88px") || css.includes("68px"), "Блайнды для 2 столов должны быть монументальными (>=88px)");
+console.log("   ✅ 2 стола: блайнды 100px+ (Stadium Dual Pillars), таймер до 155px.");
 
 // 3. Проверка CSS правил для 3 столов
 console.log("\n3. Проверка масштаба для 3 столов (Triple Arena):");

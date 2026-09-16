@@ -941,7 +941,16 @@ body.cursor-hidden * {
 
 /* --- 2 СТОЛА (SPLIT SCREEN DUAL PILLARS) --- */
 .tv-viewport[data-tables="2"] .table-card {
-  padding: 24px 36px;
+  padding: 26px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.tv-viewport[data-tables="2"] .card-top {
+  flex-shrink: 0;
+  margin-bottom: 0;
 }
 
 .tv-viewport[data-tables="2"] .dealer-label {
@@ -949,7 +958,7 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="2"] .dealer-name {
-  font-size: 38px;
+  font-size: 36px;
 }
 
 .tv-viewport[data-tables="2"] .dealer-badge-icon {
@@ -965,43 +974,107 @@ body.cursor-hidden * {
   padding: 8px 20px;
 }
 
+/* Оптическое центрирование и ликвидация вертикального вакуума */
+.tv-viewport[data-tables="2"] .timer-block {
+  margin-top: auto;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
 .tv-viewport[data-tables="2"] .timer-digits {
   font-size: 155px;
-  font-size: clamp(120px, 18vh, 170px);
-  line-height: 0.95;
+  font-size: clamp(120px, 17vh, 165px);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
 }
 
 .tv-viewport[data-tables="2"] .time-rail-track {
-  max-width: 480px;
-  height: 4px;
+  max-width: 520px;
+  height: 5px;
+  margin: 14px 0 0 0;
 }
 
+/* Ликвидация паразитного текста для освобождения высоты */
 .tv-viewport[data-tables="2"] .timer-subtext {
-  font-size: 20px;
+  display: none !important;
+}
+
+.tv-viewport[data-tables="2"] .blinds-caption {
+  display: none !important;
 }
 
 .tv-viewport[data-tables="2"] .blinds-grid,
 .tv-viewport[data-tables="2"] .blinds-monolith {
-  padding: 16px 24px;
-  gap: 10px;
+  margin-top: 24px;
+  margin-bottom: auto;
+  padding: 8px 24px;
+  gap: 12px;
 }
 
-.tv-viewport[data-tables="2"] .blinds-caption {
-  font-size: 15px;
-}
-
+/* Монументальные блайнды 100px+ (+55% рост) */
 .tv-viewport[data-tables="2"] .blinds-number.current {
-  font-size: 68px;
-  font-size: clamp(68px, 8vw, 84px);
-  line-height: 1;
+  font-size: 100px;
+  font-size: clamp(88px, 9.5vw, 108px);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
 }
 
 .tv-viewport[data-tables="2"] .ante-badge {
-  font-size: 30px;
+  font-size: 32px;
+}
+
+/* Билет следующих блайндов приподнят над нижним краем карточки */
+.tv-viewport[data-tables="2"] .upcoming-blinds-ticket {
+  margin-top: 14px;
+  padding: 8px 24px;
+  border-radius: 12px;
 }
 
 .tv-viewport[data-tables="2"] .upcoming-blinds-ticket .upcoming-ticket-val {
-  font-size: 28px;
+  font-size: 30px;
+}
+
+/* Бейджи идентификации столов (Стол 1 / Стол 2) */
+.table-identity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 8px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.table-identity-badge.table-1 {
+  background: rgba(56, 189, 248, 0.16);
+  border: 1.5px solid rgba(56, 189, 248, 0.65);
+  color: #38bdf8;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+}
+
+.table-identity-badge.table-2 {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1.5px solid rgba(245, 158, 11, 0.65);
+  color: #fbbf24;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+}
+
+.table-identity-badge.table-3 {
+  background: rgba(168, 85, 247, 0.16);
+  border: 1.5px solid rgba(168, 85, 247, 0.65);
+  color: #c084fc;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.35);
+}
+
+.table-identity-badge.table-4 {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1.5px solid rgba(16, 185, 129, 0.65);
+  color: #34d399;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
 }
 
 /* --- 3 СТОЛА (QUAD 2X2 ARENA + LIVE CLUB HUB) --- */
@@ -2340,7 +2413,7 @@ body.cursor-hidden * {
   }
 
   .tv-viewport[data-tables="2"] .blinds-number.current {
-    font-size: clamp(68px, 8vw, 102px);
+    font-size: clamp(88px, 9.5vw, 115px);
   }
 
   .tv-viewport[data-tables="2"] .ante-badge {
