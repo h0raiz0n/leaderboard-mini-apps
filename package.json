@@ -1,6 +1,6 @@
 {
   "name": "atmosphere-poker",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "private": true,
   "description": "Poker tournament ecosystem for Atmosphere anti-cafe (blind timer, live sync, leaderboards)",
   "engines": {
