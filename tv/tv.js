@@ -1326,16 +1326,16 @@ function getClubHubSlideHtml(slideIdx) {
       </div>
       <div class="club-hub-body">
         <div class="hub-leader-feature">
-          <div class="hub-leader-avatar">🌟</div>
+          <div class="hub-leader-avatar">👑</div>
           <div class="hub-leader-info">
-            <span class="hub-leader-rank">ЛЕГЕНДА КЛУБА</span>
+            <span class="hub-leader-rank">ЛЕГЕНДА КЛУБА • ТОП-1</span>
             <span class="hub-leader-name">${l1.name}</span>
             <span class="hub-leader-pts"><b>${Number(l1.points || 0).toLocaleString("ru-RU")}</b> pts • ${l1.games} игр (ITM ${l1.itm})</span>
           </div>
         </div>
         <div class="hub-top-list">
-          <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">${l2.name}</span><span class="hub-pts">${Number(l2.points || 0).toLocaleString("ru-RU")} pts • ${l2.games} игр</span></div>
-          <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">${l3.name}</span><span class="hub-pts">${Number(l3.points || 0).toLocaleString("ru-RU")} pts • ${l3.games} игр</span></div>
+          <div class="hub-row rank-2"><span class="hub-pos medal-silver" title="2 место">🥈</span><span class="hub-name">${l2.name}</span><span class="hub-pts">${Number(l2.points || 0).toLocaleString("ru-RU")} pts • ${l2.games} игр</span></div>
+          <div class="hub-row rank-3"><span class="hub-pos medal-bronze" title="3 место">🥉</span><span class="hub-name">${l3.name}</span><span class="hub-pts">${Number(l3.points || 0).toLocaleString("ru-RU")} pts • ${l3.games} игр</span></div>
         </div>
       </div>
     `;
@@ -1356,7 +1356,7 @@ function getClubHubSlideHtml(slideIdx) {
       </div>
       <div class="club-hub-body">
         <div class="hub-leader-feature">
-          <div class="hub-leader-avatar">🏆</div>
+          <div class="hub-leader-avatar">👑</div>
           <div class="hub-leader-info">
             <span class="hub-leader-rank">ЗАЛ СЛАВЫ КЛУБА • ПОБЕДИТЕЛЬ ТУРНИРА</span>
             <span class="hub-leader-name">${h1.name}</span>
@@ -1364,8 +1364,8 @@ function getClubHubSlideHtml(slideIdx) {
           </div>
         </div>
         <div class="hub-top-list">
-          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h2.name}</span><span class="hub-pts">${h2Details}</span></div>
-          <div class="hub-row"><span class="hub-pos">🥇</span><span class="hub-name">${h3.name}</span><span class="hub-pts">${h3Details}</span></div>
+          <div class="hub-row rank-2"><span class="hub-pos medal-gold" title="Победитель">🥇</span><span class="hub-name">${h2.name}</span><span class="hub-pts">${h2Details}</span></div>
+          <div class="hub-row rank-3"><span class="hub-pos medal-gold" title="Победитель">🥇</span><span class="hub-name">${h3.name}</span><span class="hub-pts">${h3Details}</span></div>
         </div>
       </div>
     `;
@@ -1390,8 +1390,8 @@ function getClubHubSlideHtml(slideIdx) {
         </div>
       </div>
       <div class="hub-top-list">
-        <div class="hub-row"><span class="hub-pos">2</span><span class="hub-name">${m2.name}</span><span class="hub-pts">${Number(m2.points || 0).toLocaleString("ru-RU")} pts</span></div>
-        <div class="hub-row"><span class="hub-pos">3</span><span class="hub-name">${m3.name}</span><span class="hub-pts">${Number(m3.points || 0).toLocaleString("ru-RU")} pts</span></div>
+        <div class="hub-row rank-2"><span class="hub-pos medal-silver" title="2 место">🥈</span><span class="hub-name">${m2.name}</span><span class="hub-pts">${Number(m2.points || 0).toLocaleString("ru-RU")} pts</span></div>
+        <div class="hub-row rank-3"><span class="hub-pos medal-bronze" title="3 место">🥉</span><span class="hub-name">${m3.name}</span><span class="hub-pts">${Number(m3.points || 0).toLocaleString("ru-RU")} pts</span></div>
       </div>
     </div>
   `;
@@ -1421,7 +1421,7 @@ function rotateClubHubSlide() {
       slideEl.innerHTML = getClubHubSlideHtml(CURRENT_HUB_SLIDE_INDEX);
       if (slideEl.classList) slideEl.classList.remove("slide-fading");
     }
-  }, 350);
+  }, 400);
 }
 
 function initLeaderboardSync() {

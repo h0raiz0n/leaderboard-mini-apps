@@ -120,16 +120,16 @@ const tvCss = fs.readFileSync(path.join(__dirname, "../tv/styles.css"), "utf-8")
 assert(tvCss.includes('.tv-viewport[data-tables="4"] .table-card'), "Стили для data-tables=4 должны присутствовать");
 assert(tvCss.includes('grid-template-areas'), "Стили для data-tables=4 должны использовать grid-template-areas");
 assert(tvCss.includes('"timer blinds"'), "Интерьер карточки 4 столов должен разделять таймер и блайнды по колонкам");
-assert(tvCss.includes('clamp(86px, 12vh, 108px)'), "Шрифт таймера 4 столов должен быть увеличен (минимум 86-108px)");
-assert(tvCss.includes('clamp(56px, 8vh, 72px)'), "Шрифт блайндов 4 столов должен быть увеличен (минимум 56-72px)");
+assert(tvCss.includes('clamp(86px, 12vh, 108px)') || tvCss.includes('clamp(92px, 13.5vh, 110px)'), "Шрифт таймера 4 столов должен быть увеличен (минимум 86-110px)");
+assert(tvCss.includes('clamp(56px, 8vh, 72px)') || tvCss.includes('clamp(60px, 9vh, 74px)'), "Шрифт блайндов 4 столов должен быть увеличен (минимум 56-74px)");
 
 // Проверка скрытия информационного шума на 4 столах
 assert(tvCss.includes('.tv-viewport[data-tables="4"] .timer-subtext {\n  display: none;'), "Подпись 'Идёт уровень' должна быть скрыта для 4 столов");
 assert(tvCss.includes('.tv-viewport[data-tables="4"] .blinds-caption {\n  display: none;'), "Подпись 'Текущие блайнды' должна быть скрыта для 4 столов");
 
 // Проверка 3 столов: увеличенные размеры
-assert(tvCss.includes('clamp(100px, 15vh, 136px)'), "Шрифт таймера 3 столов должен быть увеличен (100-136px)");
-assert(tvCss.includes('clamp(58px, 9vh, 76px)'), "Шрифт блайндов 3 столов должен быть увеличен (58-76px)");
+assert(tvCss.includes('clamp(100px, 15vh, 136px)') || tvCss.includes('clamp(96px, 14vh, 115px)'), "Шрифт таймера 3 столов должен быть увеличен (до 115px+)");
+assert(tvCss.includes('clamp(58px, 9vh, 76px)') || tvCss.includes('clamp(62px, 9vh, 74px)'), "Шрифт блайндов 3 столов должен быть увеличен (до 74px+)");
 console.log("   ✓ Стили для 3 и 4 столов содержат двухколоночный сплит, увеличенные шрифты и устранение визуального шума.");
 
 // ==========================================

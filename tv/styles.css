@@ -578,7 +578,7 @@ body.cursor-hidden * {
   background: linear-gradient(180deg, rgba(16, 36, 64, 0.95) 0%, rgba(9, 18, 34, 0.98) 100%);
   border: 1px solid rgba(251, 191, 36, 0.35);
   border-radius: var(--radius-card);
-  padding: 16px 22px;
+  padding: 12px 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -594,11 +594,13 @@ body.cursor-hidden * {
   justify-content: space-between;
   height: 100%;
   opacity: 1;
-  transition: opacity 0.35s ease;
+  transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0);
 }
 
 .club-hub-slide.slide-fading {
   opacity: 0;
+  transform: translateY(6px);
 }
 
 .club-hub-head {
@@ -606,7 +608,7 @@ body.cursor-hidden * {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .club-hub-tag {
@@ -630,25 +632,27 @@ body.cursor-hidden * {
 .club-hub-body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   flex: 1;
   justify-content: space-around;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
 .hub-leader-feature {
   display: flex;
   align-items: center;
-  gap: 16px;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%);
+  border: 1.5px solid rgba(251, 191, 36, 0.45);
   border-radius: 12px;
-  padding: 12px 18px;
+  padding: 10px 16px;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.16);
 }
 
 .hub-leader-avatar {
-  font-size: 38px;
+  font-size: 36px;
   line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
 }
 
 .hub-leader-info {
@@ -665,14 +669,14 @@ body.cursor-hidden * {
 }
 
 .hub-leader-name {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
   color: var(--ink);
   line-height: 1.1;
 }
 
 .hub-leader-pts {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--muted);
 }
 
@@ -684,7 +688,7 @@ body.cursor-hidden * {
 .hub-top-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .hub-row {
@@ -694,22 +698,55 @@ body.cursor-hidden * {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 16px;
+  padding: 8px 14px;
+  font-size: 15px;
   font-weight: 700;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.hub-row.rank-2 {
+  border-color: rgba(203, 213, 225, 0.25);
+  background: linear-gradient(90deg, rgba(203, 213, 225, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+}
+
+.hub-row.rank-3 {
+  border-color: rgba(217, 119, 6, 0.25);
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
 }
 
 .hub-pos {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
+  line-height: 1;
+}
+
+.hub-pos.medal-gold {
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.65);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.35);
+}
+
+.hub-pos.medal-silver {
+  background: rgba(203, 213, 225, 0.2);
+  border: 1px solid rgba(203, 213, 225, 0.65);
+  color: #e2e8f0;
+  box-shadow: 0 0 10px rgba(203, 213, 225, 0.35);
+}
+
+.hub-pos.medal-bronze {
+  background: rgba(217, 119, 6, 0.2);
+  border: 1px solid rgba(217, 119, 6, 0.65);
+  color: #f59e0b;
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.35);
 }
 
 .hub-name {
@@ -722,7 +759,7 @@ body.cursor-hidden * {
   color: #38bdf8;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .club-hub-foot {
@@ -1142,17 +1179,21 @@ body.cursor-hidden * {
 }
 
 /* --- 3 СТОЛА (QUAD 2X2 ARENA + LIVE CLUB HUB) --- */
+.tv-viewport[data-tables="3"] {
+  padding: 6px 10px;
+  gap: 8px;
+}
+
 .tv-viewport[data-tables="3"] .table-card {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   grid-template-areas:
     "header header"
-    "timer blinds"
-    "floor floor";
+    "timer blinds";
   align-items: center;
-  gap: 8px 18px;
-  padding: 14px 22px;
+  gap: 4px 14px;
+  padding: 10px 18px;
 }
 
 .tv-viewport[data-tables="3"] .table-card.break-screen-card {
@@ -1163,7 +1204,7 @@ body.cursor-hidden * {
 
 .tv-viewport[data-tables="3"] .card-top {
   grid-area: header;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .tv-viewport[data-tables="3"] .dealer-label {
@@ -1171,7 +1212,7 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="3"] .dealer-name {
-  font-size: 30px;
+  font-size: 28px;
 }
 
 .tv-viewport[data-tables="3"] .dealer-badge-icon {
@@ -1183,8 +1224,8 @@ body.cursor-hidden * {
 .tv-viewport[data-tables="3"] .round-pill,
 .tv-viewport[data-tables="3"] .players-pill,
 .tv-viewport[data-tables="3"] .tournament-stage-badge {
-  font-size: 15px;
-  padding: 6px 14px;
+  font-size: 14px;
+  padding: 5px 12px;
 }
 
 .tv-viewport[data-tables="3"] .timer-block {
@@ -1198,8 +1239,8 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="3"] .timer-digits {
-  font-size: 115px;
-  font-size: clamp(100px, 15vh, 136px);
+  font-size: 108px;
+  font-size: clamp(96px, 14vh, 115px);
   line-height: 0.95;
 }
 
@@ -1207,11 +1248,11 @@ body.cursor-hidden * {
   max-width: 100%;
   width: 88%;
   height: 3.5px;
-  margin: 8px 0 0 0;
+  margin: 6px 0 0 0;
 }
 
 .tv-viewport[data-tables="3"] .timer-subtext {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .tv-viewport[data-tables="3"] .blinds-grid,
@@ -1219,7 +1260,7 @@ body.cursor-hidden * {
   grid-area: blinds;
   margin: 0;
   width: 100%;
-  padding: 10px 16px;
+  padding: 8px 14px;
   gap: 6px;
 }
 
@@ -1228,13 +1269,18 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="3"] .blinds-number.current {
-  font-size: 52px;
-  font-size: clamp(58px, 9vh, 76px);
+  font-size: 70px;
+  font-size: clamp(62px, 9vh, 74px);
   line-height: 1;
 }
 
 .tv-viewport[data-tables="3"] .ante-badge {
   font-size: 24px;
+}
+
+.tv-viewport[data-tables="3"] .upcoming-blinds-ticket {
+  margin-top: 4px;
+  padding: 5px 14px;
 }
 
 .tv-viewport[data-tables="3"] .upcoming-blinds-ticket .upcoming-ticket-val {
@@ -1247,6 +1293,11 @@ body.cursor-hidden * {
 
 /* --- 4 СТОЛА (QUAD 2X2 ARENA) --- */
 /* Двухколоночный интерьер: слева таймер во всю высоту, справа монолит блайндов */
+.tv-viewport[data-tables="4"] {
+  padding: 6px 10px;
+  gap: 8px;
+}
+
 .tv-viewport[data-tables="4"] .table-card {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1255,8 +1306,8 @@ body.cursor-hidden * {
     "header header"
     "timer blinds";
   align-items: center;
-  gap: 8px 18px;
-  padding: 14px 22px;
+  gap: 4px 14px;
+  padding: 10px 18px;
 }
 
 .tv-viewport[data-tables="4"] .table-card.break-screen-card {
@@ -1267,7 +1318,7 @@ body.cursor-hidden * {
 
 .tv-viewport[data-tables="4"] .card-top {
   grid-area: header;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .tv-viewport[data-tables="4"] .dealer-label {
@@ -1275,7 +1326,7 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="4"] .dealer-name {
-  font-size: 30px;
+  font-size: 28px;
 }
 
 .tv-viewport[data-tables="4"] .dealer-badge-icon {
@@ -1302,8 +1353,8 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="4"] .timer-digits {
-  font-size: 92px;
-  font-size: clamp(86px, 12vh, 108px);
+  font-size: 104px;
+  font-size: clamp(92px, 13.5vh, 110px);
   line-height: 0.95;
 }
 
@@ -1311,7 +1362,7 @@ body.cursor-hidden * {
   max-width: 100%;
   width: 88%;
   height: 3.5px;
-  margin: 8px 0 0 0;
+  margin: 6px 0 0 0;
 }
 
 .tv-viewport[data-tables="4"] .timer-subtext {
@@ -1323,7 +1374,7 @@ body.cursor-hidden * {
   grid-area: blinds;
   margin: 0;
   width: 100%;
-  padding: 10px 16px;
+  padding: 8px 14px;
   gap: 6px;
 }
 
@@ -1332,17 +1383,22 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="4"] .blinds-number.current {
-  font-size: 46px;
-  font-size: clamp(56px, 8vh, 72px);
+  font-size: 68px;
+  font-size: clamp(60px, 9vh, 74px);
   line-height: 1;
 }
 
 .tv-viewport[data-tables="4"] .ante-badge {
-  font-size: 22px;
+  font-size: 24px;
+}
+
+.tv-viewport[data-tables="4"] .upcoming-blinds-ticket {
+  margin-top: 4px;
+  padding: 5px 14px;
 }
 
 .tv-viewport[data-tables="4"] .upcoming-blinds-ticket .upcoming-ticket-val {
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .tv-viewport[data-tables="4"] .card-floor-bar {

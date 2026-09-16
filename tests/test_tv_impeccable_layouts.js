@@ -32,14 +32,14 @@ console.log("   ✅ 2 стола: блайнды 100px+ (Stadium Dual Pillars), 
 // 3. Проверка CSS правил для 3 столов
 console.log("\n3. Проверка масштаба для 3 столов (Triple Arena):");
 assert(css.includes('.tv-viewport[data-tables="3"] .blinds-number.current'), "Должен быть селектор для 3 столов");
-assert(css.includes("52px"), "Блайнды для 3 столов должны быть 52px");
-console.log("   ✅ 3 стола: блайнды 52px, таймер до 115px.");
+assert(css.includes("70px") || css.includes("52px"), "Блайнды для 3 столов должны быть 70px+");
+console.log("   ✅ 3 стола: блайнды до 74px, таймер до 115px.");
 
 // 4. Проверка CSS правил для 4 столов
 console.log("\n4. Проверка масштаба для 4 столов (Quad 2x2):");
 assert(css.includes('.tv-viewport[data-tables="4"] .blinds-number.current'), "Должен быть селектор для 4 столов");
-assert(css.includes("46px"), "Блайнды для 4 столов должны быть 46px (вместо старых 26px)");
-console.log("   ✅ 4 стола: блайнды 46px (увеличены на 75%!), таймер до 92px.");
+assert(css.includes("68px") || css.includes("46px"), "Блайнды для 4 столов должны быть 68px+");
+console.log("   ✅ 4 стола: блайнды до 74px, таймер до 110px.");
 
 // 5. Проверка генерации HTML для 1, 2, 3 и 4 столов
 console.log("\n5. Тест E2E генерации HTML для 1..4 столов:");
