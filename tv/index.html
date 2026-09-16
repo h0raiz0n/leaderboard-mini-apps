@@ -9,17 +9,17 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   
-  <link rel="stylesheet" href="/tv/styles.css?v=39.0">
+  <link rel="stylesheet" href="/tv/styles.css?v=40.0">
   
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   
-  <script src="/shared/poker-config.js?v=39.0"></script>
-  <script src="/tv/tv.js?v=39.0" defer></script>
+  <script src="/shared/poker-config.js?v=40.0"></script>
+  <script src="/tv/tv.js?v=40.0" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js?v=39.0').catch(function () {});
+      navigator.serviceWorker.register('/sw.js?v=40.0').catch(function () {});
     }
   </script>
 </head>
@@ -72,6 +72,12 @@
   <!-- Информационный баннер разблокировки звука (исчезает при клике/клавише) -->
   <div id="audio-unlock-overlay" class="audio-unlock-overlay" style="display: none;" onclick="unlockAudioContext()">
     🔔 Нажмите в любом месте или клавишу F для активации звукового гонга и полного экрана
+  </div>
+
+  <!-- Всплывающий индикатор статуса звука (Mute / Unmute) -->
+  <div id="tv-audio-toast" class="tv-audio-toast" style="display: none;">
+    <span id="tv-audio-toast-icon">🔔</span>
+    <span id="tv-audio-toast-text">Звук включен</span>
   </div>
 
   <!-- Smart TV Anti-Sleep Keep-Alive Engine -->

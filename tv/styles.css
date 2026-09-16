@@ -1667,6 +1667,30 @@ body.cursor-hidden * {
   50% { transform: translateX(-50%) scale(1.02); opacity: 1; }
 }
 
+/* Всплывающее уведомление статуса звука на ТВ */
+.tv-audio-toast {
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 9999;
+  background: rgba(10, 22, 40, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-pill);
+  padding: 10px 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
 /* =========================================================
    MTT TOURNAMENT BROADCAST COCKPIT (IMPECCABLE DESIGN)
    ========================================================= */

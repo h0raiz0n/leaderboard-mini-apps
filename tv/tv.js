@@ -17,8 +17,11 @@ let WAKE_LOCK = null;
 let LAST_RENDERED_SIGNATURE = "";
 let LAST_RENDERED_MODE = "";
 let LAST_TICK_SECONDS = {};
+let LAST_LEVEL_INDICES = {};
 let AUDIO_CTX = null;
 let CURRENT_MTT_SESSION = null;
+let IS_AUDIO_MUTED = false;
+let AUDIO_TOAST_TIMER = null;
 
 let LAST_FIREBASE_SYNC_TS = 0;
 let REST_POLL_INTERVAL = null;
@@ -194,8 +197,35 @@ function showAudioUnlockOverlay() {
   if (overlay) overlay.style.display = "block";
 }
 
+function showAudioStatusToast(isMuted) {
+  if (typeof document === "undefined") return;
+  const toast = document.getElementById("tv-audio-toast");
+  const icon = document.getElementById("tv-audio-toast-icon");
+  const text = document.getElementById("tv-audio-toast-text");
+  if (!toast) return;
+
+  if (icon) icon.textContent = isMuted ? "🔇" : "🔔";
+  if (text) text.textContent = isMuted ? "Звук отключен (Mute)" : "Звук включен";
+
+  toast.style.display = "flex";
+  toast.style.opacity = "1";
+
+  if (AUDIO_TOAST_TIMER) clearTimeout(AUDIO_TOAST_TIMER);
+  AUDIO_TOAST_TIMER = setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => { toast.style.display = "none"; }, 350);
+  }, 2000);
+}
+
+function toggleAudioMute() {
+  IS_AUDIO_MUTED = !IS_AUDIO_MUTED;
+  showAudioStatusToast(IS_AUDIO_MUTED);
+  return IS_AUDIO_MUTED;
+}
+
 // 5-секундный предупредительный звуковой отсчет (5..4..3..2..1)
 function playCountdownTick(second) {
+  if (IS_AUDIO_MUTED) return;
   try {
     const ctx = getAudioContext();
     if (!ctx || ctx.state !== "running") return;
@@ -230,8 +260,11 @@ function playCountdownTick(second) {
   } catch (e) {}
 }
 
-// Финальный двухтональный гонг смены уровней блайндов
+// Финальный благородный клубный гонг смены уровней блайндов
+// Гармонический аккорд: 440Hz (фундаментальный тон) + 880Hz (октавный обертон)
+// Мягкое экспоненциальное затухание 2.5с
 function playTournamentChime() {
+  if (IS_AUDIO_MUTED) return;
   try {
     const ctx = getAudioContext();
     if (!ctx || ctx.state !== "running") return;
@@ -242,15 +275,13 @@ function playTournamentChime() {
     const gain = ctx.createGain();
 
     osc1.type = "sine";
-    osc1.frequency.setValueAtTime(880, now);
-    osc1.frequency.exponentialRampToValueAtTime(1320, now + 0.18);
+    osc1.frequency.setValueAtTime(440, now);
 
-    osc2.type = "triangle";
-    osc2.frequency.setValueAtTime(440, now);
-    osc2.frequency.exponentialRampToValueAtTime(660, now + 0.18);
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(880, now);
 
-    gain.gain.setValueAtTime(0.28, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+    gain.gain.setValueAtTime(0.32, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
 
     osc1.connect(gain);
     osc2.connect(gain);
@@ -266,12 +297,12 @@ function playTournamentChime() {
 
     osc1.onended = cleanup;
     osc2.onended = cleanup;
-    setTimeout(cleanup, 1000);
+    setTimeout(cleanup, 2600);
 
     osc1.start(now);
     osc2.start(now);
-    osc1.stop(now + 0.85);
-    osc2.stop(now + 0.85);
+    osc1.stop(now + 2.5);
+    osc2.stop(now + 2.5);
   } catch (e) {}
 }
 
@@ -286,6 +317,10 @@ function initTvHotkeys() {
   if (typeof document.addEventListener === "function") {
     document.addEventListener("click", handleUserGesture);
     document.addEventListener("touchstart", handleUserGesture);
+    document.addEventListener("pointerdown", handleUserGesture);
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+      window.addEventListener("focus", handleUserGesture);
+    }
 
     // 1.0. Скрытый жест: 4 быстрых тапа (<=1500мс) по шапке/логотипу для открытия симулятора
     let tvTapCount = 0;
@@ -322,6 +357,21 @@ function initTvHotkeys() {
       // 1.1. Переключение панели симулятора столов (Dev Mode: клавиши S или ~)
       if ((e.key === "s" || e.key === "S" || e.key === "~" || e.key === "`" || e.key === "ё" || e.key === "Ё") && !e.ctrlKey && !e.altKey && !e.metaKey) {
         toggleTvSimulator();
+        return;
+      }
+
+      // 1.2. Быстрый выбор столов в симуляторе с пульта ТВ (клавиши 1, 2, 3, 4)
+      if ((e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4") && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const count = parseInt(e.key, 10);
+        if (typeof setSimulatedTables === "function") {
+          setSimulatedTables(count);
+        }
+        return;
+      }
+
+      // 1.3. Клавиша M / m: включение / выключение звука (Mute toggle)
+      if ((e.key === "m" || e.key === "M" || e.key === "ь" || e.key === "Ь") && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        toggleAudioMute();
         return;
       }
 
@@ -2050,6 +2100,15 @@ function renderTables() {
       }
     }
 
+    // Автоматический клубный гонг при смене уровня (из сети от дилера)
+    const prevLevelIdx = LAST_LEVEL_INDICES[key];
+    if (prevLevelIdx !== undefined && timingTable.levelIndex > prevLevelIdx && timingTable.status === "running") {
+      if (!isMttSatellite) {
+        playTournamentChime();
+      }
+    }
+    LAST_LEVEL_INDICES[key] = timingTable.levelIndex;
+
     const isFinalLevel = (timingTable.levelIndex >= structure.length - 1);
     const time = calculateTableTime(timingTable, isFinalLevel);
 
@@ -2538,6 +2597,9 @@ if (typeof window !== "undefined") {
   window.buildClubHubHtml = buildClubHubHtml;
   window.rotateClubHubSlide = rotateClubHubSlide;
   window.fetchLeaderboardBundle = fetchLeaderboardBundle;
+  window.toggleAudioMute = toggleAudioMute;
+  window.isAudioMuted = () => IS_AUDIO_MUTED;
+  window.setAudioMuted = (m) => { IS_AUDIO_MUTED = m; };
 }
 
 function setActiveTables(tables) {
@@ -2556,6 +2618,10 @@ if (typeof module !== "undefined" && module.exports) {
     playTournamentChime,
     playCountdownTick,
     unlockAudioContext,
+    toggleAudioMute,
+    isAudioMuted: () => IS_AUDIO_MUTED,
+    setAudioMuted: (m) => { IS_AUDIO_MUTED = m; },
+    showAudioStatusToast,
     updateNetPingDisplay,
     initTvHotkeys,
     getTournamentMilestone,

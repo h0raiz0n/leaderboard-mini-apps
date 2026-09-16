@@ -138,4 +138,61 @@ triggerKey("ArrowLeft");
 assert.strictEqual(testTable.levelEndsAt, beforeSub - 60000, "Стрелка влево должна отнять 60 секунд от таймера");
 console.log("   ✅ [ArrowLeft / -]: От таймера отнято -60 секунд.");
 
-console.log("\n🎉 ТЕСТ WEB AUDIO COUNTDOWN И ГОРЯЧИХ КЛАВИШ УСПЕШНО ПРОЙДЕН!");
+// 2.7. Горячие клавиши 1, 2, 3, 4 с пульта ТВ (выбор числа столов в симуляторе)
+triggerKey("2");
+assert(tv.isSimulationMode(), "Клавиша 2 должна активировать режим симуляции");
+triggerKey("4");
+assert(tv.isSimulationMode(), "Клавиша 4 должна переключить симуляцию на 4 стола");
+console.log("   ✅ [1-4 Hotkeys]: Быстрый выбор 1-4 столов с пульта ТВ подтвержден.");
+
+// 2.8. Горячая клавиша M / m (Mute Toggle)
+const initialMuted = tv.isAudioMuted();
+triggerKey("m");
+assert.strictEqual(tv.isAudioMuted(), !initialMuted, "Клавиша M должна переключать статус Mute");
+assert.strictEqual(tv.isAudioMuted(), true, "После первого нажатия M звук должен быть выключен");
+
+// Проверка подавления звука при Mute
+const countBeforeMute = playedTicks.length;
+tv.playCountdownTick(2);
+assert.strictEqual(playedTicks.length, countBeforeMute, "При включенном Mute тики не должны генерироваться");
+console.log("   ✅ [M Hotkey]: Переключение Mute и блокировка генерации звука подтверждены.");
+
+// Восстановление звука клавишей M
+triggerKey("M");
+assert.strictEqual(tv.isAudioMuted(), false, "Повторное нажатие M должно включить звук обратно");
+console.log("   ✅ [M Hotkey]: Повторное включение звука подтверждено.");
+
+// 2.9. Проверка благородного клубного гонга (440 Гц / 880 Гц аккорд)
+const chimeFrequencies = [];
+const mockChimeCtx = {
+  state: "running",
+  currentTime: 0,
+  destination: {},
+  createOscillator: () => ({
+    type: "",
+    frequency: {
+      setValueAtTime: (f) => chimeFrequencies.push(f),
+      exponentialRampToValueAtTime: () => {}
+    },
+    connect: () => {},
+    start: () => {},
+    stop: () => {},
+    disconnect: () => {}
+  }),
+  createGain: () => ({
+    gain: {
+      setValueAtTime: () => {},
+      exponentialRampToValueAtTime: () => {}
+    },
+    connect: () => {},
+    disconnect: () => {}
+  })
+};
+
+tv.setAudioCtx(mockChimeCtx);
+tv.playTournamentChime();
+assert(chimeFrequencies.includes(440), "Гонг должен содержать фундаментальный тон 440 Гц");
+assert(chimeFrequencies.includes(880), "Гонг должен содержать октавный обертон 880 Гц");
+console.log("   ✅ [Noble Club Chime]: Гармонический аккорд 440Hz / 880Hz подтвержден.");
+
+console.log("\n🎉 ТЕСТ WEB AUDIO COUNTDOWN, NOBLE CHIME И ГОРЯЧИХ КЛАВИШ УСПЕШНО ПРОЙДЕН!");
