@@ -212,7 +212,7 @@
 ### Этап 1. Децентрализованные Турнирные Часы (Pure Math Clock) и Шина Сессии
 *Цель: Полная независимость таймера турнира от засыпания смартфонов любых дилеров. Ни один телефон не тикает за других. Время турнира — чистая детерминированная функция.*
 
-- [IN_PROGRESS] **1.1. [FIX] Архитектура Pure Math турнирных часов и ликвидация broadcastMttMasterState**
+- [DONE] **1.1. [FIX] Архитектура Pure Math турнирных часов и ликвидация broadcastMttMasterState** (`v42.0`)
   * **Задачи**:
     1. В `mtt_session` хранить исключительно корневые параметры турнира: `{ sessionId, startedAt, structKey, status, pausedAt, totalPausedMs }`.
     2. Полностью ликвидировать функцию `broadcastMttMasterState` (которая циклично перезаписывала чужие узлы `atmosphere/tables/{satKey}`).
@@ -220,7 +220,7 @@
     4. Удалить рудименты Color-Up из синхронизации МТТ (`table.colorUpDone`, `isColorUpActive`).
     5. Заменить устаревший хардкод `420` на фактический `durationSec` структуры в паузах и перерывах.
 
-- [TODO] **1.2. [VERIFY] Автономный Playwright E2E стресс-тест часов при засыпании Master-дилера**
+- [IN_PROGRESS] **1.2. [VERIFY] Автономный Playwright E2E стресс-тест часов при засыпании Master-дилера**
   * **Задачи**:
     1. Написать тест `tests/test_e2e_mtt_pure_clock_sleep_resilience.js`.
     2. Эмулировать запуск МТТ турнира Master-дилером и подключение Сателлита 1.
