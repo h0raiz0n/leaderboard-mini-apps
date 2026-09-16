@@ -841,6 +841,7 @@ body.cursor-hidden * {
   align-items: center;
   gap: 16px 48px;
   padding: 32px 56px;
+  position: relative;
 }
 
 .tv-viewport[data-tables="1"] .table-card.break-screen-card {
@@ -902,33 +903,58 @@ body.cursor-hidden * {
   font-size: 24px;
 }
 
+/* Stadium Hairline Glow Divider */
 .tv-viewport[data-tables="1"] .blinds-grid,
 .tv-viewport[data-tables="1"] .blinds-monolith {
   grid-area: blinds;
   margin: 0;
   width: 100%;
-  padding: 16px 24px;
-  gap: 12px;
+  padding: 16px 24px 16px 48px;
+  gap: 16px;
   align-items: center;
+  position: relative;
+}
+
+.tv-viewport[data-tables="1"] .blinds-monolith::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6%;
+  bottom: 6%;
+  width: 1.5px;
+  background: linear-gradient(180deg, 
+    rgba(56, 189, 248, 0) 0%, 
+    rgba(56, 189, 248, 0.45) 25%, 
+    rgba(251, 191, 36, 0.65) 50%, 
+    rgba(56, 189, 248, 0.45) 75%, 
+    rgba(56, 189, 248, 0) 100%
+  );
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  pointer-events: none;
 }
 
 .tv-viewport[data-tables="1"] .blinds-caption {
   font-size: 18px;
 }
 
+/* Монументальные блайнды 130px+ */
 .tv-viewport[data-tables="1"] .blinds-number.current {
-  font-size: 110px;
-  font-size: clamp(80px, 10vw, 120px);
-  line-height: 1;
+  font-size: 135px;
+  font-size: clamp(120px, 12vw, 145px);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
 }
 
 .tv-viewport[data-tables="1"] .ante-badge {
-  font-size: 38px;
+  font-size: 40px;
 }
 
 .tv-viewport[data-tables="1"] .upcoming-blinds-ticket {
-  padding: 10px 24px;
-  border-radius: 12px;
+  padding: 12px 32px;
+  border-radius: 14px;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1.5px solid rgba(56, 189, 248, 0.65);
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.28);
 }
 
 .tv-viewport[data-tables="1"] .upcoming-ticket-label {
@@ -936,7 +962,45 @@ body.cursor-hidden * {
 }
 
 .tv-viewport[data-tables="1"] .upcoming-ticket-val {
-  font-size: 34px;
+  font-size: 36px;
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.65);
+}
+
+/* Платиновый бейдж «ФИНАЛЬНЫЙ СТОЛ» */
+.final-table-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 18px;
+  border-radius: 9999px;
+  line-height: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(226, 232, 240, 0.08) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  color: #f8fafc;
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.25), inset 0 0 10px rgba(255, 255, 255, 0.12);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+  animation: final-table-glow 3s infinite alternate ease-in-out;
+}
+
+@keyframes final-table-glow {
+  0% {
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.18);
+  }
+  100% {
+    border-color: rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 22px rgba(251, 191, 36, 0.35);
+  }
+}
+
+.tv-viewport[data-tables="1"] .final-table-badge {
+  font-size: 18px;
+  padding: 8px 22px;
 }
 
 /* --- 2 СТОЛА (SPLIT SCREEN DUAL PILLARS) --- */

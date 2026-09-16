@@ -946,6 +946,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
                 <div class="break-screen-dealer" style="display: none;">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
               </div>
               <div class="pill-group">
+                ${tableKeys.length === 1 ? `<span class="final-table-badge">★ ФИНАЛЬНЫЙ СТОЛ</span>` : ""}
                 <span class="format-badge">${formatLabel}</span>
                 <div class="round-pill state-break-pill">☕ ПЕРЕРЫВ</div>
               </div>
@@ -1005,6 +1006,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
                 <div class="break-screen-dealer" style="display: none;">Стол ведущего ${table.dealerName || "Ведущий"} (${formatLabel})</div>
               </div>
               <div class="pill-group">
+                ${tableKeys.length === 1 ? `<span class="final-table-badge">★ ФИНАЛЬНЫЙ СТОЛ</span>` : ""}
                 <span class="format-badge">${formatLabel}</span>
                 <div class="round-pill state-break-pill" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4);">☕ ЗАДЕРЖКА</div>
               </div>
@@ -1114,6 +1116,7 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
             </div>
           </div>
           <div class="pill-group">
+            ${tableKeys.length === 1 ? `<span class="final-table-badge">★ ФИНАЛЬНЫЙ СТОЛ</span>` : ""}
             ${table.format === "MTT" ? `<div class="players-pill">👥 ${table.playersCount || 9}</div>` : ""}
             ${table.format === "MTT" ? (table.isMttMaster ? `<span class="mtt-role-pill master">Главный</span>` : `<span class="mtt-role-pill satellite">Сателлит</span>`) : ""}
             <div class="round-pill tournament-stage-badge">

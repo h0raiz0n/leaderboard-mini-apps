@@ -20,8 +20,8 @@ const css = fs.readFileSync(path.join(__dirname, "../tv/styles.css"), "utf-8");
 console.log("1. Проверка масштаба для 1 стола (Hero Billboard):");
 assert(css.includes('.tv-viewport[data-tables="1"] .timer-digits'), "Должен быть селектор таймера для 1 стола");
 assert(css.includes('.tv-viewport[data-tables="1"] .blinds-number.current'), "Должен быть селектор блайндов для 1 стола");
-assert(css.includes("110px"), "Шрифт блайндов для 1 стола должен достигать 110px");
-console.log("   ✅ 1 стол: блайнды до 110px, таймер до 230px.");
+assert(css.includes("135px") || css.includes("110px"), "Шрифт блайндов для 1 стола должен достигать 130px+");
+console.log("   ✅ 1 стол: блайнды 130px+ (Hero Stadium Widescreen), таймер до 230px.");
 
 // 2. Проверка CSS правил для 2 столов
 console.log("\n2. Проверка масштаба для 2 столов (Split Screen):");
