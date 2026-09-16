@@ -765,24 +765,8 @@ function notifyBlindRaise(table, nextLevelIndex, tableKey) {
 }
 
 function syncTableAutoProgression(tableKey, table) {
-  if (SIMULATION_MODE) return;
-  if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length > 0) {
-    try {
-      firebase.database().ref("atmosphere/tables/" + encodeURIComponent(tableKey)).update({
-        levelIndex: table.levelIndex,
-        durationSec: table.durationSec,
-        remainingMs: table.remainingMs,
-        levelEndsAt: table.levelEndsAt,
-        status: table.status,
-        colorUpDone: table.colorUpDone || false,
-        isColorUpActive: table.isColorUpActive || false,
-        pauseEndsAt: table.pauseEndsAt || null,
-        pauseTotalSec: table.pauseTotalSec || null,
-        lastNotifiedLevelIndex: table.lastNotifiedLevelIndex !== undefined ? table.lastNotifiedLevelIndex : null,
-        requireManualStep: table.requireManualStep || false
-      });
-    } catch (e) {}
-  }
+  // Архитектурный закон «Single Writer»: ТВ является 100% пассивным терминалом-отображателем и НИКОГДА не пишет в Firebase!
+  return;
 }
 
 // Генерация полного HTML представления (для первого рендера и тестовых окружений)
@@ -1474,9 +1458,8 @@ function isTableStale(t) {
   if (t.isBreakActive && t.breakEndsAt && t.breakEndsAt > now) return false;
   if (t.isPostGameBreak && t.nextGameAt && (now - t.nextGameAt < 3600 * 1000)) return false;
 
+  // Бессмертие активных столов: идущий турнир или пауза НИКОГДА не считаются устаревшими
   if (t.status === "running" || t.status === "paused") {
-    const activityTs = t.startedAt || t.createdAt || 0;
-    if (activityTs > 0 && (now - activityTs > 3.5 * 3600 * 1000)) return true;
     return false;
   }
 

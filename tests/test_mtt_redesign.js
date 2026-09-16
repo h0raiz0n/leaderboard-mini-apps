@@ -100,10 +100,14 @@ assert.strictEqual(dealer.isTableStale(breakTable), false, "Стол на акт
 const mockRunningTable = { status: "running" };
 assert.strictEqual(dealer.isTableStale(mockRunningTable), false, "Запущенный стол без таймштампа не отфильтровывается");
 
-// В. Зависший стол старше 3.5 часов должен считаться устаревшим
-const oldTable = { status: "running", startedAt: now - 4 * 3600 * 1000 };
-assert.strictEqual(dealer.isTableStale(oldTable), true, "Стол старше 3.5 часов должен считаться stale");
-console.log("   ✅ Алгоритм isTableStale корректно защищает активные перерывы и отфильтровывает призраков.");
+// В. Активный стол даже старше 3.5 часов НЕ должен считаться устаревшим (бессмертие столов)
+const oldActiveTable = { status: "running", startedAt: now - 4 * 3600 * 1000 };
+assert.strictEqual(dealer.isTableStale(oldActiveTable), false, "Активный стол (даже старше 3.5 часов) НЕ должен считаться stale");
+
+// Г. Заброшенный стол в статусе idle или готовый стол старше 2 часов считается устаревшим
+const ghostLobbyTable = { status: "lobby", createdAt: now - 3 * 3600 * 1000 };
+assert.strictEqual(dealer.isTableStale(ghostLobbyTable), true, "Заброшенный стол лобби старше 2 часов должен считаться stale");
+console.log("   ✅ Алгоритм isTableStale корректно защищает активные игры и перерывы, отфильтровывая заброшенные лобби.");
 
 // 5. Тест активации TV Cinema Deck
 console.log("\n5. Проверка переключения режима отображения на ТВ (Cinema Deck vs Multi-Grid):");

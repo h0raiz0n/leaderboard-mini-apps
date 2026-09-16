@@ -870,9 +870,8 @@ function isTableStale(table) {
   if (table.isBreakActive && table.breakEndsAt && table.breakEndsAt > now) return false;
   if (table.isPostGameBreak && table.nextGameAt && (now - table.nextGameAt < 3600 * 1000)) return false;
 
+  // Бессмертие активных столов: идущий турнир или пауза НИКОГДА не считаются устаревшими
   if (table.status === "running" || table.status === "paused") {
-    const activityTs = table.startedAt || table.createdAt || 0;
-    if (activityTs > 0 && (now - activityTs > 3.5 * 3600 * 1000)) return true;
     return false;
   }
 
@@ -1176,6 +1175,8 @@ function cleanupStaleTablesInFirebase(currentSessionId) {
     if (k === DEALER_ID) return;
     const t = TABLES_STATE[k];
     if (!t) return;
+    // Бессмертие активных столов: турниры в статусе running или paused никогда не растворяются и не удаляются
+    if (t.status === "running" || t.status === "paused") return;
 
     const isStaleTable = isTableStale(t);
     const isForeignMtt = (t.format === "MTT" && t.mttSessionId !== currentSessionId);
