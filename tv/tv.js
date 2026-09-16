@@ -700,7 +700,7 @@ function getTableStructure(table) {
 // Расчёт времени стола (декларативная математика времени Stage 4)
 function calculateTableTime(table, isFinalLevel = false) {
   const now = getSyncedNow();
-  const duration = table.durationSec || 420;
+  const duration = table.durationSec || 600;
   let elapsed = table.elapsedBeforePause || 0;
   let isOvertime = false;
   let remaining = 0;
@@ -948,14 +948,52 @@ function buildFullTablesHtml(tableKeys, activeMttTables) {
 
     const structure = getTableStructure(timingTable);
     const maxIdx = structure.length ? structure.length - 1 : 0;
-    const safeIndex = Math.min(Math.max(0, timingTable.levelIndex || 0), maxIdx);
-    timingTable.levelIndex = safeIndex;
-    const isFinalLevel = (safeIndex >= maxIdx);
-    const time = calculateTableTime(timingTable, isFinalLevel);
-    const currentLevel = structure[safeIndex] || structure[0];
-    const nextLevel = isFinalLevel ? null : (structure[safeIndex + 1] || null);
-    const formatLabel = getFormatLabel(table.format);
     const now = Date.now();
+    let safeIndex = 0;
+    let isFinalLevel = false;
+    let time = null;
+    let currentLevel = null;
+    let nextLevel = null;
+
+    const cfg = (typeof POKER_CONFIG !== "undefined" ? POKER_CONFIG : null)
+      || (typeof window !== "undefined" && window.POKER_CONFIG)
+      || (typeof global !== "undefined" && global.POKER_CONFIG);
+
+    if (isThisTableMtt && CURRENT_MTT_SESSION && CURRENT_MTT_SESSION.startedAt && cfg && typeof cfg.calculateTournamentProgress === "function") {
+      const mttStructKey = CURRENT_MTT_SESSION.structKey || timingTable.structKey || "MTT_PRO_5000";
+      const progress = cfg.calculateTournamentProgress(
+        mttStructKey,
+        CURRENT_MTT_SESSION.startedAt,
+        CURRENT_MTT_SESSION.totalPausedMs || 0,
+        CURRENT_MTT_SESSION.pausedAt || null,
+        now,
+        {
+          manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : timingTable.levelIndex
+        }
+      );
+      safeIndex = progress.levelIndex;
+      timingTable.levelIndex = safeIndex;
+      isFinalLevel = (safeIndex >= maxIdx);
+      currentLevel = progress.currentLevel;
+      nextLevel = progress.nextLevel;
+      const durSec = progress.levelDurationSec || 600;
+      time = {
+        remaining: progress.levelRemainingSec,
+        elapsed: progress.levelElapsedMs ? Math.floor(progress.levelElapsedMs / 1000) : (durSec - progress.levelRemainingSec),
+        isOvertime: progress.isOvertime,
+        total: durSec,
+        isAlert: Boolean(progress.levelRemainingSec <= 30 && !progress.isOvertime && !progress.isPaused && !progress.isBreak),
+        formatted: progress.formattedRemaining
+      };
+    } else {
+      safeIndex = Math.min(Math.max(0, timingTable.levelIndex || 0), maxIdx);
+      timingTable.levelIndex = safeIndex;
+      isFinalLevel = (safeIndex >= maxIdx);
+      time = calculateTableTime(timingTable, isFinalLevel);
+      currentLevel = structure[safeIndex] || structure[0];
+      nextLevel = isFinalLevel ? null : (structure[safeIndex + 1] || null);
+    }
+    const formatLabel = getFormatLabel(table.format);
     const firstLevel = (structure && structure[0]) ? structure[0] : { sb: 5, bb: 10 };
     const initialBlindsStr = `${firstLevel.sb} / ${firstLevel.bb}`;
 
@@ -1864,26 +1902,63 @@ function renderMttCinemaMode(viewport, activeMttTables, tableKeys) {
   const structure = getTableStructure(masterMttTable);
   const now = getSyncedNow();
 
-  // 1. Автопрогрессия уровней (ТВ как автономный исполнитель в зале)
-  if (masterMttTable.status === "running" && masterMttTable.levelEndsAt && now >= masterMttTable.levelEndsAt) {
-    if (!masterMttTable.requireManualStep && masterMttTable.levelIndex < structure.length - 1) {
-      masterMttTable.levelIndex += 1;
-      const nextLvl = structure[masterMttTable.levelIndex];
-      masterMttTable.durationSec = nextLvl.durationSec;
-      masterMttTable.remainingMs = nextLvl.durationSec * 1000;
-      masterMttTable.levelEndsAt = now + masterMttTable.remainingMs;
-      playTournamentChime();
-      notifyBlindRaise(masterMttTable, masterMttTable.levelIndex, masterMttTable.id || "master");
-      syncTableAutoProgression(masterMttTable.id || "master", masterMttTable);
-    }
-  }
+  // 1. Расчет времени и автопрогрессия (Pure Time Math)
+  const cfg = (typeof POKER_CONFIG !== "undefined" ? POKER_CONFIG : null)
+    || (typeof window !== "undefined" && window.POKER_CONFIG)
+    || (typeof global !== "undefined" && global.POKER_CONFIG);
 
-  const maxIdx = structure.length ? structure.length - 1 : 0;
-  const safeIndex = Math.min(Math.max(0, masterMttTable.levelIndex || 0), maxIdx);
-  const isFinalLevel = (safeIndex >= maxIdx);
-  const currentLvl = structure[safeIndex] || structure[0];
-  const nextLvl = isFinalLevel ? null : (structure[safeIndex + 1] || null);
-  const time = calculateTableTime(masterMttTable, isFinalLevel);
+  let safeIndex = 0;
+  let isFinalLevel = false;
+  let currentLvl = null;
+  let nextLvl = null;
+  let time = null;
+
+  if (CURRENT_MTT_SESSION && CURRENT_MTT_SESSION.startedAt && cfg && typeof cfg.calculateTournamentProgress === "function") {
+    const mttStructKey = CURRENT_MTT_SESSION.structKey || masterMttTable.structKey || "MTT_PRO_5000";
+    const progress = cfg.calculateTournamentProgress(
+      mttStructKey,
+      CURRENT_MTT_SESSION.startedAt,
+      CURRENT_MTT_SESSION.totalPausedMs || 0,
+      CURRENT_MTT_SESSION.pausedAt || null,
+      now,
+      {
+        manualLevelIndex: CURRENT_MTT_SESSION.manualLevelIndex !== undefined ? CURRENT_MTT_SESSION.manualLevelIndex : masterMttTable.levelIndex
+      }
+    );
+    safeIndex = progress.levelIndex;
+    masterMttTable.levelIndex = safeIndex;
+    isFinalLevel = (safeIndex >= structure.length - 1);
+    currentLvl = progress.currentLevel;
+    nextLvl = progress.nextLevel;
+    const durSec = progress.levelDurationSec || 600;
+    time = {
+      remaining: progress.levelRemainingSec,
+      elapsed: progress.levelElapsedMs ? Math.floor(progress.levelElapsedMs / 1000) : (durSec - progress.levelRemainingSec),
+      isOvertime: progress.isOvertime,
+      total: durSec,
+      isAlert: Boolean(progress.levelRemainingSec <= 30 && !progress.isOvertime && !progress.isPaused && !progress.isBreak),
+      formatted: progress.formattedRemaining
+    };
+  } else {
+    // Fallback расчет для оффлайн тестов
+    if (masterMttTable.status === "running" && masterMttTable.levelEndsAt && now >= masterMttTable.levelEndsAt) {
+      if (!masterMttTable.requireManualStep && masterMttTable.levelIndex < structure.length - 1) {
+        masterMttTable.levelIndex += 1;
+        const next = structure[masterMttTable.levelIndex];
+        masterMttTable.durationSec = next.durationSec;
+        masterMttTable.remainingMs = next.durationSec * 1000;
+        masterMttTable.levelEndsAt = now + masterMttTable.remainingMs;
+        playTournamentChime();
+        notifyBlindRaise(masterMttTable, masterMttTable.levelIndex, masterMttTable.id || "master");
+      }
+    }
+    const maxIdx = structure.length ? structure.length - 1 : 0;
+    safeIndex = Math.min(Math.max(0, masterMttTable.levelIndex || 0), maxIdx);
+    isFinalLevel = (safeIndex >= maxIdx);
+    currentLvl = structure[safeIndex] || structure[0];
+    nextLvl = isFinalLevel ? null : (structure[safeIndex + 1] || null);
+    time = calculateTableTime(masterMttTable, isFinalLevel);
+  }
 
   // 2. Звуковой 5-секундный отсчет
   if (masterMttTable.status === "running" && time.remaining <= 5 && time.remaining >= 1 && !time.isOvertime) {

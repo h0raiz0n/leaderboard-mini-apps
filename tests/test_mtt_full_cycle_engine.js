@@ -559,8 +559,8 @@ dealer.togglePause();
 assert.strictEqual(dealer.getMyTable().status, "paused", "Головной стол должен встать на паузу");
 assert.strictEqual(broadcastTestTables.dealer_arina.status, "paused", "Сателлит должен синхронно получить статус paused через broadcast");
 
-const pausePatchReq = networkLog.find(r => r.url.includes("atmosphere/tables/dealer_arina.json"));
-assert(pausePatchReq, "Для сателлита должен быть отправлен сетевой PATCH с паузой");
+const pausePatchReq = networkLog.find(r => r.url.includes("atmosphere/mtt_session.json") || r.url.includes("atmosphere/tables/dealer_arina.json"));
+assert(pausePatchReq, "Для турнира должен быть отправлен сетевой PATCH с паузой в mtt_session");
 assert.strictEqual(pausePatchReq.body.status, "paused");
 console.log("   ✅ Пауза от Мастера синхронно транслирована всем сателлитам турнира.");
 
@@ -570,8 +570,8 @@ dealer.nextLevel();
 
 assert.strictEqual(dealer.getMyTable().levelIndex, 2, "Головной стол перешел на уровень 3 (индекс 2)");
 assert.strictEqual(broadcastTestTables.dealer_arina.levelIndex, 2, "Сателлит синхронно перешел на уровень 3 через broadcast");
-const nextLvlPatchReq = networkLog.find(r => r.url.includes("atmosphere/tables/dealer_arina.json"));
-assert(nextLvlPatchReq, "Смена уровня должна быть отправлена сателлиту по сети");
+const nextLvlPatchReq = networkLog.find(r => r.url.includes("atmosphere/mtt_session.json") || r.url.includes("atmosphere/tables/dealer_arina.json"));
+assert(nextLvlPatchReq, "Смена уровня должна быть отправлена в сессию по сети");
 assert.strictEqual(nextLvlPatchReq.body.levelIndex, 2);
 console.log("   ✅ Смена уровня блайндов от Мастера синхронно транслирована всем сателлитам.");
 
